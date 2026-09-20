@@ -43,6 +43,13 @@
   .tab.active { background:var(--accent); color:var(--paper); border-color:var(--accent); }
   label.chk { display:inline-flex; align-items:center; gap:8px; margin-inline-end:20px; cursor:pointer; }
   input[type=checkbox] { width:22px; height:22px; accent-color:var(--accent); }
+  input[type=text], input[type=url], input[type=datetime-local], textarea {
+    width:100%; box-sizing:border-box; font:inherit; padding:8px;
+    border:2px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink); }
+  .field { margin-bottom:12px; }
+  .field label { display:block; margin-bottom:4px; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; margin:8px 0; }
+  button.danger { border-color:#b3472f; color:#d9694f; }
   #msg { min-height:1.4em; color:var(--accent); }
 </style>
 </head>
@@ -59,8 +66,7 @@
     </div>
   </header>
 
-  <p id="loading" class="center">جاري التحميل...</p>
-<div id="login-box" class="card center" hidden>
+  <div id="login-box" class="card center">
     <p>الدخول بتيليجرام</p>
     <script async src="https://telegram.org/js/telegram-widget.js?22"
       data-telegram-login="MATHDEPARTMENT_BOT" data-size="large"
@@ -70,7 +76,7 @@
   <div id="pending-box" class="card center" hidden>
     <p id="welcome"></p>
     <p class="label" style="text-align:center">STATUS: PENDING APPROVAL</p>
-    <p>حسابك في انتظار الموافقة من المسؤولين.</p>
+    <p>الحساب في انتظار الموافقة من المسؤولين.</p>
   </div>
 
   <div id="app" hidden>
@@ -114,11 +120,33 @@ $("theme-btn").addEventListener("click", () => {
 });
 applyTheme();
 
-/* أدوات */
+/* التوقيت (توقيت مصر) */
 const dateFmt = new Intl.DateTimeFormat("ar-EG", {
   timeZone: "Africa/Cairo", dateStyle: "full", timeStyle: "short",
 });
 function fmt(iso) { return dateFmt.format(new Date(iso)); }
+function tzOffset(ms) {
+  const p = {};
+  new Intl.DateTimeFormat("en-US", {
+    timeZone: "Africa/Cairo", hourCycle: "h23", year: "numeric", month: "2-digit",
+    day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit",
+  }).formatToParts(new Date(ms)).forEach((x) => { p[x.type] = x.value; });
+  return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second)
+    - Math.floor(ms / 1000) * 1000;
+}
+function localToISO(v) {
+  const [d, t] = v.split("T");
+  const [y, m, da] = d.split("-").map(Number);
+  const [h, mi] = t.split(":").map(Number);
+  const base = Date.UTC(y, m - 1, da, h, mi);
+  let ms = base - tzOffset(base);
+  ms = base - tzOffset(ms);
+  return new Date(ms).toISOString();
+}
+function toLocalInput(iso) {
+  const ms = new Date(iso).getTime();
+  return new Date(ms + tzOffset(ms)).toISOString().slice(0, 16);
+}
 function safeUrl(u) {
   try {
     const x = new URL(u);
@@ -126,12 +154,14 @@ function safeUrl(u) {
   } catch (e) { return null; }
 }
 
-const state = { userId: null, role: null, sections: [], items: [], progress: {}, active: null };
+const state = { userId: null, role: null, sections: [], items: [], progress: {},
+  active: null, trash: false, form: null };
+const isAdmin = () => state.role === "admin" || state.role === "full_admin";
 
 async function loadData() {
   const [s, i, p] = await Promise.all([
     sb.from("sections").select("id,title,kind,sort_order").eq("is_active", true).order("sort_order"),
-    sb.from("items").select("id,section_id,title,body,url,deadline,created_at").is("deleted_at", null),
+    sb.from("items").select("id,section_id,title,body,url,deadline,created_at,deleted_at"),
     sb.from("progress").select("item_id,done,submitted"),
   ]);
   if (s.error || i.error || p.error) { say("تعذّر تحميل البيانات"); return; }
@@ -167,6 +197,83 @@ async function save(itemId, done, submitted) {
   render();
 }
 
+async function setDeleted(id, val) {
+  if (val && !confirm("تأكيد الحذف؟ يمكن استرجاعه من سلة المحذوفات.")) return;
+  const { error } = await sb.from("items")
+    .update({ deleted_at: val ? new Date().toISOString() : null }).eq("id", id);
+  if (error) { say("تعذّر التنفيذ"); return; }
+  say(val ? "تم الحذف" : "تم الاسترجاع");
+  await loadData();
+}
+
+function field(text, node) {
+  const w = el("div", "field");
+  w.appendChild(el("label", "", text));
+  w.appendChild(node);
+  return w;
+}
+
+function buildForm(sec, it) {
+  const c = el("div", "card");
+  c.appendChild(el("h3", "", it ? "تعديل" : "إضافة"));
+
+  const title = el("input");
+  title.type = "text";
+  title.value = it ? it.title : "";
+  c.appendChild(field("العنوان", title));
+
+  const body = el("textarea");
+  body.rows = 4;
+  body.value = it && it.body ? it.body : "";
+  c.appendChild(field("التفاصيل", body));
+
+  let url = null, dl = null;
+  if (sec.kind === "links") {
+    url = el("input");
+    url.type = "url";
+    url.dir = "ltr";
+    url.value = it && it.url ? it.url : "";
+    c.appendChild(field("الرابط", url));
+  }
+  if (sec.kind === "tasks") {
+    dl = el("input");
+    dl.type = "datetime-local";
+    dl.value = it && it.deadline ? toLocalInput(it.deadline) : "";
+    c.appendChild(field("الميعاد (التاريخ والساعة)", dl));
+  }
+
+  const row = el("div", "row");
+  const ok = el("button", "", "حفظ");
+  const cancel = el("button", "", "إلغاء");
+  cancel.addEventListener("click", () => { state.form = null; say(""); render(); });
+  ok.addEventListener("click", async () => {
+    const data = { title: title.value.trim(), body: body.value.trim() || null };
+    if (!data.title) { say("العنوان مطلوب"); return; }
+    if (dl) {
+      if (!dl.value) { say("الميعاد مطلوب (التاريخ والساعة)"); return; }
+      data.deadline = localToISO(dl.value);
+    }
+    if (url) {
+      const u = safeUrl(url.value.trim());
+      if (!u) { say("الرابط غير صالح"); return; }
+      data.url = u;
+    }
+    ok.disabled = true;
+    const { error } = it
+      ? await sb.from("items").update(data).eq("id", it.id)
+      : await sb.from("items").insert({ ...data, section_id: sec.id });
+    ok.disabled = false;
+    if (error) { say("تعذّر الحفظ"); return; }
+    state.form = null;
+    say("تم الحفظ");
+    await loadData();
+  });
+  row.appendChild(ok);
+  row.appendChild(cancel);
+  c.appendChild(row);
+  return c;
+}
+
 function card(sec, it) {
   const c = el("div", "card");
   c.appendChild(el("h3", "", it.title));
@@ -174,11 +281,13 @@ function card(sec, it) {
 
   if (sec.kind === "tasks") {
     if (it.deadline) c.appendChild(el("p", "meta", "الميعاد: " + fmt(it.deadline)));
-    const pr = state.progress[it.id] || { done: false, submitted: false };
-    const row = el("div");
-    row.appendChild(check("خلّصت", pr.done, (v) => save(it.id, v, v ? pr.submitted : false)));
-    row.appendChild(check("سلّمت", pr.submitted, (v) => save(it.id, v ? true : pr.done, v)));
-    c.appendChild(row);
+    if (!it.deleted_at) {
+      const pr = state.progress[it.id] || { done: false, submitted: false };
+      const row = el("div");
+      row.appendChild(check("خلّصت", pr.done, (v) => save(it.id, v, v ? pr.submitted : false)));
+      row.appendChild(check("سلّمت", pr.submitted, (v) => save(it.id, v ? true : pr.done, v)));
+      c.appendChild(row);
+    }
   } else if (sec.kind === "links") {
     const u = it.url ? safeUrl(it.url) : null;
     if (u) {
@@ -191,6 +300,23 @@ function card(sec, it) {
   } else {
     c.appendChild(el("p", "meta", fmt(it.created_at)));
   }
+
+  if (isAdmin()) {
+    const row = el("div", "row");
+    if (it.deleted_at) {
+      const r = el("button", "small", "استرجاع");
+      r.addEventListener("click", () => setDeleted(it.id, false));
+      row.appendChild(r);
+    } else {
+      const e = el("button", "small", "تعديل");
+      e.addEventListener("click", () => { state.form = { id: it.id }; say(""); render(); });
+      const d = el("button", "small danger", "حذف");
+      d.addEventListener("click", () => setDeleted(it.id, true));
+      row.appendChild(e);
+      row.appendChild(d);
+    }
+    c.appendChild(row);
+  }
   return c;
 }
 
@@ -199,7 +325,9 @@ function render() {
   tabs.replaceChildren();
   state.sections.forEach((sec) => {
     const b = el("button", "tab" + (sec.id === state.active ? " active" : ""), sec.title);
-    b.addEventListener("click", () => { state.active = sec.id; render(); });
+    b.addEventListener("click", () => {
+      state.active = sec.id; state.form = null; state.trash = false; render();
+    });
     tabs.appendChild(b);
   });
 
@@ -208,21 +336,42 @@ function render() {
   const sec = state.sections.find((x) => x.id === state.active);
   if (!sec) { list.appendChild(el("p", "center", "لا توجد أقسام بعد")); return; }
 
-  const items = state.items.filter((x) => x.section_id === sec.id);
+  const all = state.items.filter((x) => x.section_id === sec.id);
+  const live = all.filter((x) => !x.deleted_at);
+  const dead = all.filter((x) => x.deleted_at);
+
+  if (isAdmin()) {
+    const bar = el("div", "row");
+    const add = el("button", "", "+ إضافة");
+    add.addEventListener("click", () => { state.form = { id: null }; state.trash = false; say(""); render(); });
+    const tr = el("button", "", state.trash ? "رجوع" : "سلة المحذوفات (" + dead.length + ")");
+    tr.addEventListener("click", () => { state.trash = !state.trash; state.form = null; render(); });
+    bar.appendChild(add);
+    bar.appendChild(tr);
+    list.appendChild(bar);
+  }
+
+  if (state.form) {
+    const it = state.form.id ? state.items.find((x) => x.id === state.form.id) : null;
+    list.appendChild(buildForm(sec, it));
+  }
+
+  const items = state.trash ? dead : live;
   const t = (x) => x.deadline ? new Date(x.deadline).getTime() : Infinity;
   if (sec.kind === "tasks") {
     items.sort((a, b) => (t(a) === t(b) ? 0 : (t(a) < t(b) ? -1 : 1)));
   } else {
     items.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   }
-  if (!items.length) list.appendChild(el("p", "center", "لا يوجد شيء هنا حتى الآن"));
+  if (!items.length) {
+    list.appendChild(el("p", "center", state.trash ? "السلة فارغة" : "لا يوجد شيء هنا حتى الآن"));
+  }
   items.forEach((it) => list.appendChild(card(sec, it)));
 }
 
 async function showProfile() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) {
-    $("loading").hidden = true;
     $("login-box").hidden = false;
     $("pending-box").hidden = true;
     $("app").hidden = true;
@@ -232,35 +381,29 @@ async function showProfile() {
   state.userId = session.user.id;
   const { data, error } = await sb.from("profiles")
     .select("first_name, role, approved").eq("id", state.userId).single();
-  if (error || !data) {
-    $("loading").hidden = true;
-    say("تعذّر تحميل الحساب");
-    return;
-  }
+  if (error || !data) { say("تعذّر تحميل الحساب"); return; }
 
   $("login-box").hidden = true;
   $("logout").hidden = false;
   state.role = data.role;
 
   if (!data.approved) {
-    $("loading").hidden = true;
     $("welcome").textContent = "أهلًا " + (data.first_name || "");
     $("pending-box").hidden = false;
     $("app").hidden = true;
     return;
   }
   $("pending-box").hidden = true;
+  $("app").hidden = false;
   $("hello").textContent = "WELCOME " + (data.first_name || "") + " / " + data.role;
   say("");
   await loadData();
-  $("loading").hidden = true;
-  $("app").hidden = false;
 }
 
 async function onTelegramAuth(user) {
   say("جاري تسجيل الدخول...");
   const { data, error } = await sb.functions.invoke("telegram-auth", { body: user });
-  if (error || !data || !data.token_hash) { say("فشل الدخول، حاول تاني"); return; }
+  if (error || !data || !data.token_hash) { say("فشل الدخول، برجاء إعادة المحاولة"); return; }
   const { error: e2 } = await sb.auth.verifyOtp({ token_hash: data.token_hash, type: "magiclink" });
   if (e2) { say("فشل إكمال الدخول"); return; }
   await showProfile();
