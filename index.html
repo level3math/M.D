@@ -222,6 +222,7 @@ function render() {
 async function showProfile() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) {
+    $("loading").hidden = true;
     $("login-box").hidden = false;
     $("pending-box").hidden = true;
     $("app").hidden = true;
@@ -231,23 +232,29 @@ async function showProfile() {
   state.userId = session.user.id;
   const { data, error } = await sb.from("profiles")
     .select("first_name, role, approved").eq("id", state.userId).single();
-  if (error || !data) { say("تعذّر تحميل الحساب"); return; }
+  if (error || !data) {
+    $("loading").hidden = true;
+    say("تعذّر تحميل الحساب");
+    return;
+  }
 
   $("login-box").hidden = true;
   $("logout").hidden = false;
   state.role = data.role;
 
   if (!data.approved) {
+    $("loading").hidden = true;
     $("welcome").textContent = "أهلًا " + (data.first_name || "");
     $("pending-box").hidden = false;
     $("app").hidden = true;
     return;
   }
   $("pending-box").hidden = true;
-  $("app").hidden = false;
   $("hello").textContent = "WELCOME " + (data.first_name || "") + " / " + data.role;
   say("");
   await loadData();
+  $("loading").hidden = true;
+  $("app").hidden = false;
 }
 
 async function onTelegramAuth(user) {
