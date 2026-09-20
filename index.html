@@ -195,7 +195,7 @@ async function removeAttachmentFiles(paths) {
   if (!list.length) return;
   try { await sb.storage.from("attachments").remove(list); } catch (e) {}
 }
-const roleLabels = { student: "عادي", admin: "أدمن", full_admin: "أدمن كامل" };
+const roleLabels = { student: "طالب", admin: "أدمن", full_admin: "مالك" };
 const roleRank = { full_admin: 0, admin: 1, student: 2 };
 function rpcMsg(error) {
   const m = (error && error.message) || "";
@@ -668,19 +668,22 @@ function buildForm(sec, it) {
   body.rows = 4;
   body.value = it && it.body ? it.body : "";
   c.appendChild(field("التفاصيل", body));
-  const csel = el("select");
-  const first = el("option", "", sec.kind === "news" ? "أخبار عامة" : "— اختيار المادة —");
-  first.value = "";
-  csel.appendChild(first);
-  state.courses
-    .filter((x) => x.is_active || (it && it.course_id === x.id))
-    .forEach((x) => {
-      const o = el("option", "", x.name);
-      o.value = String(x.id);
-      csel.appendChild(o);
-    });
-  csel.value = it && it.course_id != null ? String(it.course_id) : "";
-  c.appendChild(field(sec.kind === "news" ? "التصنيف" : "المادة", csel));
+  let csel = null;
+  if (sec.kind !== "newsletter") {
+    csel = el("select");
+    const first = el("option", "", sec.kind === "news" ? "أخبار عامة" : "— اختيار المادة —");
+    first.value = "";
+    csel.appendChild(first);
+    state.courses
+      .filter((x) => x.is_active || (it && it.course_id === x.id))
+      .forEach((x) => {
+        const o = el("option", "", x.name);
+        o.value = String(x.id);
+        csel.appendChild(o);
+      });
+    csel.value = it && it.course_id != null ? String(it.course_id) : "";
+    c.appendChild(field(sec.kind === "news" ? "التصنيف" : "المادة", csel));
+  }
   let url = null, dl = null;
   if (sec.kind === "links") {
     url = el("input");
@@ -725,8 +728,8 @@ function buildForm(sec, it) {
   ok.addEventListener("click", async () => {
     const data = { title: title.value.trim(), body: body.value.trim() || null };
     if (!data.title) { say("العنوان مطلوب"); return; }
-    if (sec.kind !== "news" && !csel.value) { say("المادة مطلوبة"); return; }
-    data.course_id = csel.value ? Number(csel.value) : null;
+    if (sec.kind !== "news" && sec.kind !== "newsletter" && !csel.value) { say("المادة مطلوبة"); return; }
+    if (csel) data.course_id = csel.value ? Number(csel.value) : null;
     if (dl) {
       if (!dl.value) { say("الميعاد مطلوب (التاريخ والساعة)"); return; }
       data.deadline = localToISO(dl.value);
@@ -782,7 +785,7 @@ function visible(sec, it) {
 function card(sec, it) {
   const c = el("div", "card" + (sec.kind === "tasks" && !it.deleted_at && isDone(it) ? " doneitem" : ""));
   c.appendChild(el("h3", "", it.title));
-  const cn = it.course_id != null ? courseName(it.course_id) : (sec.kind === "news" ? "أخبار عامة" : "");
+  const cn = sec.kind === "newsletter" ? "" : (it.course_id != null ? courseName(it.course_id) : (sec.kind === "news" ? "أخبار عامة" : ""));
   if (cn) c.appendChild(el("p", "meta", cn));
   if (it.body) c.appendChild(el("p", "body", it.body));
   if (sec.kind === "tasks") {
@@ -879,6 +882,7 @@ function card(sec, it) {
 function renderChips(sec) {
   const chips = $("chips");
   chips.replaceChildren();
+  if (sec.kind === "newsletter") return;
   const add = (label, val) => {
     const b = el("button", "chip" + (state.filter === val ? " active" : ""), label);
     b.addEventListener("click", () => { state.filter = val; render(); });
