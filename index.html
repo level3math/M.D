@@ -169,7 +169,7 @@ function safeUrl(u) {
   } catch (e) { return null; }
 }
 /* المرفقات */
-const MAX_ATTACH = 50 * 1024 * 1024;
+const MAX_ATTACH = 10 * 1024 * 1024;
 const WARN_ATTACH = 5 * 1024 * 1024;
 const SHRINK_IMAGES = true; // تصغير الصور تلقائيًا قبل الرفع (اجعلها false لإيقافه)
 async function shrinkImage(file) {
@@ -734,7 +734,7 @@ function buildForm(sec, it) {
     }
     const fi = el("input");
     fi.type = "file";
-    c.appendChild(field("إرفاق ملف (صورة / فيديو / PDF / أي نوع). يُفضَّل أقل من 5 ميجا، والحد الأقصى 50 ميجا", fi));
+    c.appendChild(field("إرفاق ملف (صورة / فيديو / PDF / أي نوع). يُفضَّل أقل من 5 ميجا، والحد الأقصى 10 ميجا", fi));
     fi.addEventListener("change", () => { attFile = fi.files[0] || null; });
     const alink = el("input");
     alink.type = "url";
@@ -766,7 +766,7 @@ function buildForm(sec, it) {
     let oldPath = it && it.attachment_path ? it.attachment_path : null;
     ok.disabled = true;
     if (attFile) attFile = await shrinkImage(attFile);
-    if (attFile && attFile.size > MAX_ATTACH) { ok.disabled = false; say("الملف أكبر من 50 ميجا، يُرجى استخدام رابط خارجي"); return; }
+    if (attFile && attFile.size > MAX_ATTACH) { ok.disabled = false; say("الملف أكبر من 10 ميجا، يُرجى استخدام رابط خارجي"); return; }
     if (attFile && attFile.size > WARN_ATTACH
         && !confirm("حجم الملف " + humanSize(attFile.size) + ". الملفات الكبيرة تستهلك من حصة الموقع المجانية عند كل فتح. الأفضل استخدام رابط خارجي (Drive). المتابعة بالرفع؟")) {
       ok.disabled = false;
