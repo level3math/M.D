@@ -20,40 +20,65 @@
   :root[data-theme="dark"] { --paper:#1c1812; --card:#26211a; --ink:#efe6d2; --line:#5a4d33; --accent:#d9a55b; color-scheme:dark; }
 
   [hidden] { display:none !important; }
-  body { margin:0; min-height:100vh; background:var(--paper); color:var(--ink);
-    font-family:"Amiri","Noto Naskh Arabic",Georgia,serif; font-size:18px;
-    display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; }
-  .card { background:var(--card); border:2px solid var(--line); border-radius:12px;
-    padding:24px; max-width:420px; width:100%; text-align:center; }
+  body { margin:0; background:var(--paper); color:var(--ink);
+    font-family:"Amiri","Noto Naskh Arabic",Georgia,serif; font-size:18px; }
+  .wrap { max-width:720px; margin:0 auto; padding:16px; }
+  header { display:flex; justify-content:space-between; align-items:center;
+    gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+  h1 { margin:0; font-size:26px; }
+  h3 { margin:0 0 8px; }
   .label { font-family:ui-monospace,Menlo,monospace; font-size:12px;
-    letter-spacing:.08em; color:var(--accent); margin:0 0 8px; direction:ltr; }
-  h1 { margin:0 0 16px; }
-  button { font:inherit; padding:8px 18px; border:2px solid var(--line);
-    border-radius:8px; background:transparent; color:var(--ink); cursor:pointer; }
-  .small { font-size:14px; padding:4px 12px; margin-top:16px; }
+    letter-spacing:.08em; color:var(--accent); margin:0 0 4px; direction:ltr; text-align:right; }
+  .meta { font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent); margin:8px 0; }
+  .card { background:var(--card); border:2px solid var(--line); border-radius:12px;
+    padding:16px; margin-bottom:12px; }
+  .center { text-align:center; }
+  .body { white-space:pre-wrap; margin:8px 0; }
+  button, a.btn { font:inherit; padding:8px 18px; border:2px solid var(--line);
+    border-radius:8px; background:transparent; color:var(--ink); cursor:pointer;
+    text-decoration:none; display:inline-block; }
+  .small { font-size:14px; padding:4px 12px; }
+  .tabs { display:flex; gap:8px; overflow-x:auto; padding-bottom:8px; margin-bottom:12px; }
+  .tab { flex:none; }
+  .tab.active { background:var(--accent); color:var(--paper); border-color:var(--accent); }
+  label.chk { display:inline-flex; align-items:center; gap:8px; margin-inline-end:20px; cursor:pointer; }
+  input[type=checkbox] { width:22px; height:22px; accent-color:var(--accent); }
   #msg { min-height:1.4em; color:var(--accent); }
 </style>
 </head>
 <body>
-<div class="card">
-  <p class="label">BATCH BOARD</p>
-  <h1>نشرة الدفعة</h1>
+<div class="wrap">
+  <header>
+    <div>
+      <p class="label">BATCH BOARD</p>
+      <h1>نشرة الدفعة</h1>
+    </div>
+    <div>
+      <button id="theme-btn" class="small"></button>
+      <button id="logout" class="small" hidden>خروج</button>
+    </div>
+  </header>
 
-  <div id="login-box">
+  <div id="login-box" class="card center">
     <p>الدخول بتيليجرام</p>
     <script async src="https://telegram.org/js/telegram-widget.js?22"
       data-telegram-login="MATHDEPARTMENT_BOT" data-size="large"
       data-onauth="onTelegramAuth(user)" data-request-access="write"></script>
   </div>
 
-  <div id="user-box" hidden>
+  <div id="pending-box" class="card center" hidden>
     <p id="welcome"></p>
-    <p id="status" class="label"></p>
-    <button id="logout">تسجيل الخروج</button>
+    <p class="label" style="text-align:center">STATUS: PENDING APPROVAL</p>
+    <p>حسابك في انتظار الموافقة من المسؤولين.</p>
   </div>
 
-  <p id="msg"></p>
-  <button id="theme-btn" class="small"></button>
+  <div id="app" hidden>
+    <p id="hello" class="label"></p>
+    <div id="tabs" class="tabs"></div>
+    <div id="list"></div>
+  </div>
+
+  <p id="msg" class="center"></p>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -64,8 +89,14 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const $ = (id) => document.getElementById(id);
 function say(t) { $("msg").textContent = t; }
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
 
-/* المظهر: تلقائي / داكن / فاتح */
+/* المظهر */
 const labels = { auto: "تلقائي", dark: "داكن", light: "فاتح" };
 const order = ["auto", "dark", "light"];
 let theme = "auto";
@@ -82,19 +113,140 @@ $("theme-btn").addEventListener("click", () => {
 });
 applyTheme();
 
+/* أدوات */
+const dateFmt = new Intl.DateTimeFormat("ar-EG", {
+  timeZone: "Africa/Cairo", dateStyle: "full", timeStyle: "short",
+});
+function fmt(iso) { return dateFmt.format(new Date(iso)); }
+function safeUrl(u) {
+  try {
+    const x = new URL(u);
+    return (x.protocol === "https:" || x.protocol === "http:") ? x.href : null;
+  } catch (e) { return null; }
+}
+
+const state = { userId: null, role: null, sections: [], items: [], progress: {}, active: null };
+
+async function loadData() {
+  const [s, i, p] = await Promise.all([
+    sb.from("sections").select("id,title,kind,sort_order").eq("is_active", true).order("sort_order"),
+    sb.from("items").select("id,section_id,title,body,url,deadline,created_at").is("deleted_at", null),
+    sb.from("progress").select("item_id,done,submitted"),
+  ]);
+  if (s.error || i.error || p.error) { say("تعذّر تحميل البيانات"); return; }
+  state.sections = s.data;
+  state.items = i.data;
+  state.progress = {};
+  p.data.forEach((r) => { state.progress[r.item_id] = r; });
+  if (!state.sections.find((x) => x.id === state.active)) {
+    state.active = state.sections.length ? state.sections[0].id : null;
+  }
+  render();
+}
+
+function check(text, val, onChange) {
+  const l = el("label", "chk");
+  const i = document.createElement("input");
+  i.type = "checkbox";
+  i.checked = val;
+  i.addEventListener("change", () => onChange(i.checked));
+  l.appendChild(i);
+  l.appendChild(document.createTextNode(text));
+  return l;
+}
+
+async function save(itemId, done, submitted) {
+  const { error } = await sb.from("progress").upsert(
+    { user_id: state.userId, item_id: itemId, done, submitted, updated_at: new Date().toISOString() },
+    { onConflict: "user_id,item_id" }
+  );
+  if (error) { say("تعذّر الحفظ"); return; }
+  state.progress[itemId] = { item_id: itemId, done, submitted };
+  say("");
+  render();
+}
+
+function card(sec, it) {
+  const c = el("div", "card");
+  c.appendChild(el("h3", "", it.title));
+  if (it.body) c.appendChild(el("p", "body", it.body));
+
+  if (sec.kind === "tasks") {
+    if (it.deadline) c.appendChild(el("p", "meta", "الميعاد: " + fmt(it.deadline)));
+    const pr = state.progress[it.id] || { done: false, submitted: false };
+    const row = el("div");
+    row.appendChild(check("خلّصت", pr.done, (v) => save(it.id, v, v ? pr.submitted : false)));
+    row.appendChild(check("سلّمت", pr.submitted, (v) => save(it.id, v ? true : pr.done, v)));
+    c.appendChild(row);
+  } else if (sec.kind === "links") {
+    const u = it.url ? safeUrl(it.url) : null;
+    if (u) {
+      const a = el("a", "btn", "فتح الرابط");
+      a.href = u;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      c.appendChild(a);
+    }
+  } else {
+    c.appendChild(el("p", "meta", fmt(it.created_at)));
+  }
+  return c;
+}
+
+function render() {
+  const tabs = $("tabs");
+  tabs.replaceChildren();
+  state.sections.forEach((sec) => {
+    const b = el("button", "tab" + (sec.id === state.active ? " active" : ""), sec.title);
+    b.addEventListener("click", () => { state.active = sec.id; render(); });
+    tabs.appendChild(b);
+  });
+
+  const list = $("list");
+  list.replaceChildren();
+  const sec = state.sections.find((x) => x.id === state.active);
+  if (!sec) { list.appendChild(el("p", "center", "لا توجد أقسام بعد")); return; }
+
+  const items = state.items.filter((x) => x.section_id === sec.id);
+  const t = (x) => x.deadline ? new Date(x.deadline).getTime() : Infinity;
+  if (sec.kind === "tasks") {
+    items.sort((a, b) => (t(a) === t(b) ? 0 : (t(a) < t(b) ? -1 : 1)));
+  } else {
+    items.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  }
+  if (!items.length) list.appendChild(el("p", "center", "لا يوجد شيء هنا حتى الآن"));
+  items.forEach((it) => list.appendChild(card(sec, it)));
+}
+
 async function showProfile() {
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) { $("login-box").hidden = false; $("user-box").hidden = true; return; }
+  if (!session) {
+    $("login-box").hidden = false;
+    $("pending-box").hidden = true;
+    $("app").hidden = true;
+    $("logout").hidden = true;
+    return;
+  }
+  state.userId = session.user.id;
   const { data, error } = await sb.from("profiles")
-    .select("first_name, role, approved").eq("id", session.user.id).single();
+    .select("first_name, role, approved").eq("id", state.userId).single();
   if (error || !data) { say("تعذّر تحميل الحساب"); return; }
+
   $("login-box").hidden = true;
-  $("user-box").hidden = false;
-  $("welcome").textContent = "أهلًا " + (data.first_name || "");
-  $("status").textContent = data.approved
-    ? "STATUS: APPROVED / " + data.role
-    : "STATUS: PENDING APPROVAL";
+  $("logout").hidden = false;
+  state.role = data.role;
+
+  if (!data.approved) {
+    $("welcome").textContent = "أهلًا " + (data.first_name || "");
+    $("pending-box").hidden = false;
+    $("app").hidden = true;
+    return;
+  }
+  $("pending-box").hidden = true;
+  $("app").hidden = false;
+  $("hello").textContent = "WELCOME " + (data.first_name || "") + " / " + data.role;
   say("");
+  await loadData();
 }
 
 async function onTelegramAuth(user) {
