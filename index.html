@@ -66,6 +66,7 @@
       <button id="theme-btn" class="small"></button>
       <button id="courses-btn" class="small" hidden>موادّي</button>
       <button id="manage-btn" class="small" hidden>إدارة المواد</button>
+      <button id="people-btn" class="small" hidden>users</button>
       <button id="log-btn" class="small" hidden>السجل</button>
       <button id="logout" class="small" hidden>خروج</button>
     </div>
@@ -84,12 +85,13 @@
 
   <div id="pending-box" class="card center" hidden>
     <p id="welcome"></p>
-    <p class="label" style="text-align:center">STATUS: PENDING APPROVAL</p>
-    <p>الحساب في انتظار الموافقة من المسؤولين.</p>
+    <p class="label" style="text-align:center">STATUS: SUSPENDED</p>
+    <p>الحساب غير مفعّل حاليًا. للاستفسار، برجاء التواصل مع المسؤولين.</p>
   </div>
 
   <div id="picker-box" class="card" hidden></div>
   <div id="courses-box" hidden></div>
+  <div id="people-box" hidden></div>
   <div id="log-box" hidden></div>
 
   <div id="app" hidden>
@@ -109,7 +111,14 @@ const SUPABASE_KEY = "sb_publishable_GxJNb-tD7jTgxskyPpgVLQ_ZNJZ9mm3";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const $ = (id) => document.getElementById(id);
-function say(t) { $("msg").textContent = t; }
+
+/* الرسائل تختفي بعد 5 ثواني (إلا لو keep) */
+let sayTimer = null;
+function say(t, keep) {
+  $("msg").textContent = t;
+  clearTimeout(sayTimer);
+  if (t && !keep) sayTimer = setTimeout(() => { $("msg").textContent = ""; }, 5000);
+}
 function el(tag, cls, text) {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
@@ -172,8 +181,20 @@ function safeUrl(u) {
   } catch (e) { return null; }
 }
 
+const roleLabels = { student: "عادي", admin: "أدمن", full_admin: "أدمن كامل" };
+const roleRank = { full_admin: 0, admin: 1, student: 2 };
+
+function rpcMsg(error) {
+  const m = (error && error.message) || "";
+  if (m.includes("last_full_admin")) return "لا يمكن ذلك: هذا آخر أدمن كامل";
+  if (m.includes("cannot_self")) return "لا يمكن تنفيذ ذلك على الحساب الشخصي";
+  if (m.includes("not_allowed")) return "غير مسموح";
+  return "تعذّر التنفيذ";
+}
+
 const state = { userId: null, role: null, sections: [], items: [], progress: {},
   personal: [], courses: [], mine: new Set(), chosen: false,
+  people: [], peopleQuery: "", peopleLimit: 50,
   active: null, filter: "all", trash: false, form: null, pform: null, logLimit: 100 };
 const isAdmin = () => state.role === "admin" || state.role === "full_admin";
 const isFull = () => state.role === "full_admin";
@@ -183,9 +204,11 @@ function setView(v) {
   $("app").hidden = v !== "app";
   $("picker-box").hidden = v !== "picker";
   $("courses-box").hidden = v !== "courses";
+  $("people-box").hidden = v !== "people";
   $("log-box").hidden = v !== "log";
   if (v === "picker") renderPicker();
   if (v === "courses") renderCourses();
+  if (v === "people") renderPeople(true);
   if (v === "log") renderLog();
   if (v === "app") render();
 }
@@ -195,7 +218,7 @@ async function loadCourses() {
     sb.from("courses").select("id,name,sort_order,is_active").order("sort_order").order("name"),
     sb.from("user_courses").select("course_id"),
   ]);
-  if (c.error || u.error) { say("تعذّر تحميل المواد"); return false; }
+  if (c.error || u.error) { say("تعذّر تحميل المواد", true); return false; }
   state.courses = c.data;
   state.mine = new Set(u.data.map((r) => r.course_id));
   return true;
@@ -208,7 +231,7 @@ async function fetchData() {
     sb.from("progress").select("item_id,done,submitted"),
     sb.from("personal_items").select("id,title,body,deadline,done,created_at"),
   ]);
-  if (s.error || i.error || p.error || pi.error) { say("تعذّر تحميل البيانات"); return false; }
+  if (s.error || i.error || p.error || pi.error) { say("تعذّر تحميل البيانات", true); return false; }
   state.sections = s.data;
   state.items = i.data;
   state.personal = pi.data;
@@ -363,10 +386,118 @@ function renderCourses() {
   });
 }
 
+/* users (للأدمن الكامل) */
+async function changeRole(p, role, sel) {
+  if (role === p.role) return;
+  if (!confirm("تغيير دور " + (p.first_name || "هذا الحساب") + " إلى " + roleLabels[role] + "؟")) {
+    sel.value = p.role;
+    return;
+  }
+  const { error } = await sb.rpc("set_role", { target: p.id, new_role: role });
+  if (error) { sel.value = p.role; say(rpcMsg(error)); return; }
+  p.role = role;
+  say("تم تغيير الدور");
+  renderPeople(false);
+}
+
+async function toggleBlock(p) {
+  const block = p.approved;
+  const q = block
+    ? "إيقاف هذا الحساب؟ لن يرى أي محتوى حتى يتم تفعيله."
+    : "تفعيل هذا الحساب؟";
+  if (!confirm(q)) return;
+  const { error } = await sb.rpc("set_blocked", { target: p.id, blocked: block });
+  if (error) { say(rpcMsg(error)); return; }
+  p.approved = !block;
+  say(block ? "تم إيقاف الحساب" : "تم تفعيل الحساب");
+  renderPeople(false);
+}
+
+function personCard(p) {
+  const c = el("div", "card");
+  c.appendChild(el("h3", "", p.first_name || "—"));
+  const who = (p.username ? "@" + p.username : "بدون يوزر") + " · " + (roleLabels[p.role] || p.role)
+    + (p.approved ? "" : " · موقوف");
+  c.appendChild(el("p", "meta", who));
+  if (p.id === state.userId) {
+    c.appendChild(el("p", "meta", "هذا هو الحساب الحالي"));
+    return c;
+  }
+  const row = el("div", "row");
+  const sel = el("select");
+  sel.style.width = "auto";
+  ["student", "admin", "full_admin"].forEach((r) => {
+    const o = el("option", "", roleLabels[r]);
+    o.value = r;
+    sel.appendChild(o);
+  });
+  sel.value = p.role;
+  sel.addEventListener("change", () => changeRole(p, sel.value, sel));
+  row.appendChild(sel);
+  const bl = el("button", "small" + (p.approved ? " danger" : ""), p.approved ? "إيقاف الحساب" : "تفعيل الحساب");
+  bl.addEventListener("click", () => toggleBlock(p));
+  row.appendChild(bl);
+  c.appendChild(row);
+  return c;
+}
+
+async function renderPeople(reload) {
+  const box = $("people-box");
+  if (reload) {
+    showLoading(true);
+    const { data, error } = await sb.from("profiles")
+      .select("id,first_name,username,role,approved,created_at")
+      .order("created_at", { ascending: false });
+    showLoading(false);
+    if (error) { say("تعذّر تحميل الحسابات", true); return; }
+    state.people = data;
+    state.peopleQuery = "";
+    state.peopleLimit = 50;
+  }
+  box.replaceChildren();
+  const top = el("div", "row");
+  top.appendChild(el("h3", "", "users"));
+  const back = el("button", "small", "رجوع");
+  back.addEventListener("click", () => setView("app"));
+  top.appendChild(back);
+  box.appendChild(top);
+
+  const q = el("input");
+  q.type = "text";
+  q.placeholder = "بحث بالاسم أو اليوزر";
+  q.value = state.peopleQuery;
+  box.appendChild(q);
+  const info = el("p", "meta");
+  box.appendChild(info);
+  const res = el("div");
+  box.appendChild(res);
+
+  const paint = () => {
+    res.replaceChildren();
+    const s = state.peopleQuery.trim().toLowerCase().replace(/^@/, "");
+    const all = state.people.filter((p) => !s
+      || (p.first_name || "").toLowerCase().includes(s)
+      || (p.username || "").toLowerCase().includes(s));
+    all.sort((a, b) => (roleRank[a.role] ?? 3) - (roleRank[b.role] ?? 3));
+    const shown = all.slice(0, state.peopleLimit);
+    info.textContent = "الحسابات: " + state.people.length + (s ? " · النتائج: " + all.length : "");
+    shown.forEach((p) => res.appendChild(personCard(p)));
+    if (all.length > shown.length) {
+      const more = el("button", "", "عرض المزيد");
+      more.addEventListener("click", () => { state.peopleLimit += 50; paint(); });
+      res.appendChild(more);
+    }
+  };
+  q.addEventListener("input", () => { state.peopleQuery = q.value; state.peopleLimit = 50; paint(); });
+  paint();
+}
+
 /* السجل (للأدمنز) */
 const actLabels = {
   add: "إضافة", edit: "تعديل", delete: "حذف (إلى السلة)",
   restore: "استرجاع", purge: "حذف نهائي",
+  role: "تغيير الدور", block: "إيقاف حساب", unblock: "تفعيل حساب",
+  clear_log: "مسح السجل",
 };
 
 async function renderLog() {
@@ -379,7 +510,7 @@ async function renderLog() {
     sb.from("profiles").select("id,first_name,username"),
   ]);
   showLoading(false);
-  if (l.error || p.error) { say("تعذّر تحميل السجل"); return; }
+  if (l.error || p.error) { say("تعذّر تحميل السجل", true); return; }
   const names = {};
   p.data.forEach((x) => { names[x.id] = x.first_name || (x.username ? "@" + x.username : "—"); });
 
@@ -388,6 +519,17 @@ async function renderLog() {
   const back = el("button", "small", "رجوع");
   back.addEventListener("click", () => setView("app"));
   top.appendChild(back);
+  if (isFull() && l.data.length) {
+    const clr = el("button", "small danger", "مسح السجل");
+    clr.addEventListener("click", async () => {
+      if (!confirm("مسح كل السجل؟ لا يمكن التراجع، وسيبقى سطر واحد يوضح من قام بالمسح.")) return;
+      const { error } = await sb.rpc("clear_audit_log");
+      if (error) { say(rpcMsg(error)); return; }
+      say("تم مسح السجل");
+      renderLog();
+    });
+    top.appendChild(clr);
+  }
   box.appendChild(top);
 
   if (!l.data.length) box.appendChild(el("p", "center", "لا توجد سجلات بعد"));
@@ -395,7 +537,8 @@ async function renderLog() {
     const c = el("div", "card");
     c.appendChild(el("h3", "", (r.details && r.details.title) || "—"));
     const who = r.actor ? (names[r.actor] || "—") : "النظام";
-    c.appendChild(el("p", "meta", (actLabels[r.action] || r.action) + " · " + who));
+    const to = r.details && r.details.to ? " → " + (roleLabels[r.details.to] || r.details.to) : "";
+    c.appendChild(el("p", "meta", (actLabels[r.action] || r.action) + to + " · " + who));
     c.appendChild(el("p", "meta", logFmt.format(new Date(r.created_at))));
     box.appendChild(c);
   });
@@ -404,7 +547,7 @@ async function renderLog() {
     more.addEventListener("click", () => { state.logLimit += 100; renderLog(); });
     box.appendChild(more);
   }
-      }
+}
 
 /* التقدّم والحذف */
 async function save(itemId, done, submitted) {
@@ -778,9 +921,11 @@ function hideAll() {
   $("app").hidden = true;
   $("picker-box").hidden = true;
   $("courses-box").hidden = true;
+  $("people-box").hidden = true;
   $("log-box").hidden = true;
   $("courses-btn").hidden = true;
   $("manage-btn").hidden = true;
+  $("people-btn").hidden = true;
   $("log-btn").hidden = true;
 }
 
@@ -802,7 +947,7 @@ async function showProfile() {
 
   const { data, error } = await sb.from("profiles")
     .select("first_name, role, approved, courses_chosen").eq("id", state.userId).single();
-  if (error || !data) { showLoading(false); say("تعذّر تحميل الحساب"); return; }
+  if (error || !data) { showLoading(false); say("تعذّر تحميل الحساب", true); return; }
 
   state.role = data.role;
   state.chosen = !!data.courses_chosen;
@@ -823,6 +968,7 @@ async function showProfile() {
   $("courses-btn").hidden = false;
   $("manage-btn").hidden = !isAdmin();
   $("log-btn").hidden = !isAdmin();
+  $("people-btn").hidden = !isFull();
   if (!state.chosen && state.courses.some((c) => c.is_active)) setView("picker");
   else setView("app");
 }
@@ -841,6 +987,7 @@ async function onTelegramAuth(user) {
 
 $("courses-btn").addEventListener("click", () => setView("picker"));
 $("manage-btn").addEventListener("click", () => setView("courses"));
+$("people-btn").addEventListener("click", () => setView("people"));
 $("log-btn").addEventListener("click", () => { state.logLimit = 100; setView("log"); });
 $("logout").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
 showProfile();
