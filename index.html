@@ -90,6 +90,7 @@
   <div id="log-box" hidden></div>
   <div id="app" hidden>
     <p id="hello" class="label"></p>
+    <div id="bot-banner" class="card" hidden></div>
     <div id="tabs" class="tabs"></div>
     <div id="chips" class="chips"></div>
     <div id="list"></div>
@@ -229,7 +230,7 @@ function rpcMsg(error) {
 const state = { userId: null, role: null, sections: [], items: [], progress: {},
   personal: [], courses: [], mine: new Set(), chosen: false,
   people: [], peopleQuery: "", peopleLimit: 50,
-  active: null, filter: "all", trash: false, form: null, pform: null, logLimit: 100 };
+  active: null, filter: "all", trash: false, form: null, pform: null, logLimit: 100, botOk: null };
 const isAdmin = () => state.role === "admin" || state.role === "full_admin";
 const isFull = () => state.role === "full_admin";
 const courseName = (id) => (state.courses.find((c) => c.id === id) || {}).name || "";
@@ -438,7 +439,8 @@ function personCard(p) {
   const c = el("div", "card");
   c.appendChild(el("h3", "", p.first_name || "—"));
   const who = (p.username ? "@" + p.username : "بدون يوزر") + " · " + (roleLabels[p.role] || p.role)
-    + (p.approved ? "" : " · موقوف");
+    + (p.approved ? "" : " · موقوف")
+    + (p.bot_ok === false ? " · الإشعارات متوقفة" : "");
   c.appendChild(el("p", "meta", who));
   if (p.id === state.userId) {
     c.appendChild(el("p", "meta", "هذا هو الحساب الحالي"));
@@ -466,7 +468,7 @@ async function renderPeople(reload) {
   if (reload) {
     showLoading(true);
     const { data, error } = await sb.from("profiles")
-      .select("id,first_name,username,role,approved,created_at")
+      .select("id,first_name,username,role,approved,created_at,bot_ok")
       .order("created_at", { ascending: false });
     showLoading(false);
     if (error) { say("تعذّر تحميل الحسابات", true); return; }
@@ -933,7 +935,41 @@ function renderChips(sec) {
     : state.courses.filter((c) => c.is_active);
   list.forEach((c) => add(c.name, c.id));
 }
+/* تنبيه الإشعارات المتوقفة */
+function renderBotBanner() {
+  const b = $("bot-banner");
+  b.replaceChildren();
+  if (state.botOk !== false) { b.hidden = true; return; }
+  b.hidden = false;
+  b.appendChild(el("h3", "", "الإشعارات على تيليجرام متوقفة"));
+  b.appendChild(el("p", "", "لا يمكن للبوت إرسال رسائل لهذا الحساب حاليًا، لذلك لن تصل إشعارات التكاليف والأخبار. الحل: فتح البوت والضغط على Start، ثم الضغط على «إعادة المحاولة»."));
+  const row = el("div", "row");
+  const open = el("a", "btn", "فتح البوت");
+  open.href = "https://t.me/MATHDEPARTMENT_BOT";
+  open.target = "_blank";
+  open.rel = "noopener noreferrer";
+  const retry = el("button", "", "إعادة المحاولة");
+  retry.addEventListener("click", retryBot);
+  row.appendChild(open);
+  row.appendChild(retry);
+  b.appendChild(row);
+}
+async function refreshBotStatus() {
+  const { data } = await sb.from("profiles").select("bot_ok").eq("id", state.userId).single();
+  if (data) { state.botOk = data.bot_ok; renderBotBanner(); }
+}
+async function retryBot() {
+  const { error } = await sb.rpc("resend_welcome");
+  if (error) {
+    say((error.message || "").includes("too_soon") ? "تمت المحاولة للتو، يُرجى الانتظار دقيقتين" : "تعذّر التنفيذ");
+    return;
+  }
+  say("تم إرسال رسالة اختبار. عند وصولها على تيليجرام سيختفي هذا التنبيه بعد قليل");
+  setTimeout(refreshBotStatus, 75000);
+  setTimeout(refreshBotStatus, 150000);
+}
 function render() {
+  renderBotBanner();
   const tabs = $("tabs");
   tabs.replaceChildren();
   state.sections.forEach((sec) => {
@@ -1037,10 +1073,11 @@ async function showProfile() {
   state.userId = session.user.id;
   $("logout").hidden = false;
   const { data, error } = await sb.from("profiles")
-    .select("first_name, role, approved, courses_chosen").eq("id", state.userId).single();
+    .select("first_name, role, approved, courses_chosen, bot_ok").eq("id", state.userId).single();
   if (error || !data) { showLoading(false); say("تعذّر تحميل الحساب", true); return; }
   state.role = data.role;
   state.chosen = !!data.courses_chosen;
+  state.botOk = data.bot_ok;
   if (!data.approved) {
     showLoading(false);
     $("welcome").textContent = "أهلًا " + (data.first_name || "");
