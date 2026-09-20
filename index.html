@@ -64,20 +64,20 @@
     </div>
     <div class="row">
       <button id="theme-btn" class="small"></button>
-      <button id="courses-btn" class="small" hidden>موادّي</button>
-      <button id="manage-btn" class="small" hidden>إدارة المواد</button>
+      <button id="courses-btn" class="small" hidden>\u0645\u0648\u0627\u062f\u0651\u064a</button>
+      <button id="manage-btn" class="small" hidden>\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u0648\u0627\u062f</button>
       <button id="people-btn" class="small" hidden>users</button>
-      <button id="log-btn" class="small" hidden>السجل</button>
-      <button id="logout" class="small" hidden>خروج</button>
+      <button id="log-btn" class="small" hidden>\u0627\u0644\u0633\u062c\u0644</button>
+      <button id="logout" class="small" hidden>\u062e\u0631\u0648\u062c</button>
     </div>
   </header>
 
   <div id="loading" class="card center">
-    <p>جاري التحميل...</p>
+    <p>\u062c\u0627\u0631\u064a \u0627\u0644\u062a\u062d\u0645\u064a\u0644...</p>
   </div>
 
   <div id="login-box" class="card center" hidden>
-    <p>الدخول بتيليجرام</p>
+    <p>\u0627\u0644\u062f\u062e\u0648\u0644 \u0628\u062a\u064a\u0644\u064a\u062c\u0631\u0627\u0645</p>
     <script async src="https://telegram.org/js/telegram-widget.js?22"
       data-telegram-login="MATHDEPARTMENT_BOT" data-size="large"
       data-onauth="onTelegramAuth(user)" data-request-access="write"></script>
@@ -86,7 +86,7 @@
   <div id="pending-box" class="card center" hidden>
     <p id="welcome"></p>
     <p class="label" style="text-align:center">STATUS: SUSPENDED</p>
-    <p>الحساب غير مفعّل حاليًا. للاستفسار، برجاء التواصل مع المسؤولين.</p>
+    <p>\u0627\u0644\u062d\u0633\u0627\u0628 \u063a\u064a\u0631 \u0645\u0641\u0639\u0651\u0644 \u062d\u0627\u0644\u064a\u064b\u0627. \u0644\u0644\u0627\u0633\u062a\u0641\u0633\u0627\u0631\u060c \u0628\u0631\u062c\u0627\u0621 \u0627\u0644\u062a\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0633\u0624\u0648\u0644\u064a\u0646.</p>
   </div>
 
   <div id="picker-box" class="card" hidden></div>
@@ -112,7 +112,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const $ = (id) => document.getElementById(id);
 
-/* الرسائل تختفي بعد 5 ثواني (إلا لو keep) */
+/* \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u062a\u062e\u062a\u0641\u064a \u0628\u0639\u062f 5 \u062b\u0648\u0627\u0646\u064a (\u0625\u0644\u0627 \u0644\u0648 keep) */
 let sayTimer = null;
 function say(t, keep) {
   $("msg").textContent = t;
@@ -127,15 +127,15 @@ function el(tag, cls, text) {
 }
 function showLoading(on) { $("loading").hidden = !on; }
 
-/* المظهر */
-const labels = { auto: "تلقائي", dark: "داكن", light: "فاتح" };
+/* \u0627\u0644\u0645\u0638\u0647\u0631 */
+const labels = { auto: "\u062a\u0644\u0642\u0627\u0626\u064a", dark: "\u062f\u0627\u0643\u0646", light: "\u0641\u0627\u062a\u062d" };
 const order = ["auto", "dark", "light"];
 let theme = "auto";
 try { theme = localStorage.getItem("theme") || "auto"; } catch (e) {}
 function applyTheme() {
   if (theme === "auto") document.documentElement.removeAttribute("data-theme");
   else document.documentElement.setAttribute("data-theme", theme);
-  $("theme-btn").textContent = "المظهر: " + labels[theme];
+  $("theme-btn").textContent = "\u0627\u0644\u0645\u0638\u0647\u0631: " + labels[theme];
 }
 $("theme-btn").addEventListener("click", () => {
   theme = order[(order.indexOf(theme) + 1) % order.length];
@@ -144,7 +144,7 @@ $("theme-btn").addEventListener("click", () => {
 });
 applyTheme();
 
-/* التوقيت (توقيت مصر) */
+/* \u0627\u0644\u062a\u0648\u0642\u064a\u062a (\u062a\u0648\u0642\u064a\u062a \u0645\u0635\u0631) */
 const dateFmt = new Intl.DateTimeFormat("ar-EG", {
   timeZone: "Africa/Cairo", dateStyle: "full", timeStyle: "short",
 });
@@ -181,15 +181,15 @@ function safeUrl(u) {
   } catch (e) { return null; }
 }
 
-const roleLabels = { student: "عادي", admin: "أدمن", full_admin: "أدمن كامل" };
+const roleLabels = { student: "\u0639\u0627\u062f\u064a", admin: "\u0623\u062f\u0645\u0646", full_admin: "\u0645\u0627\u0644\u0643" };
 const roleRank = { full_admin: 0, admin: 1, student: 2 };
 
 function rpcMsg(error) {
   const m = (error && error.message) || "";
-  if (m.includes("last_full_admin")) return "لا يمكن ذلك: هذا آخر أدمن كامل";
-  if (m.includes("cannot_self")) return "لا يمكن تنفيذ ذلك على الحساب الشخصي";
-  if (m.includes("not_allowed")) return "غير مسموح";
-  return "تعذّر التنفيذ";
+  if (m.includes("last_full_admin")) return "\u0644\u0627 \u064a\u0645\u0643\u0646 \u0630\u0644\u0643: \u0647\u0630\u0627 \u0622\u062e\u0631 \u0645\u0627\u0644\u0643";
+  if (m.includes("cannot_self")) return "\u0644\u0627 \u064a\u0645\u0643\u0646 \u062a\u0646\u0641\u064a\u0630 \u0630\u0644\u0643 \u0639\u0644\u0649 \u0627\u0644\u062d\u0633\u0627\u0628 \u0627\u0644\u0634\u062e\u0635\u064a";
+  if (m.includes("not_allowed")) return "\u063a\u064a\u0631 \u0645\u0633\u0645\u0648\u062d";
+  return "\u062a\u0639\u0630\u0651\u0631 \u0627\u0644\u062a\u0646\u0641\u064a\u0630";
 }
 
 const state = { userId: null, role: null, sections: [], items: [], progress: {},
@@ -218,7 +218,7 @@ async function loadCourses() {
     sb.from("courses").select("id,name,sort_order,is_active").order("sort_order").order("name"),
     sb.from("user_courses").select("course_id"),
   ]);
-  if (c.error || u.error) { say("تعذّر تحميل المواد", true); return false; }
+  if (c.error || u.error) { say("\u062a\u0639\u0630\u0651\u0631 \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0645\u0648\u0627\u062f", true); return false; }
   state.courses = c.data;
   state.mine = new Set(u.data.map((r) => r.course_id));
   return true;
@@ -231,7 +231,7 @@ async function fetchData() {
     sb.from("progress").select("item_id,done,submitted"),
     sb.from("personal_items").select("id,title,body,deadline,done,created_at"),
   ]);
-  if (s.error || i.error || p.error || pi.error) { say("تعذّر تحميل البيانات", true); return false; }
+  if (s.error || i.error || p.error || pi.error) { say("\u062a\u0639\u0630\u0651\u0631 \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a", true); return false; }
   state.sections = s.data;
   state.items = i.data;
   state.personal = pi.data;
@@ -265,22 +265,22 @@ function field(text, node) {
   return w;
 }
 
-/* اختيار المواد */
+/* \u0627\u062e\u062a\u064a\u0627\u0631 \u0627\u0644\u0645\u0648\u0627\u062f */
 function renderPicker() {
   const box = $("picker-box");
   box.replaceChildren();
-  box.appendChild(el("h3", "", "اختيار المواد"));
-  box.appendChild(el("p", "", "اختيار المواد المسجَّل فيها. تظهر التكاليف الخاصة بها فقط، ويمكن تغيير الاختيار في أي وقت."));
+  box.appendChild(el("h3", "", "\u0627\u062e\u062a\u064a\u0627\u0631 \u0627\u0644\u0645\u0648\u0627\u062f"));
+  box.appendChild(el("p", "", "\u0627\u062e\u062a\u064a\u0627\u0631 \u0627\u0644\u0645\u0648\u0627\u062f \u0627\u0644\u0645\u0633\u062c\u064e\u0651\u0644 \u0641\u064a\u0647\u0627. \u062a\u0638\u0647\u0631 \u0627\u0644\u062a\u0643\u0627\u0644\u064a\u0641 \u0627\u0644\u062e\u0627\u0635\u0629 \u0628\u0647\u0627 \u0641\u0642\u0637\u060c \u0648\u064a\u0645\u0643\u0646 \u062a\u063a\u064a\u064a\u0631 \u0627\u0644\u0627\u062e\u062a\u064a\u0627\u0631 \u0641\u064a \u0623\u064a \u0648\u0642\u062a."));
   const sel = new Set(state.mine);
   const act = state.courses.filter((c) => c.is_active);
-  if (!act.length) box.appendChild(el("p", "meta", "لا توجد مواد بعد"));
+  if (!act.length) box.appendChild(el("p", "meta", "\u0644\u0627 \u062a\u0648\u062c\u062f \u0645\u0648\u0627\u062f \u0628\u0639\u062f"));
   act.forEach((c) => {
     const row = el("div");
     row.appendChild(check(c.name, sel.has(c.id), (v) => { if (v) sel.add(c.id); else sel.delete(c.id); }));
     box.appendChild(row);
   });
   const row = el("div", "row");
-  const ok = el("button", "", "حفظ");
+  const ok = el("button", "", "\u062d\u0641\u0638");
   ok.addEventListener("click", async () => {
     ok.disabled = true;
     let e = (await sb.from("user_courses").delete().eq("user_id", state.userId)).error;
@@ -291,30 +291,30 @@ function renderPicker() {
     }
     if (!e) e = (await sb.from("profiles").update({ courses_chosen: true }).eq("id", state.userId)).error;
     ok.disabled = false;
-    if (e) { say("تعذّر الحفظ"); return; }
+    if (e) { say("\u062a\u0639\u0630\u0651\u0631 \u0627\u0644\u062d\u0641\u0638"); return; }
     state.chosen = true;
     state.mine = new Set(sel);
     state.filter = "all";
-    say("تم الحفظ");
+    say("\u062a\u0645 \u0627\u0644\u062d\u0641\u0638");
     await loadData();
     setView("app");
   });
   row.appendChild(ok);
   if (state.chosen) {
-    const cancel = el("button", "", "إلغاء");
+    const cancel = el("button", "", "\u0625\u0644\u063a\u0627\u0621");
     cancel.addEventListener("click", () => setView("app"));
     row.appendChild(cancel);
   }
   box.appendChild(row);
 }
 
-/* إدارة المواد (للأدمنز) */
+/* \u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u0648\u0627\u062f (\u0644\u0644\u0623\u062f\u0645\u0646\u0632) */
 function renderCourses() {
   const box = $("courses-box");
   box.replaceChildren();
   const top = el("div", "row");
-  top.appendChild(el("h3", "", "إدارة المواد"));
-  const back = el("button", "small", "رجوع");
+  top.appendChild(el("h3", "", "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u0648\u0627\u062f"));
+  const back = el("button", "small", "\u0631\u062c\u0648\u0639");
   back.addEventListener("click", () => setView("app"));
   top.appendChild(back);
   box.appendChild(top);
@@ -322,17 +322,17 @@ function renderCourses() {
   const add = el("div", "card");
   const inp = el("input");
   inp.type = "text";
-  inp.placeholder = "اسم المادة";
+  inp.placeholder = "\u0627\u0633\u0645 \u0627\u0644\u0645\u0627\u062f\u0629";
   add.appendChild(inp);
-  const b = el("button", "", "إضافة مادة");
+  const b = el("button", "", "\u0625\u0636\u0627\u0641\u0629 \u0645\u0627\u062f\u0629");
   b.style.marginTop = "8px";
   b.addEventListener("click", async () => {
     const name = inp.value.trim();
-    if (!name) { say("اسم المادة مطلوب"); return; }
+    if (!name) { say("\u0627\u0633\u0645 \u0627\u0644\u0645\u0627\u062f\u0629 \u0645\u0637\u0644\u0648\u0628"); return; }
     const next = state.courses.reduce((m, c) => Math.max(m, c.sort_order), 0) + 1;
     const { error } = await sb.from("courses").insert({ name, sort_order: next });
-    if (error) { say(error.code === "23505" ? "المادة موجودة بالفعل" : "تعذّر الحفظ"); return; }
-    say("تمت الإضافة");
+    if (error) { say(error.code === "23505" ? "\u0627\u0644\u0645\u0627\u062f\u0629 \u0645\u0648\u062c\u0648\u062f\u0629 \u0628\u0627\u0644\u0641\u0639\u0644" : "\u062a\u0639\u0630\u0651\u0631 \u0627\u0644\u062d\u0641\u0638"); return; }
+    say("\u062a\u0645\u062a \u0627\u0644\u0625\u0636\u0627\u0641\u0629");
     await loadCourses();
     renderCourses();
   });
@@ -341,22 +341,22 @@ function renderCourses() {
 
   state.courses.forEach((c) => {
     const card = el("div", "card");
-    card.appendChild(el("h3", "", c.name + (c.is_active ? "" : " (متوقفة)")));
+    card.appendChild(el("h3", "", c.name + (c.is_active ? "" : " (\u0645\u062a\u0648\u0642\u0641\u0629)")));
     const row = el("div", "row");
-    const rn = el("button", "small", "تعديل الاسم");
+    const rn = el("button", "small", "\u062a\u0639\u062f\u064a\u0644 \u0627\u0644\u0627\u0633\u0645");
     rn.addEventListener("click", async () => {
-      const name = (prompt("الاسم الجديد", c.name) || "").trim();
+      const name = (prompt("\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u062c\u062f\u064a\u062f", c.name) || "").trim();
       if (!name || name === c.name) return;
       const { error } = await sb.from("courses").update({ name }).eq("id", c.id);
-      if (error) { say(error.code === "23505" ? "الاسم مستخدم بالفعل" : "تعذّر الحفظ"); return; }
+      if (error) { say(error.code === "23505" ? "\u0627\u0644\u0627\u0633\u0645 \u0645\u0633\u062a\u062e\u062f\u0645 \u0628\u0627\u0644\u0641\u0639\u0644" : "\u062a\u0639\u0630\u0651\u0631 \u0627\u0644\u062d\u0641\u0638"); return; }
       say("");
       await loadCourses();
       renderCourses();
     });
-    const tg = el("button", "small", c.is_active ? "إيقاف" : "تفعيل");
+    const tg = el("button", "small", c.is_active ? "\u0625\u064a\u0642\u0627\u0641" : "\u062a\u0641\u0639\u064a\u0644");
     tg.addEventListener("click", async () => {
       const { error } = await sb.from("courses").update({ is_active: !c.is_active }).eq("id", c.id);
-      if (error) { say("تعذّر الحفظ"); return; }
+      if (error) { say("\u062a\u0639\u0630\u0651\u0631 \u0627\u0644\u062d\u0641\u0638"); return; }
       say("");
       await loadCourses();
       renderCourses();
@@ -364,18 +364,18 @@ function renderCourses() {
     row.appendChild(rn);
     row.appendChild(tg);
     if (isFull()) {
-      const del = el("button", "small danger", "حذف");
+      const del = el("button", "small danger", "\u062d\u0630\u0641");
       del.addEventListener("click", async () => {
-        if (!confirm("حذف المادة نهائيًا؟ سيتم إلغاء تسجيل الناس فيها ولا يمكن التراجع.")) return;
+        if (!confirm("\u062d\u0630\u0641 \u0627\u0644\u0645\u0627\u062f\u0629 \u0646\u0647\u0627\u0626\u064a\u064b\u0627\u061f \u0633\u064a\u062a\u0645 \u0625\u0644\u063a\u0627\u0621 \u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u0646\u0627\u0633 \u0641\u064a\u0647\u0627 \u0648\u0644\u0627 \u064a\u0645\u0643\u0646 \u0627\u0644\u062a\u0631\u0627\u062c\u0639.")) return;
         const { data, error } = await sb.from("courses").delete().eq("id", c.id).select("id");
         if (error) {
           say(error.code === "23503"
-            ? "المادة مرتبطة بعناصر (حتى الموجودة في السلة). الأفضل إيقافها، أو حذف عناصرها أولًا."
-            : "تعذّر الحذف");
+            ? "\u0627\u0644\u0645\u0627\u062f\u0629 \u0645\u0631\u062a\u0628\u0637\u0629 \u0628\u0639\u0646\u0627\u0635\u0631 (\u062d\u062a\u0649 \u0627\u0644\u0645\u0648\u062c\u0648\u062f\u0629 \u0641\u064a \u0627\u0644\u0633\u0644\u0629). \u0627\u0644\u0623\u0641\u0636\u0644 \u0625\u064a\u0642\u0627\u0641\u0647\u0627\u060c \u0623\u0648 \u062d\u0630\u0641 \u0639\u0646\u0627\u0635\u0631\u0647\u0627 \u0623\u0648\u0644\u064b\u0627."
+            : "\u062a\u0639\u0630\u0651\u0631 \u0627\u0644\u062d\u0630\u0641");
           return;
         }
-        if (!data || !data.length) { say("تعذّر الحذف"); return; }
-        say("تم الحذف");
+        if (!data || !data.length) { say("\u062a\u0639\u0630\u0651\u0631 \u0627\u0644\u062d\u0630\u0641"); return; }
+        say("\u062a\u0645 \u0627\u0644\u062d\u0630\u0641");
         await loadCourses();
         renderCourses();
       });
@@ -386,41 +386,41 @@ function renderCourses() {
   });
 }
 
-/* users (للأدمن الكامل) */
+/* users (\u0644\u0644\u0623\u062f\u0645\u0646 \u0627\u0644\u0643\u0627\u0645\u0644) */
 async function changeRole(p, role, sel) {
   if (role === p.role) return;
-  if (!confirm("تغيير دور " + (p.first_name || "هذا الحساب") + " إلى " + roleLabels[role] + "؟")) {
+  if (!confirm("\u062a\u063a\u064a\u064a\u0631 \u062f\u0648\u0631 " + (p.first_name || "\u0647\u0630\u0627 \u0627\u0644\u062d\u0633\u0627\u0628") + " \u0625\u0644\u0649 " + roleLabels[role] + "\u061f")) {
     sel.value = p.role;
     return;
   }
   const { error } = await sb.rpc("set_role", { target: p.id, new_role: role });
   if (error) { sel.value = p.role; say(rpcMsg(error)); return; }
   p.role = role;
-  say("تم تغيير الدور");
+  say("\u062a\u0645 \u062a\u063a\u064a\u064a\u0631 \u0627\u0644\u062f\u0648\u0631");
   renderPeople(false);
 }
 
 async function toggleBlock(p) {
   const block = p.approved;
   const q = block
-    ? "إيقاف هذا الحساب؟ لن يرى أي محتوى حتى يتم تفعيله."
-    : "تفعيل هذا الحساب؟";
+    ? "\u0625\u064a\u0642\u0627\u0641 \u0647\u0630\u0627 \u0627\u0644\u062d\u0633\u0627\u0628\u061f \u0644\u0646 \u064a\u0631\u0649 \u0623\u064a \u0645\u062d\u062a\u0648\u0649 \u062d\u062a\u0649 \u064a\u062a\u0645 \u062a\u0641\u0639\u064a\u0644\u0647."
+    : "\u062a\u0641\u0639\u064a\u0644 \u0647\u0630\u0627 \u0627\u0644\u062d\u0633\u0627\u0628\u061f";
   if (!confirm(q)) return;
   const { error } = await sb.rpc("set_blocked", { target: p.id, blocked: block });
   if (error) { say(rpcMsg(error)); return; }
   p.approved = !block;
-  say(block ? "تم إيقاف الحساب" : "تم تفعيل الحساب");
+  say(block ? "\u062a\u0645 \u0625\u064a\u0642\u0627\u0641 \u0627\u0644\u062d\u0633\u0627\u0628" : "\u062a\u0645 \u062a\u0641\u0639\u064a\u0644 \u0627\u0644\u062d\u0633\u0627\u0628");
   renderPeople(false);
 }
 
 function personCard(p) {
   const c = el("div", "card");
-  c.appendChild(el("h3", "", p.first_name || "—"));
-  const who = (p.username ? "@" + p.username : "بدون يوزر") + " · " + (roleLabels[p.role] || p.role)
-    + (p.approved ? "" : " · موقوف");
+  c.appendChild(el("h3", "", p.first_name || "\u2014"));
+  const who = (p.username ? "@" + p.username : "\u0628\u062f\u0648\u0646 \u064a\u0648\u0632\u0631") + " · " + (roleLabels[p.role] || p.role)
+    + (p.approved ? "" : " · \u0645\u0648\u0642\u0648\u0641");
   c.appendChild(el("p", "meta", who));
   if (p.id === state.userId) {
-    c.appendChild(el("p", "meta", "هذا هو الحساب الحالي"));
+    c.appendChild(el("p", "meta", "\u0647\u0630\u0627 \u0647\u0648 \u0627\u0644\u062d\u0633\u0627\u0628 \u0627\u0644\u062d\u0627\u0644\u064a"));
     return c;
   }
   const row = el("div", "row");
@@ -434,7 +434,7 @@ function personCard(p) {
   sel.value = p.role;
   sel.addEventListener("change", () => changeRole(p, sel.value, sel));
   row.appendChild(sel);
-  const bl = el("button", "small" + (p.approved ? " danger" : ""), p.approved ? "إيقاف الحساب" : "تفعيل الحساب");
+  const bl = el("button", "small" + (p.approved ? " danger" : ""), p.approved ? "\u0625\u064a\u0642\u0627\u0641 \u0627\u0644\u062d\u0633\u0627\u0628" : "\u062a\u0641\u0639\u064a\u0644 \u0627\u0644\u062d\u0633\u0627\u0628");
   bl.addEventListener("click", () => toggleBlock(p));
   row.appendChild(bl);
   c.appendChild(row);
@@ -449,7 +449,7 @@ async function renderPeople(reload) {
       .select("id,first_name,username,role,approved,created_at")
       .order("created_at", { ascending: false });
     showLoading(false);
-    if (error) { say("تعذّر تحميل الحسابات", true); return; }
+    if (error) { say("\u062a\u0639\u0630\u0651\u0631 \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u062d\u0633\u0627\u0628\u0627\u062a", true); return; }
     state.people = data;
     state.peopleQuery = "";
     state.peopleLimit = 50;
@@ -457,14 +457,14 @@ async function renderPeople(reload) {
   box.replaceChildren();
   const top = el("div", "row");
   top.appendChild(el("h3", "", "users"));
-  const back = el("button", "small", "رجوع");
+  const back = el("button", "small", "\u0631\u062c\u0648\u0639");
   back.addEventListener("click", () => setView("app"));
   top.appendChild(back);
   box.appendChild(top);
 
   const q = el("input");
   q.type = "text";
-  q.placeholder = "بحث بالاسم أو اليوزر";
+  q.placeholder = "\u0628\u062d\u062b \u0628\u0627\u0644\u0627\u0633\u0645 \u0623\u0648 \u0627\u0644\u064a\u0648\u0632\u0631";
   q.value = state.peopleQuery;
   box.appendChild(q);
   const info = el("p", "meta");
@@ -480,10 +480,10 @@ async function renderPeople(reload) {
       || (p.username || "").toLowerCase().includes(s));
     all.sort((a, b) => (roleRank[a.role] ?? 3) - (roleRank[b.role] ?? 3));
     const shown = all.slice(0, state.peopleLimit);
-    info.textContent = "الحسابات: " + state.people.length + (s ? " · النتائج: " + all.length : "");
+    info.textContent = "\u0627\u0644\u062d\u0633\u0627\u0628\u0627\u062a: " + state.people.length + (s ? " · \u0627\u0644\u0646\u062a\u0627\u0626\u062c: " + all.length : "");
     shown.forEach((p) => res.appendChild(personCard(p)));
     if (all.length > shown.length) {
-      const more = el("button", "", "عرض المزيد");
+      const more = el("button", "", "\u0639\u0631\u0636 \u0627\u0644\u0645\u0632\u064a\u062f");
       more.addEventListener("click", () => { state.peopleLimit += 50; paint(); });
       res.appendChild(more);
     }
@@ -492,12 +492,12 @@ async function renderPeople(reload) {
   paint();
 }
 
-/* السجل (للأدمنز) */
+/* \u0627\u0644\u0633\u062c\u0644 (\u0644\u0644\u0623\u062f\u0645\u0646\u0632) */
 const actLabels = {
-  add: "إضافة", edit: "تعديل", delete: "حذف (إلى السلة)",
-  restore: "استرجاع", purge: "حذف نهائي",
-  role: "تغيير الدور", block: "إيقاف حساب", unblock: "تفعيل حساب",
-  clear_log: "مسح السجل",
+  add: "\u0625\u0636\u0627\u0641\u0629", edit: "\u062a\u0639\u062f\u064a\u0644", delete: "\u062d\u0630\u0641 (\u0625\u0644\u0649 \u0627\u0644\u0633\u0644\u0629)",
+  restore: "\u0627\u0633\u062a\u0631\u062c\u0627\u0639", purge: "\u062d\u0630\u0641 \u0646\u0647\u0627\u0626\u064a",
+  role: "\u062a\u063a\u064a\u064a\u0631 \u0627\u0644\u062f\u0648\u0631", block: "\u0625\u064a\u0642\u0627\u0641 \u062d\u0633\u0627\u0628", unblock: "\u062a\u0641\u0639\u064a\u0644 \u062d\u0633\u0627\u0628",
+  clear_log: "\u0645\u0633\u062d \u0627\u0644\u0633\u062c\u0644",
 };
 
 async function renderLog() {
@@ -510,125 +510,125 @@ async function renderLog() {
     sb.from("profiles").select("id,first_name,username"),
   ]);
   showLoading(false);
-  if (l.error || p.error) { say("تعذّر تحميل السجل", true); return; }
+  if (l.error || p.error) { say("\u062a\u0639\u0630\u0651\u0631 \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0633\u062c\u0644", true); return; }
   const names = {};
-  p.data.forEach((x) => { names[x.id] = x.first_name || (x.username ? "@" + x.username : "—"); });
+  p.data.forEach((x) => { names[x.id] = x.first_name || (x.username ? "@" + x.username : "\u2014"); });
 
   const top = el("div", "row");
-  top.appendChild(el("h3", "", "السجل"));
-  const back = el("button", "small", "رجوع");
+  top.appendChild(el("h3", "", "\u0627\u0644\u0633\u062c\u0644"));
+  const back = el("button", "small", "\u0631\u062c\u0648\u0639");
   back.addEventListener("click", () => setView("app"));
   top.appendChild(back);
   if (isFull() && l.data.length) {
-    const clr = el("button", "small danger", "مسح السجل");
+    const clr = el("button", "small danger", "\u0645\u0633\u062d \u0627\u0644\u0633\u062c\u0644");
     clr.addEventListener("click", async () => {
-      if (!confirm("مسح كل السجل؟ لا يمكن التراجع، وسيبقى سطر واحد يوضح من قام بالمسح.")) return;
+      if (!confirm("\u0645\u0633\u062d \u0643\u0644 \u0627\u0644\u0633\u062c\u0644\u061f \u0644\u0627 \u064a\u0645\u0643\u0646 \u0627\u0644\u062a\u0631\u0627\u062c\u0639\u060c \u0648\u0633\u064a\u0628\u0642\u0649 \u0633\u0637\u0631 \u0648\u0627\u062d\u062f \u064a\u0648\u0636\u062d \u0645\u0646 \u0642\u0627\u0645 \u0628\u0627\u0644\u0645\u0633\u062d.")) return;
       const { error } = await sb.rpc("clear_audit_log");
       if (error) { say(rpcMsg(error)); return; }
-      say("تم مسح السجل");
+      say("\u062a\u0645 \u0645\u0633\u062d \u0627\u0644\u0633\u062c\u0644");
       renderLog();
     });
     top.appendChild(clr);
   }
   box.appendChild(top);
 
-  if (!l.data.length) box.appendChild(el("p", "center", "لا توجد سجلات بعد"));
+  if (!l.data.length) box.appendChild(el("p", "center", "\u0644\u0627 \u062a\u0648\u062c\u062f \u0633\u062c\u0644\u0627\u062a \u0628\u0639\u062f"));
   l.data.forEach((r) => {
     const c = el("div", "card");
-    c.appendChild(el("h3", "", (r.details && r.details.title) || "—"));
-    const who = r.actor ? (names[r.actor] || "—") : "النظام";
-    const to = r.details && r.details.to ? " → " + (roleLabels[r.details.to] || r.details.to) : "";
+    c.appendChild(el("h3", "", (r.details && r.details.title) || "\u2014"));
+    const who = r.actor ? (names[r.actor] || "\u2014") : "\u0627\u0644\u0646\u0638\u0627\u0645";
+    const to = r.details && r.details.to ? " \u2192 " + (roleLabels[r.details.to] || r.details.to) : "";
     c.appendChild(el("p", "meta", (actLabels[r.action] || r.action) + to + " · " + who));
     c.appendChild(el("p", "meta", logFmt.format(new Date(r.created_at))));
     box.appendChild(c);
   });
   if (l.data.length >= state.logLimit) {
-    const more = el("button", "", "عرض المزيد");
+    const more = el("button", "", "\u0639\u0631\u0636 \u0627\u0644\u0645\u0632\u064a\u062f");
     more.addEventListener("click", () => { state.logLimit += 100; renderLog(); });
     box.appendChild(more);
   }
 }
 
-/* التقدّم والحذف */
+/* \u0627\u0644\u062a\u0642\u062f\u0651\u0645 \u0648\u0627\u0644\u062d\u0630\u0641 */
 async function save(itemId, done, submitted) {
   const { error } = await sb.from("progress").upsert(
     { user_id: state.userId, item_id: itemId, done, submitted, updated_at: new Date().toISOString() },
     { onConflict: "user_id,item_id" }
   );
-  if (error) { say("تعذّر الحفظ"); return; }
+  if (error) { say("\u062a\u0639\u0630\u0651\u0631 \u0627\u0644\u062d\u0641\u0638"); return; }
   state.progress[itemId] = { item_id: itemId, done, submitted };
   say("");
   render();
 }
 
 async function setDeleted(id, val) {
-  if (val && !confirm("تأكيد الحذف؟ يمكن استرجاعه من سلة المحذوفات.")) return;
+  if (val && !confirm("\u062a\u0623\u0643\u064a\u062f \u0627\u0644\u062d\u0630\u0641\u061f \u064a\u0645\u0643\u0646 \u0627\u0633\u062a\u0631\u062c\u0627\u0639\u0647 \u0645\u0646 \u0633\u0644\u0629 \u0627\u0644\u0645\u062d\u0630\u0648\u0641\u0627\u062a.")) return;
   const { error } = await sb.from("items")
     .update({ deleted_at: val ? new Date().toISOString() : null }).eq("id", id);
-  if (error) { say("تعذّر التنفيذ"); return; }
-  say(val ? "تم الحذف" : "تم الاسترجاع");
+  if (error) { say("\u062a\u0639\u0630\u0651\u0631 \u0627\u0644\u062a\u0646\u0641\u064a\u0630"); return; }
+  say(val ? "\u062a\u0645 \u0627\u0644\u062d\u0630\u0641" : "\u062a\u0645 \u0627\u0644\u0627\u0633\u062a\u0631\u062c\u0627\u0639");
   await loadData();
 }
 
 async function purge(id) {
-  if (!confirm("حذف نهائي؟ لا يمكن التراجع، وستُمسح علامات الإنجاز الخاصة بهذا العنصر عند الجميع.")) return;
+  if (!confirm("\u062d\u0630\u0641 \u0646\u0647\u0627\u0626\u064a\u061f \u0644\u0627 \u064a\u0645\u0643\u0646 \u0627\u0644\u062a\u0631\u0627\u062c\u0639\u060c \u0648\u0633\u062a\u064f\u0645\u0633\u062d \u0639\u0644\u0627\u0645\u0627\u062a \u0627\u0644\u0625\u0646\u062c\u0627\u0632 \u0627\u0644\u062e\u0627\u0635\u0629 \u0628\u0647\u0630\u0627 \u0627\u0644\u0639\u0646\u0635\u0631 \u0639\u0646\u062f \u0627\u0644\u062c\u0645\u064a\u0639.")) return;
   const { data, error } = await sb.from("items").delete().eq("id", id).select("id");
-  if (error || !data || !data.length) { say("تعذّر الحذف النهائي"); return; }
-  say("تم الحذف النهائي");
+  if (error || !data || !data.length) { say("\u062a\u0639\u0630\u0651\u0631 \u0627\u0644\u062d\u0630\u0641 \u0627\u0644\u0646\u0647\u0627\u0626\u064a"); return; }
+  say("\u062a\u0645 \u0627\u0644\u062d\u0630\u0641 \u0627\u0644\u0646\u0647\u0627\u0626\u064a");
   await loadData();
 }
 
 async function emptyTrash(ids) {
   if (!ids.length) return;
-  if (!confirm("تفريغ السلة؟ سيتم حذف " + ids.length + " عنصر نهائيًا ولا يمكن التراجع.")) return;
+  if (!confirm("\u062a\u0641\u0631\u064a\u063a \u0627\u0644\u0633\u0644\u0629\u061f \u0633\u064a\u062a\u0645 \u062d\u0630\u0641 " + ids.length + " \u0639\u0646\u0635\u0631 \u0646\u0647\u0627\u0626\u064a\u064b\u0627 \u0648\u0644\u0627 \u064a\u0645\u0643\u0646 \u0627\u0644\u062a\u0631\u0627\u062c\u0639.")) return;
   const { data, error } = await sb.from("items").delete().in("id", ids).select("id");
-  if (error || !data) { say("تعذّر تفريغ السلة"); return; }
-  say("تم حذف " + data.length + " عنصر نهائيًا");
+  if (error || !data) { say("\u062a\u0639\u0630\u0651\u0631 \u062a\u0641\u0631\u064a\u063a \u0627\u0644\u0633\u0644\u0629"); return; }
+  say("\u062a\u0645 \u062d\u0630\u0641 " + data.length + " \u0639\u0646\u0635\u0631 \u0646\u0647\u0627\u0626\u064a\u064b\u0627");
   await loadData();
 }
 
-/* العناصر الشخصية */
+/* \u0627\u0644\u0639\u0646\u0627\u0635\u0631 \u0627\u0644\u0634\u062e\u0635\u064a\u0629 */
 async function setPersonalDone(p, v) {
   const { error } = await sb.from("personal_items")
     .update({ done: v, updated_at: new Date().toISOString() }).eq("id", p.id);
-  if (error) { say("تعذّر الحفظ"); render(); return; }
+  if (error) { say("\u062a\u0639\u0630\u0651\u0631 \u0627\u0644\u062d\u0641\u0638"); render(); return; }
   p.done = v;
   say("");
   render();
 }
 
 async function deletePersonal(p) {
-  if (!confirm("حذف هذا العنصر الشخصي نهائيًا؟")) return;
+  if (!confirm("\u062d\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0639\u0646\u0635\u0631 \u0627\u0644\u0634\u062e\u0635\u064a \u0646\u0647\u0627\u0626\u064a\u064b\u0627\u061f")) return;
   const { error } = await sb.from("personal_items").delete().eq("id", p.id);
-  if (error) { say("تعذّر الحذف"); return; }
-  say("تم الحذف");
+  if (error) { say("\u062a\u0639\u0630\u0651\u0631 \u0627\u0644\u062d\u0630\u0641"); return; }
+  say("\u062a\u0645 \u0627\u0644\u062d\u0630\u0641");
   await loadData();
 }
 
 function buildPersonalForm(p) {
   const c = el("div", "card");
-  c.appendChild(el("h3", "", p ? "تعديل عنصر شخصي" : "عنصر شخصي جديد"));
+  c.appendChild(el("h3", "", p ? "\u062a\u0639\u062f\u064a\u0644 \u0639\u0646\u0635\u0631 \u0634\u062e\u0635\u064a" : "\u0639\u0646\u0635\u0631 \u0634\u062e\u0635\u064a \u062c\u062f\u064a\u062f"));
 
   const title = el("input");
   title.type = "text";
   title.maxLength = 200;
   title.value = p ? p.title : "";
-  c.appendChild(field("العنوان", title));
+  c.appendChild(field("\u0627\u0644\u0639\u0646\u0648\u0627\u0646", title));
 
   const body = el("textarea");
   body.rows = 3;
   body.maxLength = 2000;
   body.value = p && p.body ? p.body : "";
-  c.appendChild(field("التفاصيل", body));
+  c.appendChild(field("\u0627\u0644\u062a\u0641\u0627\u0635\u064a\u0644", body));
 
   const dl = el("input");
   dl.type = "datetime-local";
   dl.value = p && p.deadline ? toLocalInput(p.deadline) : "";
-  c.appendChild(field("الميعاد (اختياري)", dl));
+  c.appendChild(field("\u0627\u0644\u0645\u064a\u0639\u0627\u062f (\u0627\u062e\u062a\u064a\u0627\u0631\u064a)", dl));
 
   const row = el("div", "row");
-  const ok = el("button", "", "حفظ");
-  const cancel = el("button", "", "إلغاء");
+  const ok = el("button", "", "\u062d\u0641\u0638");
+  const cancel = el("button", "", "\u0625\u0644\u063a\u0627\u0621");
   cancel.addEventListener("click", () => { state.pform = null; say(""); render(); });
   ok.addEventListener("click", async () => {
     const data = {
@@ -636,15 +636,15 @@ function buildPersonalForm(p) {
       body: body.value.trim() || null,
       deadline: dl.value ? localToISO(dl.value) : null,
     };
-    if (!data.title) { say("العنوان مطلوب"); return; }
+    if (!data.title) { say("\u0627\u0644\u0639\u0646\u0648\u0627\u0646 \u0645\u0637\u0644\u0648\u0628"); return; }
     ok.disabled = true;
     const { error } = p
       ? await sb.from("personal_items").update({ ...data, updated_at: new Date().toISOString() }).eq("id", p.id)
       : await sb.from("personal_items").insert({ ...data, user_id: state.userId });
     ok.disabled = false;
-    if (error) { say("تعذّر الحفظ"); return; }
+    if (error) { say("\u062a\u0639\u0630\u0651\u0631 \u0627\u0644\u062d\u0641\u0638"); return; }
     state.pform = null;
-    say("تم الحفظ");
+    say("\u062a\u0645 \u0627\u0644\u062d\u0641\u0638");
     await loadData();
   });
   row.appendChild(ok);
@@ -656,16 +656,16 @@ function buildPersonalForm(p) {
 function personalCard(p) {
   const c = el("div", "card" + (p.done ? " doneitem" : ""));
   c.appendChild(el("h3", "", p.title));
-  c.appendChild(el("p", "meta", "شخصي"));
+  c.appendChild(el("p", "meta", "\u0634\u062e\u0635\u064a"));
   if (p.body) c.appendChild(el("p", "body", p.body));
-  if (p.deadline) c.appendChild(el("p", "meta", "الميعاد: " + fmt(p.deadline)));
+  if (p.deadline) c.appendChild(el("p", "meta", "\u0627\u0644\u0645\u064a\u0639\u0627\u062f: " + fmt(p.deadline)));
   const row = el("div");
-  row.appendChild(check("خلّصت", p.done, (v) => setPersonalDone(p, v)));
+  row.appendChild(check("\u062e\u0644\u0651\u0635\u062a", p.done, (v) => setPersonalDone(p, v)));
   c.appendChild(row);
   const act = el("div", "row");
-  const e = el("button", "small", "تعديل");
+  const e = el("button", "small", "\u062a\u0639\u062f\u064a\u0644");
   e.addEventListener("click", () => { state.pform = { id: p.id }; state.form = null; say(""); render(); });
-  const d = el("button", "small danger", "حذف");
+  const d = el("button", "small danger", "\u062d\u0630\u0641");
   d.addEventListener("click", () => deletePersonal(p));
   act.appendChild(e);
   act.appendChild(d);
@@ -673,23 +673,23 @@ function personalCard(p) {
   return c;
 }
 
-/* نموذج الإضافة والتعديل */
+/* \u0646\u0645\u0648\u0630\u062c \u0627\u0644\u0625\u0636\u0627\u0641\u0629 \u0648\u0627\u0644\u062a\u0639\u062f\u064a\u0644 */
 function buildForm(sec, it) {
   const c = el("div", "card");
-  c.appendChild(el("h3", "", it ? "تعديل" : "إضافة"));
+  c.appendChild(el("h3", "", it ? "\u062a\u0639\u062f\u064a\u0644" : "\u0625\u0636\u0627\u0641\u0629"));
 
   const title = el("input");
   title.type = "text";
   title.value = it ? it.title : "";
-  c.appendChild(field("العنوان", title));
+  c.appendChild(field("\u0627\u0644\u0639\u0646\u0648\u0627\u0646", title));
 
   const body = el("textarea");
   body.rows = 4;
   body.value = it && it.body ? it.body : "";
-  c.appendChild(field("التفاصيل", body));
+  c.appendChild(field("\u0627\u0644\u062a\u0641\u0627\u0635\u064a\u0644", body));
 
   const csel = el("select");
-  const first = el("option", "", sec.kind === "news" ? "أخبار عامة" : "— اختيار المادة —");
+  const first = el("option", "", sec.kind === "news" ? "\u0623\u062e\u0628\u0627\u0631 \u0639\u0627\u0645\u0629" : "\u2014 \u0627\u062e\u062a\u064a\u0627\u0631 \u0627\u0644\u0645\u0627\u062f\u0629 \u2014");
   first.value = "";
   csel.appendChild(first);
   state.courses
@@ -700,7 +700,7 @@ function buildForm(sec, it) {
       csel.appendChild(o);
     });
   csel.value = it && it.course_id != null ? String(it.course_id) : "";
-  c.appendChild(field(sec.kind === "news" ? "التصنيف" : "المادة", csel));
+  c.appendChild(field(sec.kind === "news" ? "\u0627\u0644\u062a\u0635\u0646\u064a\u0641" : "\u0627\u0644\u0645\u0627\u062f\u0629", csel));
 
   let url = null, dl = null;
   if (sec.kind === "links") {
@@ -708,31 +708,31 @@ function buildForm(sec, it) {
     url.type = "url";
     url.dir = "ltr";
     url.value = it && it.url ? it.url : "";
-    c.appendChild(field("الرابط", url));
+    c.appendChild(field("\u0627\u0644\u0631\u0627\u0628\u0637", url));
   }
   if (sec.kind === "tasks") {
     dl = el("input");
     dl.type = "datetime-local";
     dl.value = it && it.deadline ? toLocalInput(it.deadline) : "";
-    c.appendChild(field("الميعاد (التاريخ والساعة)", dl));
+    c.appendChild(field("\u0627\u0644\u0645\u064a\u0639\u0627\u062f (\u0627\u0644\u062a\u0627\u0631\u064a\u062e \u0648\u0627\u0644\u0633\u0627\u0639\u0629)", dl));
   }
 
   const row = el("div", "row");
-  const ok = el("button", "", "حفظ");
-  const cancel = el("button", "", "إلغاء");
+  const ok = el("button", "", "\u062d\u0641\u0638");
+  const cancel = el("button", "", "\u0625\u0644\u063a\u0627\u0621");
   cancel.addEventListener("click", () => { state.form = null; say(""); render(); });
   ok.addEventListener("click", async () => {
     const data = { title: title.value.trim(), body: body.value.trim() || null };
-    if (!data.title) { say("العنوان مطلوب"); return; }
-    if (sec.kind !== "news" && !csel.value) { say("المادة مطلوبة"); return; }
+    if (!data.title) { say("\u0627\u0644\u0639\u0646\u0648\u0627\u0646 \u0645\u0637\u0644\u0648\u0628"); return; }
+    if (sec.kind !== "news" && !csel.value) { say("\u0627\u0644\u0645\u0627\u062f\u0629 \u0645\u0637\u0644\u0648\u0628\u0629"); return; }
     data.course_id = csel.value ? Number(csel.value) : null;
     if (dl) {
-      if (!dl.value) { say("الميعاد مطلوب (التاريخ والساعة)"); return; }
+      if (!dl.value) { say("\u0627\u0644\u0645\u064a\u0639\u0627\u062f \u0645\u0637\u0644\u0648\u0628 (\u0627\u0644\u062a\u0627\u0631\u064a\u062e \u0648\u0627\u0644\u0633\u0627\u0639\u0629)"); return; }
       data.deadline = localToISO(dl.value);
     }
     if (url) {
       const u = safeUrl(url.value.trim());
-      if (!u) { say("الرابط غير صالح"); return; }
+      if (!u) { say("\u0627\u0644\u0631\u0627\u0628\u0637 \u063a\u064a\u0631 \u0635\u0627\u0644\u062d"); return; }
       data.url = u;
     }
     ok.disabled = true;
@@ -740,9 +740,9 @@ function buildForm(sec, it) {
       ? await sb.from("items").update(data).eq("id", it.id)
       : await sb.from("items").insert({ ...data, section_id: sec.id });
     ok.disabled = false;
-    if (error) { say("تعذّر الحفظ"); return; }
+    if (error) { say("\u062a\u0639\u0630\u0651\u0631 \u0627\u0644\u062d\u0641\u0638"); return; }
     state.form = null;
-    say("تم الحفظ");
+    say("\u062a\u0645 \u0627\u0644\u062d\u0641\u0638");
     await loadData();
   });
   row.appendChild(ok);
@@ -751,7 +751,7 @@ function buildForm(sec, it) {
   return c;
 }
 
-/* العرض */
+/* \u0627\u0644\u0639\u0631\u0636 */
 const isDone = (it) => { const p = state.progress[it.id]; return !!(p && p.done && p.submitted); };
 
 function visible(sec, it) {
@@ -764,23 +764,23 @@ function visible(sec, it) {
 function card(sec, it) {
   const c = el("div", "card" + (sec.kind === "tasks" && !it.deleted_at && isDone(it) ? " doneitem" : ""));
   c.appendChild(el("h3", "", it.title));
-  const cn = it.course_id != null ? courseName(it.course_id) : (sec.kind === "news" ? "أخبار عامة" : "");
+  const cn = it.course_id != null ? courseName(it.course_id) : (sec.kind === "news" ? "\u0623\u062e\u0628\u0627\u0631 \u0639\u0627\u0645\u0629" : "");
   if (cn) c.appendChild(el("p", "meta", cn));
   if (it.body) c.appendChild(el("p", "body", it.body));
 
   if (sec.kind === "tasks") {
-    if (it.deadline) c.appendChild(el("p", "meta", "الميعاد: " + fmt(it.deadline)));
+    if (it.deadline) c.appendChild(el("p", "meta", "\u0627\u0644\u0645\u064a\u0639\u0627\u062f: " + fmt(it.deadline)));
     if (!it.deleted_at) {
       const pr = state.progress[it.id] || { done: false, submitted: false };
       const row = el("div");
-      row.appendChild(check("خلّصت", pr.done, (v) => save(it.id, v, v ? pr.submitted : false)));
-      row.appendChild(check("سلّمت", pr.submitted, (v) => save(it.id, v ? true : pr.done, v)));
+      row.appendChild(check("\u062e\u0644\u0651\u0635\u062a", pr.done, (v) => save(it.id, v, v ? pr.submitted : false)));
+      row.appendChild(check("\u0633\u0644\u0651\u0645\u062a", pr.submitted, (v) => save(it.id, v ? true : pr.done, v)));
       c.appendChild(row);
     }
   } else if (sec.kind === "links") {
     const u = it.url ? safeUrl(it.url) : null;
     if (u) {
-      const a = el("a", "btn", "فتح الرابط");
+      const a = el("a", "btn", "\u0641\u062a\u062d \u0627\u0644\u0631\u0627\u0628\u0637");
       a.href = u;
       a.target = "_blank";
       a.rel = "noopener noreferrer";
@@ -793,18 +793,18 @@ function card(sec, it) {
   if (isAdmin()) {
     const row = el("div", "row");
     if (it.deleted_at) {
-      const r = el("button", "small", "استرجاع");
+      const r = el("button", "small", "\u0627\u0633\u062a\u0631\u062c\u0627\u0639");
       r.addEventListener("click", () => setDeleted(it.id, false));
       row.appendChild(r);
       if (isFull()) {
-        const pg = el("button", "small danger", "حذف نهائي");
+        const pg = el("button", "small danger", "\u062d\u0630\u0641 \u0646\u0647\u0627\u0626\u064a");
         pg.addEventListener("click", () => purge(it.id));
         row.appendChild(pg);
       }
     } else {
-      const e = el("button", "small", "تعديل");
+      const e = el("button", "small", "\u062a\u0639\u062f\u064a\u0644");
       e.addEventListener("click", () => { state.form = { id: it.id }; state.pform = null; say(""); render(); });
-      const d = el("button", "small danger", "حذف");
+      const d = el("button", "small danger", "\u062d\u0630\u0641");
       d.addEventListener("click", () => setDeleted(it.id, true));
       row.appendChild(e);
       row.appendChild(d);
@@ -822,9 +822,9 @@ function renderChips(sec) {
     b.addEventListener("click", () => { state.filter = val; render(); });
     chips.appendChild(b);
   };
-  add("الكل", "all");
-  if (sec.kind === "news") add("أخبار عامة", "general");
-  if (sec.kind === "tasks") add("شخصي", "personal");
+  add("\u0627\u0644\u0643\u0644", "all");
+  if (sec.kind === "news") add("\u0623\u062e\u0628\u0627\u0631 \u0639\u0627\u0645\u0629", "general");
+  if (sec.kind === "tasks") add("\u0634\u062e\u0635\u064a", "personal");
   const list = (sec.kind === "tasks" && !isAdmin())
     ? state.courses.filter((c) => c.is_active && state.mine.has(c.id))
     : state.courses.filter((c) => c.is_active);
@@ -846,7 +846,7 @@ function render() {
   const list = $("list");
   list.replaceChildren();
   const sec = state.sections.find((x) => x.id === state.active);
-  if (!sec) { $("chips").replaceChildren(); list.appendChild(el("p", "center", "لا توجد أقسام بعد")); return; }
+  if (!sec) { $("chips").replaceChildren(); list.appendChild(el("p", "center", "\u0644\u0627 \u062a\u0648\u062c\u062f \u0623\u0642\u0633\u0627\u0645 \u0628\u0639\u062f")); return; }
   renderChips(sec);
 
   const inSec = state.items.filter((x) => x.section_id === sec.id);
@@ -856,20 +856,20 @@ function render() {
 
   const bar = el("div", "row");
   if (isAdmin()) {
-    const add = el("button", "", "+ إضافة");
+    const add = el("button", "", "+ \u0625\u0636\u0627\u0641\u0629");
     add.addEventListener("click", () => { state.form = { id: null }; state.pform = null; state.trash = false; say(""); render(); });
-    const tr = el("button", "", state.trash ? "رجوع" : "سلة المحذوفات (" + dead.length + ")");
+    const tr = el("button", "", state.trash ? "\u0631\u062c\u0648\u0639" : "\u0633\u0644\u0629 \u0627\u0644\u0645\u062d\u0630\u0648\u0641\u0627\u062a (" + dead.length + ")");
     tr.addEventListener("click", () => { state.trash = !state.trash; state.form = null; state.pform = null; render(); });
     bar.appendChild(add);
     bar.appendChild(tr);
   }
   if (isFull() && state.trash && dead.length) {
-    const et = el("button", "danger", "تفريغ السلة");
+    const et = el("button", "danger", "\u062a\u0641\u0631\u064a\u063a \u0627\u0644\u0633\u0644\u0629");
     et.addEventListener("click", () => emptyTrash(dead.map((x) => x.id)));
     bar.appendChild(et);
   }
   if (isTasks && !state.trash) {
-    const pa = el("button", "", "+ عنصر شخصي");
+    const pa = el("button", "", "+ \u0639\u0646\u0635\u0631 \u0634\u062e\u0635\u064a");
     pa.addEventListener("click", () => { state.pform = { id: null }; state.form = null; say(""); render(); });
     bar.appendChild(pa);
   }
@@ -911,12 +911,12 @@ function render() {
   }
 
   if (!entries.length) {
-    list.appendChild(el("p", "center", state.trash ? "السلة فارغة" : "لا يوجد شيء هنا حتى الآن"));
+    list.appendChild(el("p", "center", state.trash ? "\u0627\u0644\u0633\u0644\u0629 \u0641\u0627\u0631\u063a\u0629" : "\u0644\u0627 \u064a\u0648\u062c\u062f \u0634\u064a\u0621 \u0647\u0646\u0627 \u062d\u062a\u0649 \u0627\u0644\u0622\u0646"));
   }
   entries.forEach((e) => list.appendChild(e.k === "c" ? card(sec, e.it) : personalCard(e.p)));
 }
 
-/* الدخول والحساب */
+/* \u0627\u0644\u062f\u062e\u0648\u0644 \u0648\u0627\u0644\u062d\u0633\u0627\u0628 */
 function hideAll() {
   $("app").hidden = true;
   $("picker-box").hidden = true;
@@ -947,19 +947,19 @@ async function showProfile() {
 
   const { data, error } = await sb.from("profiles")
     .select("first_name, role, approved, courses_chosen").eq("id", state.userId).single();
-  if (error || !data) { showLoading(false); say("تعذّر تحميل الحساب", true); return; }
+  if (error || !data) { showLoading(false); say("\u062a\u0639\u0630\u0651\u0631 \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u062d\u0633\u0627\u0628", true); return; }
 
   state.role = data.role;
   state.chosen = !!data.courses_chosen;
 
   if (!data.approved) {
     showLoading(false);
-    $("welcome").textContent = "أهلًا " + (data.first_name || "");
+    $("welcome").textContent = "\u0623\u0647\u0644\u064b\u0627 " + (data.first_name || "");
     $("pending-box").hidden = false;
     return;
   }
 
-  $("hello").textContent = "WELCOME " + (data.first_name || "") + " / " + data.role;
+  $("hello").textContent = "WELCOME " + (data.first_name || "") + " / " + (roleLabels[data.role] || data.role);
   say("");
   const [okC, okD] = await Promise.all([loadCourses(), fetchData()]);
   showLoading(false);
@@ -979,9 +979,9 @@ async function onTelegramAuth(user) {
   say("");
   const fail = (m) => { showLoading(false); $("login-box").hidden = false; say(m); };
   const { data, error } = await sb.functions.invoke("telegram-auth", { body: user });
-  if (error || !data || !data.token_hash) { fail("فشل الدخول، برجاء إعادة المحاولة"); return; }
+  if (error || !data || !data.token_hash) { fail("\u0641\u0634\u0644 \u0627\u0644\u062f\u062e\u0648\u0644\u060c \u0628\u0631\u062c\u0627\u0621 \u0625\u0639\u0627\u062f\u0629 \u0627\u0644\u0645\u062d\u0627\u0648\u0644\u0629"); return; }
   const { error: e2 } = await sb.auth.verifyOtp({ token_hash: data.token_hash, type: "magiclink" });
-  if (e2) { fail("فشل إكمال الدخول"); return; }
+  if (e2) { fail("\u0641\u0634\u0644 \u0625\u0643\u0645\u0627\u0644 \u0627\u0644\u062f\u062e\u0648\u0644"); return; }
   await showProfile();
 }
 
