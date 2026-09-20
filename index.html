@@ -66,6 +66,7 @@
       <button id="theme-btn" class="small"></button>
       <button id="courses-btn" class="small" hidden>موادّي</button>
       <button id="manage-btn" class="small" hidden>إدارة المواد</button>
+      <button id="log-btn" class="small" hidden>السجل</button>
       <button id="logout" class="small" hidden>خروج</button>
     </div>
   </header>
@@ -89,6 +90,7 @@
 
   <div id="picker-box" class="card" hidden></div>
   <div id="courses-box" hidden></div>
+  <div id="log-box" hidden></div>
 
   <div id="app" hidden>
     <p id="hello" class="label"></p>
@@ -137,6 +139,9 @@ applyTheme();
 const dateFmt = new Intl.DateTimeFormat("ar-EG", {
   timeZone: "Africa/Cairo", dateStyle: "full", timeStyle: "short",
 });
+const logFmt = new Intl.DateTimeFormat("ar-EG", {
+  timeZone: "Africa/Cairo", dateStyle: "medium", timeStyle: "short",
+});
 function fmt(iso) { return dateFmt.format(new Date(iso)); }
 function tzOffset(ms) {
   const p = {};
@@ -169,7 +174,7 @@ function safeUrl(u) {
 
 const state = { userId: null, role: null, sections: [], items: [], progress: {},
   personal: [], courses: [], mine: new Set(), chosen: false,
-  active: null, filter: "all", trash: false, form: null, pform: null };
+  active: null, filter: "all", trash: false, form: null, pform: null, logLimit: 100 };
 const isAdmin = () => state.role === "admin" || state.role === "full_admin";
 const isFull = () => state.role === "full_admin";
 const courseName = (id) => (state.courses.find((c) => c.id === id) || {}).name || "";
@@ -178,8 +183,10 @@ function setView(v) {
   $("app").hidden = v !== "app";
   $("picker-box").hidden = v !== "picker";
   $("courses-box").hidden = v !== "courses";
+  $("log-box").hidden = v !== "log";
   if (v === "picker") renderPicker();
   if (v === "courses") renderCourses();
+  if (v === "log") renderLog();
   if (v === "app") render();
 }
 
@@ -340,7 +347,7 @@ function renderCourses() {
         const { data, error } = await sb.from("courses").delete().eq("id", c.id).select("id");
         if (error) {
           say(error.code === "23503"
-            ? "المادة مرتبطة بعناصر (حتى الموجودة في السلة). الأفضل إيقافها."
+            ? "المادة مرتبطة بعناصر (حتى الموجودة في السلة). الأفضل إيقافها، أو حذف عناصرها أولًا."
             : "تعذّر الحذف");
           return;
         }
@@ -355,6 +362,49 @@ function renderCourses() {
     box.appendChild(card);
   });
 }
+
+/* السجل (للأدمنز) */
+const actLabels = {
+  add: "إضافة", edit: "تعديل", delete: "حذف (إلى السلة)",
+  restore: "استرجاع", purge: "حذف نهائي",
+};
+
+async function renderLog() {
+  const box = $("log-box");
+  box.replaceChildren();
+  showLoading(true);
+  const [l, p] = await Promise.all([
+    sb.from("audit_log").select("id,actor,action,details,created_at")
+      .order("created_at", { ascending: false }).limit(state.logLimit),
+    sb.from("profiles").select("id,first_name,username"),
+  ]);
+  showLoading(false);
+  if (l.error || p.error) { say("تعذّر تحميل السجل"); return; }
+  const names = {};
+  p.data.forEach((x) => { names[x.id] = x.first_name || (x.username ? "@" + x.username : "—"); });
+
+  const top = el("div", "row");
+  top.appendChild(el("h3", "", "السجل"));
+  const back = el("button", "small", "رجوع");
+  back.addEventListener("click", () => setView("app"));
+  top.appendChild(back);
+  box.appendChild(top);
+
+  if (!l.data.length) box.appendChild(el("p", "center", "لا توجد سجلات بعد"));
+  l.data.forEach((r) => {
+    const c = el("div", "card");
+    c.appendChild(el("h3", "", (r.details && r.details.title) || "—"));
+    const who = r.actor ? (names[r.actor] || "—") : "النظام";
+    c.appendChild(el("p", "meta", (actLabels[r.action] || r.action) + " · " + who));
+    c.appendChild(el("p", "meta", logFmt.format(new Date(r.created_at))));
+    box.appendChild(c);
+  });
+  if (l.data.length >= state.logLimit) {
+    const more = el("button", "", "عرض المزيد");
+    more.addEventListener("click", () => { state.logLimit += 100; renderLog(); });
+    box.appendChild(more);
+  }
+      }
 
 /* التقدّم والحذف */
 async function save(itemId, done, submitted) {
@@ -374,6 +424,23 @@ async function setDeleted(id, val) {
     .update({ deleted_at: val ? new Date().toISOString() : null }).eq("id", id);
   if (error) { say("تعذّر التنفيذ"); return; }
   say(val ? "تم الحذف" : "تم الاسترجاع");
+  await loadData();
+}
+
+async function purge(id) {
+  if (!confirm("حذف نهائي؟ لا يمكن التراجع، وستُمسح علامات الإنجاز الخاصة بهذا العنصر عند الجميع.")) return;
+  const { data, error } = await sb.from("items").delete().eq("id", id).select("id");
+  if (error || !data || !data.length) { say("تعذّر الحذف النهائي"); return; }
+  say("تم الحذف النهائي");
+  await loadData();
+}
+
+async function emptyTrash(ids) {
+  if (!ids.length) return;
+  if (!confirm("تفريغ السلة؟ سيتم حذف " + ids.length + " عنصر نهائيًا ولا يمكن التراجع.")) return;
+  const { data, error } = await sb.from("items").delete().in("id", ids).select("id");
+  if (error || !data) { say("تعذّر تفريغ السلة"); return; }
+  say("تم حذف " + data.length + " عنصر نهائيًا");
   await loadData();
 }
 
@@ -441,7 +508,7 @@ function buildPersonalForm(p) {
   row.appendChild(cancel);
   c.appendChild(row);
   return c;
-  }
+}
 
 function personalCard(p) {
   const c = el("div", "card" + (p.done ? " doneitem" : ""));
@@ -586,6 +653,11 @@ function card(sec, it) {
       const r = el("button", "small", "استرجاع");
       r.addEventListener("click", () => setDeleted(it.id, false));
       row.appendChild(r);
+      if (isFull()) {
+        const pg = el("button", "small danger", "حذف نهائي");
+        pg.addEventListener("click", () => purge(it.id));
+        row.appendChild(pg);
+      }
     } else {
       const e = el("button", "small", "تعديل");
       e.addEventListener("click", () => { state.form = { id: it.id }; state.pform = null; say(""); render(); });
@@ -648,6 +720,11 @@ function render() {
     bar.appendChild(add);
     bar.appendChild(tr);
   }
+  if (isFull() && state.trash && dead.length) {
+    const et = el("button", "danger", "تفريغ السلة");
+    et.addEventListener("click", () => emptyTrash(dead.map((x) => x.id)));
+    bar.appendChild(et);
+  }
   if (isTasks && !state.trash) {
     const pa = el("button", "", "+ عنصر شخصي");
     pa.addEventListener("click", () => { state.pform = { id: null }; state.form = null; say(""); render(); });
@@ -701,8 +778,10 @@ function hideAll() {
   $("app").hidden = true;
   $("picker-box").hidden = true;
   $("courses-box").hidden = true;
+  $("log-box").hidden = true;
   $("courses-btn").hidden = true;
   $("manage-btn").hidden = true;
+  $("log-btn").hidden = true;
 }
 
 async function showProfile() {
@@ -743,6 +822,7 @@ async function showProfile() {
 
   $("courses-btn").hidden = false;
   $("manage-btn").hidden = !isAdmin();
+  $("log-btn").hidden = !isAdmin();
   if (!state.chosen && state.courses.some((c) => c.is_active)) setView("picker");
   else setView("app");
 }
@@ -761,6 +841,7 @@ async function onTelegramAuth(user) {
 
 $("courses-btn").addEventListener("click", () => setView("picker"));
 $("manage-btn").addEventListener("click", () => setView("courses"));
+$("log-btn").addEventListener("click", () => { state.logLimit = 100; setView("log"); });
 $("logout").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
 showProfile();
 </script>
