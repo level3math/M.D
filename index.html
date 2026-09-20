@@ -67,6 +67,7 @@
       <button id="manage-btn" class="small" hidden>إدارة المواد</button>
       <button id="people-btn" class="small" hidden>users</button>
       <button id="log-btn" class="small" hidden>السجل</button>
+      <button id="backup-btn" class="small" hidden>نسخة احتياطية</button>
       <button id="logout" class="small" hidden>خروج</button>
     </div>
   </header>
@@ -935,6 +936,22 @@ function renderChips(sec) {
     : state.courses.filter((c) => c.is_active);
   list.forEach((c) => add(c.name, c.id));
 }
+/* نسخة احتياطية (للمالك) */
+async function downloadBackup() {
+  showLoading(true);
+  const { data, error } = await sb.rpc("export_backup");
+  showLoading(false);
+  if (error || !data) { say("تعذّر إنشاء النسخة الاحتياطية"); return; }
+  const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "math3-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  say("تم تنزيل النسخة. يُرجى حفظها في مكان خاص (Drive أو الرسائل المحفوظة)");
+}
 /* تنبيه الإشعارات المتوقفة */
 function renderBotBanner() {
   const b = $("bot-banner");
@@ -1057,6 +1074,7 @@ function hideAll() {
   $("manage-btn").hidden = true;
   $("people-btn").hidden = true;
   $("log-btn").hidden = true;
+  $("backup-btn").hidden = true;
 }
 async function showProfile() {
   showLoading(true);
@@ -1093,6 +1111,10 @@ async function showProfile() {
   $("manage-btn").hidden = !isAdmin();
   $("log-btn").hidden = !isAdmin();
   $("people-btn").hidden = !isFull();
+  $("backup-btn").hidden = true;
+  if (isFull()) {
+    sb.rpc("can_backup").then(({ data }) => { $("backup-btn").hidden = data !== true; });
+  }
   if (!state.chosen && state.courses.some((c) => c.is_active)) setView("picker");
   else setView("app");
 }
@@ -1111,6 +1133,7 @@ $("courses-btn").addEventListener("click", () => setView("picker"));
 $("manage-btn").addEventListener("click", () => setView("courses"));
 $("people-btn").addEventListener("click", () => setView("people"));
 $("log-btn").addEventListener("click", () => { state.logLimit = 100; setView("log"); });
+$("backup-btn").addEventListener("click", downloadBackup);
 $("logout").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
 showProfile();
 </script>
