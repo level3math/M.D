@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>نشرة الدفعة</title>
+<title>math 3</title>
 <script>
   try {
     var t = localStorage.getItem("theme");
@@ -25,7 +25,7 @@
   .wrap { max-width:720px; margin:0 auto; padding:16px; }
   header { display:flex; justify-content:space-between; align-items:center;
     gap:8px; flex-wrap:wrap; margin-bottom:16px; }
-  h1 { margin:0; font-size:26px; }
+  h1 { margin:0; font-size:26px; direction:ltr; text-align:right; }
   h3 { margin:0 0 8px; }
   .label { font-family:ui-monospace,Menlo,monospace; font-size:12px;
     letter-spacing:.08em; color:var(--accent); margin:0 0 4px; direction:ltr; text-align:right; }
@@ -60,7 +60,7 @@
   <header>
     <div>
       <p class="label">BATCH BOARD</p>
-      <h1>نشرة الدفعة</h1>
+      <h1>math 3</h1>
     </div>
     <div class="row">
       <button id="theme-btn" class="small"></button>
@@ -70,7 +70,11 @@
     </div>
   </header>
 
-  <div id="login-box" class="card center">
+  <div id="loading" class="card center">
+    <p>جاري التحميل...</p>
+  </div>
+
+  <div id="login-box" class="card center" hidden>
     <p>الدخول بتيليجرام</p>
     <script async src="https://telegram.org/js/telegram-widget.js?22"
       data-telegram-login="MATHDEPARTMENT_BOT" data-size="large"
@@ -83,7 +87,7 @@
     <p>الحساب في انتظار الموافقة من المسؤولين.</p>
   </div>
 
-  <div id="picker-box" class="card" hidden></div>
+<div id="picker-box" class="card" hidden></div>
   <div id="courses-box" hidden></div>
 
   <div id="app" hidden>
@@ -110,6 +114,8 @@ function el(tag, cls, text) {
   if (text != null) e.textContent = text;
   return e;
 }
+function showLoading(on) { $("loading").hidden = !on; }
+
 /* المظهر */
 const labels = { auto: "تلقائي", dark: "داكن", light: "فاتح" };
 const order = ["auto", "dark", "light"];
@@ -165,6 +171,7 @@ const state = { userId: null, role: null, sections: [], items: [], progress: {},
   courses: [], mine: new Set(), chosen: false,
   active: null, filter: "all", trash: false, form: null };
 const isAdmin = () => state.role === "admin" || state.role === "full_admin";
+const isFull = () => state.role === "full_admin";
 const courseName = (id) => (state.courses.find((c) => c.id === id) || {}).name || "";
 
 function setView(v) {
@@ -187,13 +194,13 @@ async function loadCourses() {
   return true;
 }
 
-async function loadData() {
+async function fetchData() {
   const [s, i, p] = await Promise.all([
     sb.from("sections").select("id,title,kind,sort_order").eq("is_active", true).order("sort_order"),
     sb.from("items").select("id,section_id,course_id,title,body,url,deadline,created_at,deleted_at"),
     sb.from("progress").select("item_id,done,submitted"),
   ]);
-  if (s.error || i.error || p.error) { say("تعذّر تحميل البيانات"); return; }
+  if (s.error || i.error || p.error) { say("تعذّر تحميل البيانات"); return false; }
   state.sections = s.data;
   state.items = i.data;
   state.progress = {};
@@ -201,7 +208,11 @@ async function loadData() {
   if (!state.sections.find((x) => x.id === state.active)) {
     state.active = state.sections.length ? state.sections[0].id : null;
   }
-  render();
+  return true;
+}
+
+async function loadData() {
+  if (await fetchData()) render();
 }
 
 function check(text, val, onChange) {
@@ -220,8 +231,9 @@ function field(text, node) {
   w.appendChild(el("label", "", text));
   w.appendChild(node);
   return w;
-    }
- /* اختيار المواد */
+}
+
+/* اختيار المواد */
 function renderPicker() {
   const box = $("picker-box");
   box.replaceChildren();
@@ -319,6 +331,24 @@ function renderCourses() {
     });
     row.appendChild(rn);
     row.appendChild(tg);
+    if (isFull()) {
+      const del = el("button", "small danger", "حذف");
+      del.addEventListener("click", async () => {
+        if (!confirm("حذف المادة نهائيًا؟ سيتم إلغاء تسجيل الناس فيها ولا يمكن التراجع.")) return;
+        const { data, error } = await sb.from("courses").delete().eq("id", c.id).select("id");
+        if (error) {
+          say(error.code === "23503"
+            ? "المادة مرتبطة بعناصر (حتى الموجودة في السلة). الأفضل إيقافها."
+            : "تعذّر الحذف");
+          return;
+        }
+        if (!data || !data.length) { say("تعذّر الحذف"); return; }
+        say("تم الحذف");
+        await loadCourses();
+        renderCourses();
+      });
+      row.appendChild(del);
+    }
     card.appendChild(row);
     box.appendChild(card);
   });
@@ -479,7 +509,7 @@ function card(sec, it) {
     c.appendChild(row);
   }
   return c;
-  }
+}
 
 function renderChips(sec) {
   const chips = $("chips");
@@ -561,47 +591,56 @@ function hideAll() {
 }
 
 async function showProfile() {
+  showLoading(true);
+  hideAll();
+  $("login-box").hidden = true;
+  $("pending-box").hidden = true;
+
   const { data: { session } } = await sb.auth.getSession();
   if (!session) {
-    hideAll();
-    $("login-box").hidden = false;
-    $("pending-box").hidden = true;
+    showLoading(false);
     $("logout").hidden = true;
+    $("login-box").hidden = false;
     return;
   }
   state.userId = session.user.id;
+  $("logout").hidden = false;
+
   const { data, error } = await sb.from("profiles")
     .select("first_name, role, approved, courses_chosen").eq("id", state.userId).single();
-  if (error || !data) { say("تعذّر تحميل الحساب"); return; }
+  if (error || !data) { showLoading(false); say("تعذّر تحميل الحساب"); return; }
 
-  $("login-box").hidden = true;
-  $("logout").hidden = false;
   state.role = data.role;
   state.chosen = !!data.courses_chosen;
 
   if (!data.approved) {
-    hideAll();
+    showLoading(false);
     $("welcome").textContent = "أهلًا " + (data.first_name || "");
     $("pending-box").hidden = false;
     return;
   }
-  $("pending-box").hidden = true;
+
   $("hello").textContent = "WELCOME " + (data.first_name || "") + " / " + data.role;
+  say("");
+  const [okC, okD] = await Promise.all([loadCourses(), fetchData()]);
+  showLoading(false);
+  if (!okC || !okD) return;
+
   $("courses-btn").hidden = false;
   $("manage-btn").hidden = !isAdmin();
-  say("");
-  if (!(await loadCourses())) return;
-  await loadData();
   if (!state.chosen && state.courses.some((c) => c.is_active)) setView("picker");
   else setView("app");
 }
 
 async function onTelegramAuth(user) {
-  say("جاري تسجيل الدخول...");
+  $("login-box").hidden = true;
+  showLoading(true);
+  say("");
+  const fail = (m) => { showLoading(false); $("login-box").hidden = false; say(m); };
   const { data, error } = await sb.functions.invoke("telegram-auth", { body: user });
-  if (error || !data || !data.token_hash) { say("فشل الدخول، برجاء إعادة المحاولة"); return; }
+  if (error || !data || !data.token_hash) { fail("فشل الدخول، برجاء إعادة المحاولة"); return; }
   const { error: e2 } = await sb.auth.verifyOtp({ token_hash: data.token_hash, type: "magiclink" });
-  if (e2) { say("فشل إكمال الدخول"); return; }
+  if (e2) { fail("فشل إكمال الدخول"); return; }
   await showProfile();
 }
 
