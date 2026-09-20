@@ -170,6 +170,28 @@ function safeUrl(u) {
 }
 /* المرفقات */
 const MAX_ATTACH = 50 * 1024 * 1024;
+const WARN_ATTACH = 5 * 1024 * 1024;
+const SHRINK_IMAGES = true; // تصغير الصور تلقائيًا قبل الرفع (اجعلها false لإيقافه)
+async function shrinkImage(file) {
+  const okTypes = ["image/jpeg", "image/png", "image/webp"];
+  if (!SHRINK_IMAGES || !okTypes.includes(file.type) || file.size < 400 * 1024) return file;
+  try {
+    const bmp = await createImageBitmap(file);
+    const max = 1600;
+    const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    const w = Math.round(bmp.width * k), h = Math.round(bmp.height * k);
+    const cv = document.createElement("canvas");
+    cv.width = w; cv.height = h;
+    const cx = cv.getContext("2d");
+    cx.fillStyle = "#fff";
+    cx.fillRect(0, 0, w, h);
+    cx.drawImage(bmp, 0, 0, w, h);
+    if (bmp.close) bmp.close();
+    const blob = await new Promise((r) => cv.toBlob(r, "image/jpeg", 0.82));
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
+  } catch (e) { return file; }
+}
 function humanSize(n) {
   if (n == null) return "";
   if (n < 1024 * 1024) return Math.round(n / 1024) + " ك.ب";
@@ -712,13 +734,13 @@ function buildForm(sec, it) {
     }
     const fi = el("input");
     fi.type = "file";
-    c.appendChild(field("إرفاق ملف (صورة / فيديو / PDF / أي نوع، حتى 50 ميجا)", fi));
+    c.appendChild(field("إرفاق ملف (صورة / فيديو / PDF / أي نوع). يُفضَّل أقل من 5 ميجا، والحد الأقصى 50 ميجا", fi));
     fi.addEventListener("change", () => { attFile = fi.files[0] || null; });
     const alink = el("input");
     alink.type = "url";
     alink.dir = "ltr";
     alink.placeholder = "https://drive.google.com/...";
-    c.appendChild(field("أو رابط خارجي (لملف أكبر من 50 ميجا)", alink));
+    c.appendChild(field("أو رابط خارجي (للملفات الكبيرة، مثل Drive)", alink));
     var attLinkInput = alink;
   }
   const row = el("div", "row");
@@ -740,10 +762,16 @@ function buildForm(sec, it) {
       data.url = u;
     }
     const linkVal = attLinkInput ? attLinkInput.value.trim() : "";
-    if (attFile && linkVal) { say("اختاري واحد بس: رفع ملف أو رابط خارجي"); return; }
-    if (attFile && attFile.size > MAX_ATTACH) { say("الملف أكبر من 50 ميجا، استخدمي رابط خارجي بدل كده"); return; }
+    if (attFile && linkVal) { say("الاختيار: رفع ملف أو رابط خارجي، وليس الاثنين معًا"); return; }
     let oldPath = it && it.attachment_path ? it.attachment_path : null;
     ok.disabled = true;
+    if (attFile) attFile = await shrinkImage(attFile);
+    if (attFile && attFile.size > MAX_ATTACH) { ok.disabled = false; say("الملف أكبر من 50 ميجا، يُرجى استخدام رابط خارجي"); return; }
+    if (attFile && attFile.size > WARN_ATTACH
+        && !confirm("حجم الملف " + humanSize(attFile.size) + ". الملفات الكبيرة تستهلك من حصة الموقع المجانية عند كل فتح. الأفضل استخدام رابط خارجي (Drive). المتابعة بالرفع؟")) {
+      ok.disabled = false;
+      return;
+    }
     if (attFile) {
       const up = await uploadAttachment(sec.id, attFile);
       if (up.error) { ok.disabled = false; say("تعذّر رفع الملف"); return; }
@@ -803,24 +831,33 @@ function card(sec, it) {
     const mime = it.attachment_mime || "";
     if (it.attachment_kind === "file" && mime.startsWith("image/")) {
       const img = el("img");
+      img.loading = "lazy";
+      img.decoding = "async";
       img.src = it.attachment_url;
       img.style.maxWidth = "100%";
       img.style.borderRadius = "8px";
       wrap.appendChild(img);
     } else if (it.attachment_kind === "file" && mime.startsWith("video/")) {
       const v = el("video");
+      v.preload = "none";
+      v.setAttribute("playsinline", "");
       v.src = it.attachment_url;
       v.controls = true;
       v.style.maxWidth = "100%";
       wrap.appendChild(v);
     } else if (it.attachment_kind === "file" && mime === "application/pdf") {
-      const f = el("iframe");
-      f.src = it.attachment_url;
-      f.style.width = "100%";
-      f.style.height = "70vh";
-      f.style.border = "2px solid var(--line)";
-      f.style.borderRadius = "8px";
-      wrap.appendChild(f);
+      const show = el("button", "", "📄 عرض الملف هنا");
+      show.style.marginBottom = "8px";
+      show.addEventListener("click", () => {
+        const f = el("iframe");
+        f.src = it.attachment_url;
+        f.style.width = "100%";
+        f.style.height = "70vh";
+        f.style.border = "2px solid var(--line)";
+        f.style.borderRadius = "8px";
+        show.replaceWith(f);
+      });
+      wrap.appendChild(show);
     }
     const box = el("div", "row");
     if (it.attachment_kind === "link") {
@@ -1010,7 +1047,7 @@ async function showProfile() {
     $("pending-box").hidden = false;
     return;
   }
-  $("hello").textContent = "WELCOME " + (data.first_name || "") + " / " + data.role;
+  $("hello").textContent = "WELCOME " + (data.first_name || "") + " / " + (roleLabels[data.role] || data.role);
   say("");
   const [okC, okD] = await Promise.all([loadCourses(), fetchData()]);
   showLoading(false);
