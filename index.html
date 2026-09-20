@@ -55,6 +55,43 @@
 </style>
 </head>
 <body>
+<script>
+(function () {
+  var ua = navigator.userAgent || "";
+  window.IS_IOS = /iP(hone|ad|od)/.test(ua) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  window.__showError = function (msg) {
+    var b = document.getElementById("errbox");
+    if (!b) {
+      b = document.createElement("div");
+      b.id = "errbox";
+      b.setAttribute("style", "position:fixed;top:0;left:0;right:0;z-index:99999;padding:10px 12px;background:#7a1f12;color:#fff;font:14px/1.5 -apple-system,Helvetica,Arial,sans-serif;direction:rtl;text-align:right;white-space:pre-wrap;word-break:break-word");
+      b.onclick = function () { if (b.parentNode) b.parentNode.removeChild(b); };
+      (document.body || document.documentElement).appendChild(b);
+    }
+    var base = "حدثت مشكلة في تشغيل الصفحة. برجاء المحاولة مرة أخرى بعد قليل.";
+    b.textContent = /[?&]debug/.test(location.search) ? base + "\n" + msg : base;
+  };
+  window.addEventListener("error", function (e) {
+    var t = e && e.target;
+    if (t && t !== window) {
+      if (t.tagName === "SCRIPT") window.__showError("failed to load: " + (t.src || ""));
+      return;
+    }
+    var m = (e && e.message) ? e.message : "unknown error";
+    var w = (e && e.filename) ? " @" + String(e.filename).split("/").pop() + ":" + e.lineno : "";
+    window.__showError(m + w);
+  }, true);
+  window.addEventListener("unhandledrejection", function (e) {
+    var r = e && e.reason;
+    window.__showError("rejected: " + (r && r.message ? r.message : String(r)));
+  });
+  setTimeout(function () {
+    var l = document.getElementById("loading");
+    if (l && !l.hidden) window.__showError("slow load (20s). check the connection and try again");
+  }, 20000);
+})();
+</script>
 <div class="wrap">
   <header>
     <div>
@@ -76,9 +113,12 @@
   </div>
   <div id="login-box" class="card center" hidden>
     <p>الدخول بتيليجرام</p>
-    <script async src="https://telegram.org/js/telegram-widget.js?22"
-      data-telegram-login="MATHDEPARTMENT_BOT" data-size="large"
-      data-onauth="onTelegramAuth(user)" data-request-access="write"></script>
+    <div id="tg-slot"></div>
+    <script>
+      if (!window.IS_IOS) {
+        document.write('<script async src="https://telegram.org/js/telegram-widget.js?22" data-telegram-login="MATHDEPARTMENT_BOT" data-size="large" data-onauth="onTelegramAuth(user)" data-request-access="write"><\/script>');
+      }
+    </script>
   </div>
   <div id="pending-box" class="card center" hidden>
     <p id="welcome"></p>
@@ -97,7 +137,19 @@
     <div id="list"></div>
   </div>
   <p id="msg" class="center"></p>
+  <p class="label" style="text-align:center;opacity:.5">BUILD ios-fix-2</p>
 </div>
+<script>
+if (!Element.prototype.replaceChildren) {
+  Element.prototype.replaceChildren = function () {
+    while (this.firstChild) this.removeChild(this.firstChild);
+    for (var i = 0; i < arguments.length; i++) {
+      var a = arguments[i];
+      this.appendChild(typeof a === "string" ? document.createTextNode(a) : a);
+    }
+  };
+}
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL = "https://xwnjimsoframcqstdjfo.supabase.co";
@@ -499,7 +551,7 @@ async function renderPeople(reload) {
     const all = state.people.filter((p) => !s
       || (p.first_name || "").toLowerCase().includes(s)
       || (p.username || "").toLowerCase().includes(s));
-    all.sort((a, b) => (roleRank[a.role] ?? 3) - (roleRank[b.role] ?? 3));
+    all.sort((a, b) => (roleRank[a.role] != null ? roleRank[a.role] : 3) - (roleRank[b.role] != null ? roleRank[b.role] : 3));
     const shown = all.slice(0, state.peopleLimit);
     info.textContent = "الحسابات: " + state.people.length + (s ? " · النتائج: " + all.length : "");
     shown.forEach((p) => res.appendChild(personCard(p)));
@@ -1086,6 +1138,7 @@ async function showProfile() {
     showLoading(false);
     $("logout").hidden = true;
     $("login-box").hidden = false;
+    mountTelegramRedirectButton();
     return;
   }
   state.userId = session.user.id;
@@ -1122,7 +1175,7 @@ async function onTelegramAuth(user) {
   $("login-box").hidden = true;
   showLoading(true);
   say("");
-  const fail = (m) => { showLoading(false); $("login-box").hidden = false; say(m); };
+  const fail = (m) => { showLoading(false); $("login-box").hidden = false; mountTelegramRedirectButton(); say(m); };
   const { data, error } = await sb.functions.invoke("telegram-auth", { body: user });
   if (error || !data || !data.token_hash) { fail("فشل الدخول، برجاء إعادة المحاولة"); return; }
   const { error: e2 } = await sb.auth.verifyOtp({ token_hash: data.token_hash, type: "magiclink" });
@@ -1135,7 +1188,33 @@ $("people-btn").addEventListener("click", () => setView("people"));
 $("log-btn").addEventListener("click", () => { state.logLimit = 100; setView("log"); });
 $("backup-btn").addEventListener("click", downloadBackup);
 $("logout").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
-showProfile();
+/* دخول تيليجرام على الآيفون: بيرجع للصفحة برابط فيه بيانات الدخول */
+function mountTelegramRedirectButton() {
+  if (!window.IS_IOS) return;
+  var slot = $("tg-slot");
+  if (!slot || slot.firstChild) return;
+  var s = document.createElement("script");
+  s.async = true;
+  s.src = "https://telegram.org/js/telegram-widget.js?22";
+  s.setAttribute("data-telegram-login", "MATHDEPARTMENT_BOT");
+  s.setAttribute("data-size", "large");
+  s.setAttribute("data-request-access", "write");
+  s.setAttribute("data-auth-url", location.origin + location.pathname.replace(/index\.html$/, ""));
+  slot.appendChild(s);
+}
+function readTelegramReturn() {
+  try {
+    var q = new URLSearchParams(location.search);
+    if (!q.get("hash") || !q.get("id") || !q.get("auth_date")) return null;
+    var keys = ["id", "first_name", "last_name", "username", "photo_url", "auth_date", "hash"];
+    var u = {};
+    keys.forEach(function (k) { if (q.has(k)) u[k] = q.get(k); });
+    history.replaceState(null, "", location.pathname);
+    return u;
+  } catch (e) { return null; }
+}
+var tgReturn = readTelegramReturn();
+if (tgReturn) onTelegramAuth(tgReturn); else showProfile();
 </script>
 </body>
 </html>
