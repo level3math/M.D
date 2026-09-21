@@ -55,6 +55,43 @@
 </style>
 </head>
 <body>
+<script>
+(function () {
+  var ua = navigator.userAgent || "";
+  window.IS_IOS = /iP(hone|ad|od)/.test(ua) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  window.__showError = function (msg) {
+    var b = document.getElementById("errbox");
+    if (!b) {
+      b = document.createElement("div");
+      b.id = "errbox";
+      b.setAttribute("style", "position:fixed;top:0;left:0;right:0;z-index:99999;padding:10px 12px;background:#7a1f12;color:#fff;font:14px/1.5 -apple-system,Helvetica,Arial,sans-serif;direction:rtl;text-align:right;white-space:pre-wrap;word-break:break-word");
+      b.onclick = function () { if (b.parentNode) b.parentNode.removeChild(b); };
+      (document.body || document.documentElement).appendChild(b);
+    }
+    var base = "حدثت مشكلة في تشغيل الصفحة. برجاء المحاولة مرة أخرى بعد قليل.";
+    b.textContent = /[?&]debug/.test(location.search) ? base + "\n" + msg : base;
+  };
+  window.addEventListener("error", function (e) {
+    var t = e && e.target;
+    if (t && t !== window) {
+      if (t.tagName === "SCRIPT") window.__showError("failed to load: " + (t.src || ""));
+      return;
+    }
+    var m = (e && e.message) ? e.message : "unknown error";
+    var w = (e && e.filename) ? " @" + String(e.filename).split("/").pop() + ":" + e.lineno : "";
+    window.__showError(m + w);
+  }, true);
+  window.addEventListener("unhandledrejection", function (e) {
+    var r = e && e.reason;
+    window.__showError("rejected: " + (r && r.message ? r.message : String(r)));
+  });
+  setTimeout(function () {
+    var l = document.getElementById("loading");
+    if (l && !l.hidden) window.__showError("slow load (20s). check the connection and try again");
+  }, 20000);
+})();
+</script>
 <div class="wrap">
   <header>
     <div>
@@ -67,6 +104,7 @@
       <button id="manage-btn" class="small" hidden>إدارة المواد</button>
       <button id="people-btn" class="small" hidden>users</button>
       <button id="log-btn" class="small" hidden>السجل</button>
+      <button id="backup-btn" class="small" hidden>نسخة احتياطية</button>
       <button id="logout" class="small" hidden>خروج</button>
     </div>
   </header>
@@ -75,9 +113,12 @@
   </div>
   <div id="login-box" class="card center" hidden>
     <p>الدخول بتيليجرام</p>
-    <script async src="https://telegram.org/js/telegram-widget.js?22"
-      data-telegram-login="MATHDEPARTMENT_BOT" data-size="large"
-      data-onauth="onTelegramAuth(user)" data-request-access="write"></script>
+    <div id="tg-slot"></div>
+    <script>
+      if (!window.IS_IOS) {
+        document.write('<script async src="https://telegram.org/js/telegram-widget.js?22" data-telegram-login="MATHDEPARTMENT_BOT" data-size="large" data-onauth="onTelegramAuth(user)" data-request-access="write"><\/script>');
+      }
+    </script>
   </div>
   <div id="pending-box" class="card center" hidden>
     <p id="welcome"></p>
@@ -90,12 +131,24 @@
   <div id="log-box" hidden></div>
   <div id="app" hidden>
     <p id="hello" class="label"></p>
+    <div id="bot-banner" class="card" hidden></div>
     <div id="tabs" class="tabs"></div>
     <div id="chips" class="chips"></div>
     <div id="list"></div>
   </div>
   <p id="msg" class="center"></p>
 </div>
+<script>
+if (!Element.prototype.replaceChildren) {
+  Element.prototype.replaceChildren = function () {
+    while (this.firstChild) this.removeChild(this.firstChild);
+    for (var i = 0; i < arguments.length; i++) {
+      var a = arguments[i];
+      this.appendChild(typeof a === "string" ? document.createTextNode(a) : a);
+    }
+  };
+}
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL = "https://xwnjimsoframcqstdjfo.supabase.co";
@@ -169,7 +222,29 @@ function safeUrl(u) {
   } catch (e) { return null; }
 }
 /* المرفقات */
-const MAX_ATTACH = 50 * 1024 * 1024;
+const MAX_ATTACH = 10 * 1024 * 1024;
+const WARN_ATTACH = 5 * 1024 * 1024;
+const SHRINK_IMAGES = true; // تصغير الصور تلقائيًا قبل الرفع (اجعلها false لإيقافه)
+async function shrinkImage(file) {
+  const okTypes = ["image/jpeg", "image/png", "image/webp"];
+  if (!SHRINK_IMAGES || !okTypes.includes(file.type) || file.size < 400 * 1024) return file;
+  try {
+    const bmp = await createImageBitmap(file);
+    const max = 1600;
+    const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    const w = Math.round(bmp.width * k), h = Math.round(bmp.height * k);
+    const cv = document.createElement("canvas");
+    cv.width = w; cv.height = h;
+    const cx = cv.getContext("2d");
+    cx.fillStyle = "#fff";
+    cx.fillRect(0, 0, w, h);
+    cx.drawImage(bmp, 0, 0, w, h);
+    if (bmp.close) bmp.close();
+    const blob = await new Promise((r) => cv.toBlob(r, "image/jpeg", 0.82));
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
+  } catch (e) { return file; }
+}
 function humanSize(n) {
   if (n == null) return "";
   if (n < 1024 * 1024) return Math.round(n / 1024) + " ك.ب";
@@ -208,7 +283,7 @@ const state = { userId: null, role: null, sections: [], items: [], progress: {},
   personal: [], courses: [], mine: new Set(), chosen: false,
   people: [], peopleQuery: "", peopleLimit: 50,
   questions: [], answers: [], qaNames: {}, qform: null, answerForm: {},
-  active: null, filter: "all", trash: false, form: null, pform: null, logLimit: 100 };
+  active: null, filter: "all", trash: false, form: null, pform: null, logLimit: 100, botOk: null };
 const isAdmin = () => state.role === "admin" || state.role === "full_admin";
 const isFull = () => state.role === "full_admin";
 const courseName = (id) => (state.courses.find((c) => c.id === id) || {}).name || "";
@@ -434,7 +509,8 @@ function personCard(p) {
   const c = el("div", "card");
   c.appendChild(el("h3", "", p.first_name || "—"));
   const who = (p.username ? "@" + p.username : "بدون يوزر") + " · " + (roleLabels[p.role] || p.role)
-    + (p.approved ? "" : " · موقوف");
+    + (p.approved ? "" : " · موقوف")
+    + (p.bot_ok === false ? " · الإشعارات متوقفة" : "");
   c.appendChild(el("p", "meta", who));
   if (p.id === state.userId) {
     c.appendChild(el("p", "meta", "هذا هو الحساب الحالي"));
@@ -462,7 +538,7 @@ async function renderPeople(reload) {
   if (reload) {
     showLoading(true);
     const { data, error } = await sb.from("profiles")
-      .select("id,first_name,username,role,approved,created_at")
+      .select("id,first_name,username,role,approved,created_at,bot_ok")
       .order("created_at", { ascending: false });
     showLoading(false);
     if (error) { say("تعذّر تحميل الحسابات", true); return; }
@@ -492,7 +568,7 @@ async function renderPeople(reload) {
     const all = state.people.filter((p) => !s
       || (p.first_name || "").toLowerCase().includes(s)
       || (p.username || "").toLowerCase().includes(s));
-    all.sort((a, b) => (roleRank[a.role] ?? 3) - (roleRank[b.role] ?? 3));
+    all.sort((a, b) => (roleRank[a.role] != null ? roleRank[a.role] : 3) - (roleRank[b.role] != null ? roleRank[b.role] : 3));
     const shown = all.slice(0, state.peopleLimit);
     info.textContent = "الحسابات: " + state.people.length + (s ? " · النتائج: " + all.length : "");
     shown.forEach((p) => res.appendChild(personCard(p)));
@@ -730,13 +806,13 @@ function buildForm(sec, it) {
     }
     const fi = el("input");
     fi.type = "file";
-    c.appendChild(field("إرفاق ملف (صورة / فيديو / PDF / أي نوع، حتى 50 ميجا)", fi));
+    c.appendChild(field("إرفاق ملف (صورة / فيديو / PDF / أي نوع). يُفضَّل أقل من 5 ميجا، والحد الأقصى 10 ميجا", fi));
     fi.addEventListener("change", () => { attFile = fi.files[0] || null; });
     const alink = el("input");
     alink.type = "url";
     alink.dir = "ltr";
     alink.placeholder = "https://drive.google.com/...";
-    c.appendChild(field("أو رابط خارجي (لملف أكبر من 50 ميجا)", alink));
+    c.appendChild(field("أو رابط خارجي (للملفات الكبيرة، مثل Drive)", alink));
     var attLinkInput = alink;
   }
   const row = el("div", "row");
@@ -758,10 +834,16 @@ function buildForm(sec, it) {
       data.url = u;
     }
     const linkVal = attLinkInput ? attLinkInput.value.trim() : "";
-    if (attFile && linkVal) { say("اختاري واحد بس: رفع ملف أو رابط خارجي"); return; }
-    if (attFile && attFile.size > MAX_ATTACH) { say("الملف أكبر من 50 ميجا، استخدمي رابط خارجي بدل كده"); return; }
+    if (attFile && linkVal) { say("الاختيار: رفع ملف أو رابط خارجي، وليس الاثنين معًا"); return; }
     let oldPath = it && it.attachment_path ? it.attachment_path : null;
     ok.disabled = true;
+    if (attFile) attFile = await shrinkImage(attFile);
+    if (attFile && attFile.size > MAX_ATTACH) { ok.disabled = false; say("الملف أكبر من 10 ميجا، يُرجى استخدام رابط خارجي"); return; }
+    if (attFile && attFile.size > WARN_ATTACH
+        && !confirm("حجم الملف " + humanSize(attFile.size) + ". الملفات الكبيرة تستهلك من حصة الموقع المجانية عند كل فتح. الأفضل استخدام رابط خارجي (Drive). المتابعة بالرفع؟")) {
+      ok.disabled = false;
+      return;
+    }
     if (attFile) {
       const up = await uploadAttachment(sec.id, attFile);
       if (up.error) { ok.disabled = false; say("تعذّر رفع الملف"); return; }
@@ -821,24 +903,33 @@ function card(sec, it) {
     const mime = it.attachment_mime || "";
     if (it.attachment_kind === "file" && mime.startsWith("image/")) {
       const img = el("img");
+      img.loading = "lazy";
+      img.decoding = "async";
       img.src = it.attachment_url;
       img.style.maxWidth = "100%";
       img.style.borderRadius = "8px";
       wrap.appendChild(img);
     } else if (it.attachment_kind === "file" && mime.startsWith("video/")) {
       const v = el("video");
+      v.preload = "none";
+      v.setAttribute("playsinline", "");
       v.src = it.attachment_url;
       v.controls = true;
       v.style.maxWidth = "100%";
       wrap.appendChild(v);
     } else if (it.attachment_kind === "file" && mime === "application/pdf") {
-      const f = el("iframe");
-      f.src = it.attachment_url;
-      f.style.width = "100%";
-      f.style.height = "70vh";
-      f.style.border = "2px solid var(--line)";
-      f.style.borderRadius = "8px";
-      wrap.appendChild(f);
+      const show = el("button", "", "📄 عرض الملف هنا");
+      show.style.marginBottom = "8px";
+      show.addEventListener("click", () => {
+        const f = el("iframe");
+        f.src = it.attachment_url;
+        f.style.width = "100%";
+        f.style.height = "70vh";
+        f.style.border = "2px solid var(--line)";
+        f.style.borderRadius = "8px";
+        show.replaceWith(f);
+      });
+      wrap.appendChild(show);
     }
     const box = el("div", "row");
     if (it.attachment_kind === "link") {
@@ -914,6 +1005,55 @@ function renderChips(sec) {
     : state.courses.filter((c) => c.is_active);
   list.forEach((c) => add(c.name, c.id));
 }
+/* نسخة احتياطية (للمالك) */
+async function downloadBackup() {
+  showLoading(true);
+  const { data, error } = await sb.rpc("export_backup");
+  showLoading(false);
+  if (error || !data) { say("تعذّر إنشاء النسخة الاحتياطية"); return; }
+  const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "math3-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  say("تم تنزيل النسخة. يُرجى حفظها في مكان خاص (Drive أو الرسائل المحفوظة)");
+}
+/* تنبيه الإشعارات المتوقفة */
+function renderBotBanner() {
+  const b = $("bot-banner");
+  b.replaceChildren();
+  if (state.botOk !== false) { b.hidden = true; return; }
+  b.hidden = false;
+  b.appendChild(el("h3", "", "الإشعارات على تيليجرام متوقفة"));
+  b.appendChild(el("p", "", "لا يمكن للبوت إرسال رسائل لهذا الحساب حاليًا، لذلك لن تصل إشعارات التكاليف والأخبار. الحل: فتح البوت والضغط على Start، ثم الضغط على «إعادة المحاولة»."));
+  const row = el("div", "row");
+  const open = el("a", "btn", "فتح البوت");
+  open.href = "https://t.me/MATHDEPARTMENT_BOT";
+  open.target = "_blank";
+  open.rel = "noopener noreferrer";
+  const retry = el("button", "", "إعادة المحاولة");
+  retry.addEventListener("click", retryBot);
+  row.appendChild(open);
+  row.appendChild(retry);
+  b.appendChild(row);
+}
+async function refreshBotStatus() {
+  const { data } = await sb.from("profiles").select("bot_ok").eq("id", state.userId).single();
+  if (data) { state.botOk = data.bot_ok; renderBotBanner(); }
+}
+async function retryBot() {
+  const { error } = await sb.rpc("resend_welcome");
+  if (error) {
+    say((error.message || "").includes("too_soon") ? "تمت المحاولة للتو، يُرجى الانتظار دقيقتين" : "تعذّر التنفيذ");
+    return;
+  }
+  say("تم إرسال رسالة اختبار. عند وصولها على تيليجرام سيختفي هذا التنبيه بعد قليل");
+  setTimeout(refreshBotStatus, 75000);
+  setTimeout(refreshBotStatus, 150000);
+}
 /* قسم الأسئلة */
 function displayName(uid) { return state.qaNames[uid] || "مستخدم"; }
 function myPendingAnswer(qid) {
@@ -926,7 +1066,7 @@ function renderQA(sec) {
   const list = $("list");
   list.replaceChildren();
   const bar = el("div", "row");
-  const add = el("button", "", state.qform ? "إلغاء السؤال" : "+ اسألي سؤال");
+  const add = el("button", "", state.qform ? "إلغاء السؤال" : "+ اسأل سؤال");
   add.addEventListener("click", () => { state.qform = state.qform ? null : {}; render(); });
   bar.appendChild(add);
   list.appendChild(bar);
@@ -944,7 +1084,7 @@ function renderQA(sec) {
     const cancel = el("button", "", "إلغاء");
     cancel.addEventListener("click", () => { state.qform = null; render(); });
     ok.addEventListener("click", async () => {
-      if (!t.value.trim()) { say("اكتبي السؤال"); return; }
+      if (!t.value.trim()) { say("اكتب السؤال"); return; }
       ok.disabled = true;
       const { error } = await sb.rpc("ask_question", { p_title: t.value.trim(), p_body: b.value.trim() || null });
       ok.disabled = false;
@@ -1014,14 +1154,14 @@ function renderQA(sec) {
       if (state.answerForm[q.id]) {
         const ab = el("textarea");
         ab.rows = 2;
-        ab.placeholder = "اكتبي إجابتك";
+        ab.placeholder = "اكتب إجابتك";
         c.appendChild(ab);
         const arow = el("div", "row");
         const asend = el("button", "small", "إرسال الإجابة");
         const acancel = el("button", "small", "إلغاء");
         acancel.addEventListener("click", () => { delete state.answerForm[q.id]; render(); });
         asend.addEventListener("click", async () => {
-          if (!ab.value.trim()) { say("اكتبي الإجابة"); return; }
+          if (!ab.value.trim()) { say("اكتب الإجابة"); return; }
           asend.disabled = true;
           const { error } = await sb.rpc("answer_question", { p_question: q.id, p_body: ab.value.trim() });
           asend.disabled = false;
@@ -1054,6 +1194,7 @@ function renderQA(sec) {
   });
 }
 function render() {
+  renderBotBanner();
   const tabs = $("tabs");
   tabs.replaceChildren();
   state.sections.forEach((sec) => {
@@ -1143,6 +1284,7 @@ function hideAll() {
   $("manage-btn").hidden = true;
   $("people-btn").hidden = true;
   $("log-btn").hidden = true;
+  $("backup-btn").hidden = true;
 }
 async function showProfile() {
   showLoading(true);
@@ -1154,22 +1296,24 @@ async function showProfile() {
     showLoading(false);
     $("logout").hidden = true;
     $("login-box").hidden = false;
+    mountTelegramRedirectButton();
     return;
   }
   state.userId = session.user.id;
   $("logout").hidden = false;
   const { data, error } = await sb.from("profiles")
-    .select("first_name, role, approved, courses_chosen").eq("id", state.userId).single();
+    .select("first_name, role, approved, courses_chosen, bot_ok").eq("id", state.userId).single();
   if (error || !data) { showLoading(false); say("تعذّر تحميل الحساب", true); return; }
   state.role = data.role;
   state.chosen = !!data.courses_chosen;
+  state.botOk = data.bot_ok;
   if (!data.approved) {
     showLoading(false);
     $("welcome").textContent = "أهلًا " + (data.first_name || "");
     $("pending-box").hidden = false;
     return;
   }
-  $("hello").textContent = "WELCOME " + (data.first_name || "") + " / " + data.role;
+  $("hello").textContent = "WELCOME " + (data.first_name || "") + " / " + (roleLabels[data.role] || data.role);
   say("");
   const [okC, okD] = await Promise.all([loadCourses(), fetchData()]);
   showLoading(false);
@@ -1178,6 +1322,10 @@ async function showProfile() {
   $("manage-btn").hidden = !isAdmin();
   $("log-btn").hidden = !isAdmin();
   $("people-btn").hidden = !isFull();
+  $("backup-btn").hidden = true;
+  if (isFull()) {
+    sb.rpc("can_backup").then(({ data }) => { $("backup-btn").hidden = data !== true; });
+  }
   if (!state.chosen && state.courses.some((c) => c.is_active)) setView("picker");
   else setView("app");
 }
@@ -1185,7 +1333,7 @@ async function onTelegramAuth(user) {
   $("login-box").hidden = true;
   showLoading(true);
   say("");
-  const fail = (m) => { showLoading(false); $("login-box").hidden = false; say(m); };
+  const fail = (m) => { showLoading(false); $("login-box").hidden = false; mountTelegramRedirectButton(); say(m); };
   const { data, error } = await sb.functions.invoke("telegram-auth", { body: user });
   if (error || !data || !data.token_hash) { fail("فشل الدخول، برجاء إعادة المحاولة"); return; }
   const { error: e2 } = await sb.auth.verifyOtp({ token_hash: data.token_hash, type: "magiclink" });
@@ -1196,8 +1344,35 @@ $("courses-btn").addEventListener("click", () => setView("picker"));
 $("manage-btn").addEventListener("click", () => setView("courses"));
 $("people-btn").addEventListener("click", () => setView("people"));
 $("log-btn").addEventListener("click", () => { state.logLimit = 100; setView("log"); });
+$("backup-btn").addEventListener("click", downloadBackup);
 $("logout").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
-showProfile();
+/* دخول تيليجرام على الآيفون: بيرجع للصفحة برابط فيه بيانات الدخول */
+function mountTelegramRedirectButton() {
+  if (!window.IS_IOS) return;
+  var slot = $("tg-slot");
+  if (!slot || slot.firstChild) return;
+  var s = document.createElement("script");
+  s.async = true;
+  s.src = "https://telegram.org/js/telegram-widget.js?22";
+  s.setAttribute("data-telegram-login", "MATHDEPARTMENT_BOT");
+  s.setAttribute("data-size", "large");
+  s.setAttribute("data-request-access", "write");
+  s.setAttribute("data-auth-url", location.origin + location.pathname.replace(/index\.html$/, ""));
+  slot.appendChild(s);
+}
+function readTelegramReturn() {
+  try {
+    var q = new URLSearchParams(location.search);
+    if (!q.get("hash") || !q.get("id") || !q.get("auth_date")) return null;
+    var keys = ["id", "first_name", "last_name", "username", "photo_url", "auth_date", "hash"];
+    var u = {};
+    keys.forEach(function (k) { if (q.has(k)) u[k] = q.get(k); });
+    history.replaceState(null, "", location.pathname);
+    return u;
+  } catch (e) { return null; }
+}
+var tgReturn = readTelegramReturn();
+if (tgReturn) onTelegramAuth(tgReturn); else showProfile();
 </script>
 </body>
 </html>
