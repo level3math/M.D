@@ -301,7 +301,7 @@ function setView(v) {
 }
 async function loadCourses() {
   const [c, u] = await Promise.all([
-    sb.from("courses").select("id,name,sort_order,is_active").order("sort_order").order("name"),
+    sb.from("courses").select("id,name,sort_order,is_active,drive_url").order("sort_order").order("name"),
     sb.from("user_courses").select("course_id"),
   ]);
   if (c.error || u.error) { say("تعذّر تحميل المواد", true); return false; }
@@ -1055,6 +1055,60 @@ async function retryBot() {
   setTimeout(refreshBotStatus, 75000);
   setTimeout(refreshBotStatus, 150000);
 }
+/* تبييض المحاضرات: فولدر درايف ثابت لكل مادة */
+function renderLinks(sec) {
+  $("chips").replaceChildren();
+  const list = $("list");
+  list.replaceChildren();
+  const courses = state.courses.filter((c) => c.is_active || (isAdmin() && c.drive_url));
+  if (!courses.length) {
+    list.appendChild(el("p", "center", "لا توجد مواد بعد"));
+    return;
+  }
+  courses.forEach((c) => {
+    const card = el("div", "card");
+    card.appendChild(el("h3", "", c.name + (c.is_active ? "" : " (متوقفة)")));
+    if (c.drive_url) {
+      const a = el("a", "btn", "📁 فتح فولدر المحاضرات");
+      a.href = c.drive_url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      card.appendChild(a);
+    } else {
+      card.appendChild(el("p", "meta", "الرابط لسه مش متاح"));
+    }
+    if (isAdmin()) {
+      const row = el("div", "row");
+      const edit = el("button", "small", c.drive_url ? "تعديل الرابط" : "إضافة رابط");
+      edit.addEventListener("click", async () => {
+        const url = (prompt("رابط فولدر Drive بتاع " + c.name, c.drive_url || "") || "").trim();
+        if (url === "") return;
+        const u = safeUrl(url);
+        if (!u) { say("الرابط غير صالح"); return; }
+        const { error } = await sb.from("courses").update({ drive_url: u }).eq("id", c.id);
+        if (error) { say("تعذّر الحفظ"); return; }
+        say("تم الحفظ");
+        await loadCourses();
+        render();
+      });
+      row.appendChild(edit);
+      if (c.drive_url) {
+        const rm = el("button", "small danger", "حذف الرابط");
+        rm.addEventListener("click", async () => {
+          if (!confirm("حذف رابط الفولدر لمادة " + c.name + "؟")) return;
+          const { error } = await sb.from("courses").update({ drive_url: null }).eq("id", c.id);
+          if (error) { say("تعذّر الحذف"); return; }
+          say("تم الحذف");
+          await loadCourses();
+          render();
+        });
+        row.appendChild(rm);
+      }
+      card.appendChild(row);
+    }
+    list.appendChild(card);
+  });
+}
 /* قسم الأسئلة */
 function displayName(uid) { return state.qaNames[uid] || "مستخدم"; }
 function myPendingAnswer(qid) {
@@ -1212,6 +1266,7 @@ function render() {
   const sec = state.sections.find((x) => x.id === state.active);
   if (!sec) { $("chips").replaceChildren(); list.appendChild(el("p", "center", "لا توجد أقسام بعد")); return; }
   if (sec.kind === "qa") { renderQA(sec); return; }
+  if (sec.kind === "links") { renderLinks(sec); return; }
   renderChips(sec);
   const inSec = state.items.filter((x) => x.section_id === sec.id);
   const dead = inSec.filter((x) => x.deleted_at);
