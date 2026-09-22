@@ -331,7 +331,7 @@ function renderQAAttachment(obj) {
   wrap.appendChild(box);
   return wrap;
 }
-const roleLabels = { student: "طالب", admin: "أدمن", full_admin: "مالك" };
+const roleLabels = { student: "Student", admin: "Admin", full_admin: "Owner" };
 const roleRank = { full_admin: 0, admin: 1, student: 2 };
 function rpcMsg(error) {
   const m = (error && error.message) || "";
@@ -348,6 +348,11 @@ const state = { userId: null, role: null, sections: [], items: [], progress: {},
 const isAdmin = () => state.role === "admin" || state.role === "full_admin";
 const isFull = () => state.role === "full_admin";
 const courseName = (id) => (state.courses.find((c) => c.id === id) || {}).name || "";
+function goHome() {
+  state.active = null; state.form = null; state.pform = null;
+  state.trash = false; state.filter = "all"; state.qform = null; state.answerForm = {};
+  render();
+}
 function setView(v) {
   $("app").hidden = v !== "app";
   $("picker-box").hidden = v !== "picker";
@@ -358,8 +363,14 @@ function setView(v) {
   if (v === "courses") renderCourses();
   if (v === "people") renderPeople(true);
   if (v === "log") renderLog();
-  if (v === "app") render();
+  if (v === "app") goHome();
 }
+/* الدوس على الخلفية (أي حاجة مش زرار/كارت/تاب) يرجّع للهوم */
+document.addEventListener("click", (e) => {
+  if ($("app").hidden || !state.active) return;
+  if (e.target.closest("header, button, a, input, textarea, select, .card")) return;
+  goHome();
+});
 async function loadCourses() {
   const [c, u] = await Promise.all([
     sb.from("courses").select("id,name,sort_order,is_active,drive_url").order("sort_order").order("name"),
