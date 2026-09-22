@@ -1332,8 +1332,11 @@ function renderQA(sec) {
       const delq = el("button", "small danger", "حذف السؤال");
       delq.addEventListener("click", async () => {
         if (!confirm("حذف السؤال؟")) return;
-        const { error } = await sb.rpc("delete_question", { p_id: q.id });
+        const { data, error } = await sb.rpc("delete_question", { p_id: q.id });
         if (error) { say(/[?&]debug/.test(location.search) ? "تعذّر الحذف: " + error.message : "تعذّر الحذف"); return; }
+        if (Array.isArray(data) && data.length) {
+          await sb.storage.from("attachments").remove(data);
+        }
         await loadData();
       });
       c.appendChild(delq);
