@@ -315,8 +315,8 @@ async function fetchData() {
     sb.from("items").select("id,section_id,course_id,title,body,url,deadline,created_at,deleted_at,attachment_kind,attachment_url,attachment_path,attachment_name,attachment_mime,attachment_size"),
     sb.from("progress").select("item_id,done,submitted"),
     sb.from("personal_items").select("id,title,body,deadline,done,created_at"),
-    sb.from("questions_public").select("id,asker_id,title,body,created_at").order("created_at", { ascending: false }),
-    sb.from("answers_public").select("id,question_id,author_id,author_role,body,status,created_at"),
+    sb.rpc("get_questions"),
+    sb.rpc("get_answers"),
   ]);
   if (s.error || i.error || p.error || pi.error || q.error || a.error) { say("تعذّر تحميل البيانات", true); return false; }
   state.sections = s.data;
