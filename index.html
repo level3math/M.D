@@ -1246,8 +1246,11 @@ function renderQA(sec) {
         const del = el("button", "small danger", "حذف");
         del.addEventListener("click", async () => {
           if (!confirm("حذف الإجابة؟")) return;
-          const { error } = await sb.rpc("delete_answer", { p_id: a.id });
+          const { data, error } = await sb.rpc("delete_answer", { p_id: a.id });
           if (error) { say("تعذّر الحذف"); return; }
+          if (data) {
+            await sb.storage.from("attachments").remove([data]);
+          }
           await loadData();
         });
         ac.appendChild(del);
