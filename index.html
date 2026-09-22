@@ -186,10 +186,10 @@ $("theme-btn").addEventListener("click", () => {
 });
 applyTheme();
 /* التوقيت (توقيت مصر) */
-const dateFmt = new Intl.DateTimeFormat("ar-EG", {
+const dateFmt = new Intl.DateTimeFormat("en-US", {
   timeZone: "Africa/Cairo", dateStyle: "full", timeStyle: "short",
 });
-const logFmt = new Intl.DateTimeFormat("ar-EG", {
+const logFmt = new Intl.DateTimeFormat("en-US", {
   timeZone: "Africa/Cairo", dateStyle: "medium", timeStyle: "short",
 });
 function fmt(iso) { return dateFmt.format(new Date(iso)); }
