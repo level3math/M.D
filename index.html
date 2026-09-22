@@ -47,8 +47,6 @@
     border:2px solid var(--line); border-radius:12px; padding:8px;
     display:flex; flex-direction:column; gap:6px; box-shadow:0 6px 18px rgba(0,0,0,.2); }
   .dropdown .chip { display:block; width:100%; text-align:start; font-size:14px; }
-  .dropdown .group-label { font-family:ui-monospace,Menlo,monospace; font-size:11px;
-    letter-spacing:.06em; color:var(--accent); margin:6px 2px 0; }
   label.chk { display:inline-flex; align-items:center; gap:8px; margin-inline-end:20px; cursor:pointer; }
   input[type=checkbox] { width:22px; height:22px; accent-color:var(--accent); }
   input[type=text], input[type=url], input[type=datetime-local], textarea, select {
@@ -1056,7 +1054,8 @@ function renderChips(sec) {
   const chips = $("chips");
   chips.replaceChildren();
   if (sec.kind === "newsletter") return;
-  if (sec.kind === "tasks") { renderSectionsMenu(sec); return; }
+  if (sec.kind === "tasks") { chips.style.overflow = "visible"; renderSectionsMenu(sec); return; }
+  chips.style.overflow = "";
   const add = (label, val) => {
     const b = el("button", "chip" + (state.filter === val ? " active" : ""), label);
     b.addEventListener("click", () => { state.filter = val; render(); });
@@ -1088,7 +1087,6 @@ function renderSectionsMenu(sec) {
   };
   addItem("الكل", "all");
   addItem("شخصي", "personal");
-  if (courseList.length) dd.appendChild(el("p", "group-label", "مواد الموقع"));
   courseList.forEach((c) => addItem(c.name, c.id));
   btn.addEventListener("click", (e) => { e.stopPropagation(); dd.hidden = !dd.hidden; });
   wrap.appendChild(btn);
