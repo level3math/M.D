@@ -570,7 +570,8 @@ async function renderPeople(reload) {
       || (p.username || "").toLowerCase().includes(s));
     all.sort((a, b) => (roleRank[a.role] != null ? roleRank[a.role] : 3) - (roleRank[b.role] != null ? roleRank[b.role] : 3));
     const shown = all.slice(0, state.peopleLimit);
-    info.textContent = "الحسابات: " + state.people.length + (s ? " · النتائج: " + all.length : "");
+    info.textContent = "الحسابات: " + state.people.length + (s ? " · النتائج: " + all.length : "")
+      + " · الإشعارات متوقفة عند: " + state.people.filter((p) => p.bot_ok === false).length;
     shown.forEach((p) => res.appendChild(personCard(p)));
     if (all.length > shown.length) {
       const more = el("button", "", "عرض المزيد");
