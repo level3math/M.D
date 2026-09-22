@@ -47,6 +47,20 @@
     border:2px solid var(--line); border-radius:12px; padding:8px;
     display:flex; flex-direction:column; gap:6px; box-shadow:0 6px 18px rgba(0,0,0,.2); }
   .dropdown .chip { display:block; width:100%; text-align:start; font-size:14px; }
+  .links-fab { position:fixed; top:14px; left:14px; z-index:70; width:44px; height:44px;
+    border-radius:50%; padding:0; display:flex; align-items:center; justify-content:center;
+    font-size:20px; line-height:1; background:var(--card); box-shadow:0 4px 14px rgba(0,0,0,.3); }
+  .links-panel { position:fixed; top:64px; left:14px; z-index:70;
+    width:min(300px, calc(100vw - 28px)); max-height:70vh; overflow-y:auto;
+    background:var(--card); border:2px solid var(--line); border-radius:12px; padding:10px;
+    box-shadow:0 6px 18px rgba(0,0,0,.25); }
+  .links-row { display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:6px 2px; border-bottom:1px solid var(--line); }
+  .links-row:last-child { border-bottom:none; }
+  .links-row .name { font-size:15px; }
+  .links-row .icons { display:flex; gap:10px; font-size:19px; flex:none; }
+  .links-row .icons a { text-decoration:none; }
+  .links-row .icons span.dim { opacity:.25; }
   label.chk { display:inline-flex; align-items:center; gap:8px; margin-inline-end:20px; cursor:pointer; }
   input[type=checkbox] { width:22px; height:22px; accent-color:var(--accent); }
   input[type=text], input[type=url], input[type=datetime-local], textarea, select {
@@ -98,6 +112,8 @@
   }, 20000);
 })();
 </script>
+<button id="links-fab" class="links-fab" hidden>🔗</button>
+<div id="links-panel" class="links-panel" hidden></div>
 <div class="wrap">
   <header>
     <div>
@@ -373,7 +389,7 @@ document.addEventListener("click", (e) => {
 });
 async function loadCourses() {
   const [c, u] = await Promise.all([
-    sb.from("courses").select("id,name,sort_order,is_active,drive_url").order("sort_order").order("name"),
+    sb.from("courses").select("id,name,sort_order,is_active,drive_url,whatsapp_link,teams_link,telegram_link").order("sort_order").order("name"),
     sb.from("user_courses").select("course_id"),
   ]);
   if (c.error || u.error) { say("تعذّر تحميل المواد", true); return false; }
@@ -530,6 +546,24 @@ function renderCourses() {
     });
     row.appendChild(rn);
     row.appendChild(tg);
+    [
+      { key: "whatsapp_link", label: "واتساب" },
+      { key: "teams_link", label: "تيمز" },
+      { key: "telegram_link", label: "تيليجرام" },
+    ].forEach((k) => {
+      const lb = el("button", "small", (c[k.key] ? "تعديل لينك " : "إضافة لينك ") + k.label);
+      lb.addEventListener("click", async () => {
+        const url = (prompt("رابط " + k.label + " بتاع " + c.name, c[k.key] || "") || "").trim();
+        const u = url || null;
+        if (u === (c[k.key] || null)) return;
+        const { error } = await sb.from("courses").update({ [k.key]: u }).eq("id", c.id);
+        if (error) { say("تعذّر الحفظ"); return; }
+        say("");
+        await loadCourses();
+        renderCourses();
+      });
+      row.appendChild(lb);
+    });
     if (isFull()) {
       const del = el("button", "small danger", "حذف");
       del.addEventListener("click", async () => {
@@ -1488,6 +1522,8 @@ function hideAll() {
   $("people-btn").hidden = true;
   $("log-btn").hidden = true;
   $("backup-btn").hidden = true;
+  $("links-fab").hidden = true;
+  $("links-panel").hidden = true;
 }
 async function showProfile() {
   showLoading(true);
@@ -1522,6 +1558,7 @@ async function showProfile() {
   showLoading(false);
   if (!okC || !okD) return;
   $("courses-btn").hidden = false;
+  $("links-fab").hidden = false;
   $("manage-btn").hidden = !isAdmin();
   $("log-btn").hidden = !isAdmin();
   $("people-btn").hidden = !isFull();
@@ -1543,6 +1580,48 @@ async function onTelegramAuth(user) {
   if (e2) { fail("فشل إكمال الدخول"); return; }
   await showProfile();
 }
+/* البتاعة العائمة: جروبات التواصل بتاعة كل مادة */
+function renderLinksPanel() {
+  const panel = $("links-panel");
+  panel.replaceChildren();
+  const kinds = [
+    { key: "whatsapp_link", icon: "🟢" },
+    { key: "teams_link", icon: "🟣" },
+    { key: "telegram_link", icon: "🔵" },
+  ];
+  const list = state.courses
+    .filter((c) => c.is_active)
+    .map((c) => ({ c, n: kinds.reduce((s, k) => s + (c[k.key] ? 1 : 0), 0) }))
+    .sort((a, b) => b.n - a.n);
+  if (!list.length) { panel.appendChild(el("p", "center", "لا توجد مواد بعد")); return; }
+  list.forEach(({ c }) => {
+    const row = el("div", "links-row");
+    row.appendChild(el("span", "name", c.name));
+    const icons = el("div", "icons");
+    kinds.forEach((k) => {
+      if (c[k.key]) {
+        const a = document.createElement("a");
+        a.href = c[k.key]; a.target = "_blank"; a.rel = "noopener";
+        a.textContent = k.icon;
+        icons.appendChild(a);
+      } else {
+        icons.appendChild(el("span", "dim", k.icon));
+      }
+    });
+    row.appendChild(icons);
+    panel.appendChild(row);
+  });
+}
+$("links-fab").addEventListener("click", (e) => {
+  e.stopPropagation();
+  const panel = $("links-panel");
+  panel.hidden = !panel.hidden;
+  if (!panel.hidden) renderLinksPanel();
+});
+document.addEventListener("click", (e) => {
+  if (e.target.closest("#links-fab, #links-panel")) return;
+  $("links-panel").hidden = true;
+});
 $("courses-btn").addEventListener("click", () => setView("picker"));
 $("manage-btn").addEventListener("click", () => setView("courses"));
 $("people-btn").addEventListener("click", () => setView("people"));
