@@ -1333,7 +1333,7 @@ function renderQA(sec) {
       delq.addEventListener("click", async () => {
         if (!confirm("حذف السؤال؟")) return;
         const { error } = await sb.rpc("delete_question", { p_id: q.id });
-        if (error) { say("تعذّر الحذف"); return; }
+        if (error) { say(/[?&]debug/.test(location.search) ? "تعذّر الحذف: " + error.message : "تعذّر الحذف"); return; }
         await loadData();
       });
       c.appendChild(delq);
