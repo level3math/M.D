@@ -401,7 +401,7 @@ async function fetchData() {
     }
   }
   if (!state.sections.find((x) => x.id === state.active)) {
-    state.active = state.sections.length ? state.sections[0].id : null;
+    state.active = null;
   }
   return true;
 }
@@ -1400,7 +1400,7 @@ function render() {
   const list = $("list");
   list.replaceChildren();
   const sec = state.sections.find((x) => x.id === state.active);
-  if (!sec) { $("chips").replaceChildren(); list.appendChild(el("p", "center", "لا توجد أقسام بعد")); return; }
+  if (!sec) { $("chips").replaceChildren(); return; }
   if (sec.kind === "qa") { renderQA(sec); return; }
   if (sec.kind === "links") { renderLinks(sec); return; }
   renderChips(sec);
