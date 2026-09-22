@@ -58,9 +58,10 @@
     padding:6px 2px; border-bottom:1px solid var(--line); }
   .links-row:last-child { border-bottom:none; }
   .links-row .name { font-size:15px; }
-  .links-row .icons { display:flex; gap:10px; font-size:19px; flex:none; }
-  .links-row .icons a { text-decoration:none; }
-  .links-row .icons span.dim { opacity:.25; }
+  .links-row .icons { display:flex; gap:8px; align-items:center; flex:none; }
+  .links-row .icons a { text-decoration:none; display:flex; }
+  .links-row .icons svg { display:block; width:20px; height:20px; }
+  .links-row .icons span.dim svg { opacity:.25; }
   label.chk { display:inline-flex; align-items:center; gap:8px; margin-inline-end:20px; cursor:pointer; }
   input[type=checkbox] { width:22px; height:22px; accent-color:var(--accent); }
   input[type=text], input[type=url], input[type=datetime-local], textarea, select {
@@ -1585,9 +1586,9 @@ function renderLinksPanel() {
   const panel = $("links-panel");
   panel.replaceChildren();
   const kinds = [
-    { key: "whatsapp_link", icon: "🟢" },
-    { key: "teams_link", icon: "🟣" },
-    { key: "telegram_link", icon: "🔵" },
+    { key: "whatsapp_link", icon: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#25D366"/><path fill="#fff" d="M12 5.5a6.5 6.5 0 00-5.6 9.8L5.5 18.5l3.3-.9A6.5 6.5 0 1012 5.5zm3.8 9.3c-.2.5-1 .9-1.4 1-.4.1-.8.1-1.3-.1-.3-.1-.7-.2-1.2-.5-2.1-1-3.5-3-3.6-3.2-.1-.2-.9-1.2-.9-2.3 0-1.1.6-1.6.8-1.9.2-.2.4-.3.6-.3h.4c.1 0 .3 0 .5.4l.6 1.5c.1.1.1.3 0 .4l-.3.4c-.1.1-.2.3-.1.5.2.3.6 1 1.3 1.6.9.8 1.6 1 1.9 1.2.2.1.4.1.5-.1l.5-.6c.2-.2.3-.2.5-.1l1.3.6c.2.1.3.1.4.2.1.2.1.7-.1 1.2z"/></svg>' },
+    { key: "teams_link", icon: '<svg viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#5059C9"/><text x="12" y="17" font-size="14" font-family="Arial,sans-serif" font-weight="700" fill="#fff" text-anchor="middle">T</text></svg>' },
+    { key: "telegram_link", icon: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#229ED9"/><path fill="#fff" d="M17.5 7.2l-2.1 10.1c-.2.7-.6.9-1.2.6l-3.3-2.4-1.6 1.5c-.2.2-.3.3-.6.3l.2-3.3 6-5.4c.3-.2-.1-.4-.4-.2l-7.4 4.7-3.2-1c-.7-.2-.7-.7.1-1l12.5-4.8c.5-.2 1 .1.8 1z"/></svg>' },
   ];
   const list = state.courses
     .filter((c) => c.is_active)
@@ -1602,10 +1603,12 @@ function renderLinksPanel() {
       if (c[k.key]) {
         const a = document.createElement("a");
         a.href = c[k.key]; a.target = "_blank"; a.rel = "noopener";
-        a.textContent = k.icon;
+        a.innerHTML = k.icon;
         icons.appendChild(a);
       } else {
-        icons.appendChild(el("span", "dim", k.icon));
+        const s = el("span", "dim");
+        s.innerHTML = k.icon;
+        icons.appendChild(s);
       }
     });
     row.appendChild(icons);
