@@ -270,6 +270,61 @@ async function removeAttachmentFiles(paths) {
   if (!list.length) return;
   try { await sb.storage.from("attachments").remove(list); } catch (e) {}
 }
+async function uploadQAAttachment(file) {
+  file = await shrinkImage(file);
+  const safeName = file.name.replace(/[^\w.\-]+/g, "_").slice(-80);
+  const path = "qa/" + Date.now() + "_" + safeName;
+  const { error } = await sb.storage.from("attachments")
+    .upload(path, file, { contentType: file.type || "application/octet-stream" });
+  if (error) return { error };
+  const { data } = sb.storage.from("attachments").getPublicUrl(path);
+  return {
+    data: {
+      attachment_url: data.publicUrl, attachment_path: path,
+      attachment_name: file.name, attachment_mime: file.type || "application/octet-stream",
+      attachment_size: file.size,
+    },
+  };
+}
+function renderQAAttachment(obj) {
+  if (!obj.attachment_url) return null;
+  const wrap = el("div");
+  const mime = obj.attachment_mime || "";
+  if (mime.startsWith("image/")) {
+    const img = el("img");
+    img.src = obj.attachment_url;
+    img.style.maxWidth = "100%";
+    img.style.borderRadius = "8px";
+    wrap.appendChild(img);
+  } else if (mime.startsWith("video/")) {
+    const v = el("video");
+    v.src = obj.attachment_url;
+    v.controls = true;
+    v.style.maxWidth = "100%";
+    wrap.appendChild(v);
+  } else if (mime === "application/pdf") {
+    const f = el("iframe");
+    f.src = obj.attachment_url;
+    f.style.width = "100%";
+    f.style.height = "60vh";
+    f.style.border = "2px solid var(--line)";
+    f.style.borderRadius = "8px";
+    wrap.appendChild(f);
+  }
+  const box = el("div", "row");
+  const open = el("a", "btn", "↗️ فتح في نافذة جديدة");
+  open.href = obj.attachment_url;
+  open.target = "_blank";
+  open.rel = "noopener noreferrer";
+  box.appendChild(open);
+  const dl = el("a", "btn", "⬇️ تحميل" + (obj.attachment_size ? " (" + humanSize(obj.attachment_size) + ")" : ""));
+  dl.href = obj.attachment_url + (obj.attachment_url.includes("?") ? "&" : "?")
+    + "download=" + encodeURIComponent(obj.attachment_name || "");
+  dl.rel = "noopener noreferrer";
+  box.appendChild(dl);
+  wrap.appendChild(box);
+  return wrap;
+}
 const roleLabels = { student: "طالب", admin: "أدمن", full_admin: "مالك" };
 const roleRank = { full_admin: 0, admin: 1, student: 2 };
 function rpcMsg(error) {
@@ -1134,14 +1189,30 @@ function renderQA(sec) {
     b.placeholder = "تفاصيل إضافية (اختياري)";
     c.appendChild(field("السؤال", t));
     c.appendChild(field("تفاصيل", b));
+    const fi = el("input");
+    fi.type = "file";
+    let qFile = null;
+    fi.addEventListener("change", () => { qFile = fi.files[0] || null; });
+    c.appendChild(field("إرفاق ملف (اختياري، حتى 10 ميجا)", fi));
     const row = el("div", "row");
     const ok = el("button", "", "إرسال");
     const cancel = el("button", "", "إلغاء");
     cancel.addEventListener("click", () => { state.qform = null; render(); });
     ok.addEventListener("click", async () => {
       if (!t.value.trim()) { say("اكتب السؤال"); return; }
+      if (qFile && qFile.size > MAX_ATTACH) { say("الملف أكبر من 10 ميجا"); return; }
       ok.disabled = true;
-      const { error } = await sb.rpc("ask_question", { p_title: t.value.trim(), p_body: b.value.trim() || null });
+      let att = {};
+      if (qFile) {
+        const up = await uploadQAAttachment(qFile);
+        if (up.error) { ok.disabled = false; say("تعذّر رفع الملف"); return; }
+        att = {
+          p_attachment_url: up.data.attachment_url, p_attachment_path: up.data.attachment_path,
+          p_attachment_name: up.data.attachment_name, p_attachment_mime: up.data.attachment_mime,
+          p_attachment_size: up.data.attachment_size,
+        };
+      }
+      const { error } = await sb.rpc("ask_question", { p_title: t.value.trim(), p_body: b.value.trim() || null, ...att });
       ok.disabled = false;
       if (error) { say("تعذّر إرسال السؤال"); return; }
       state.qform = null;
@@ -1164,6 +1235,8 @@ function renderQA(sec) {
     const metaBits = [fmt(q.created_at)];
     if (isAdmin()) metaBits.push(displayName(q.asker_id));
     c.appendChild(el("div", "meta", metaBits.join(" · ")));
+    const qAtt = renderQAAttachment(q);
+    if (qAtt) c.appendChild(qAtt);
     const approved = approvedAnswers(q.id);
     const pending = pendingAnswers(q.id);
     approved.forEach((a) => {
@@ -1180,6 +1253,8 @@ function renderQA(sec) {
         ac.appendChild(del);
       }
       c.appendChild(ac);
+      const aAtt = renderQAAttachment(a);
+      if (aAtt) c.appendChild(aAtt);
     });
     if (isAdmin()) {
       pending.forEach((a) => {
@@ -1200,6 +1275,8 @@ function renderQA(sec) {
         pc.appendChild(okb);
         pc.appendChild(nob);
         c.appendChild(pc);
+        const pAtt = renderQAAttachment(a);
+        if (pAtt) c.appendChild(pAtt);
       });
     } else if (myPendingAnswer(q.id)) {
       c.appendChild(el("div", "meta", "إجابتك قيد المراجعة"));
@@ -1211,14 +1288,30 @@ function renderQA(sec) {
         ab.rows = 2;
         ab.placeholder = "اكتب إجابتك";
         c.appendChild(ab);
+        const afi = el("input");
+        afi.type = "file";
+        let aFile = null;
+        afi.addEventListener("change", () => { aFile = afi.files[0] || null; });
+        c.appendChild(field("إرفاق ملف (اختياري، حتى 10 ميجا)", afi));
         const arow = el("div", "row");
         const asend = el("button", "small", "إرسال الإجابة");
         const acancel = el("button", "small", "إلغاء");
         acancel.addEventListener("click", () => { delete state.answerForm[q.id]; render(); });
         asend.addEventListener("click", async () => {
           if (!ab.value.trim()) { say("اكتب الإجابة"); return; }
+          if (aFile && aFile.size > MAX_ATTACH) { say("الملف أكبر من 10 ميجا"); return; }
           asend.disabled = true;
-          const { error } = await sb.rpc("answer_question", { p_question: q.id, p_body: ab.value.trim() });
+          let att = {};
+          if (aFile) {
+            const up = await uploadQAAttachment(aFile);
+            if (up.error) { asend.disabled = false; say("تعذّر رفع الملف"); return; }
+            att = {
+              p_attachment_url: up.data.attachment_url, p_attachment_path: up.data.attachment_path,
+              p_attachment_name: up.data.attachment_name, p_attachment_mime: up.data.attachment_mime,
+              p_attachment_size: up.data.attachment_size,
+            };
+          }
+          const { error } = await sb.rpc("answer_question", { p_question: q.id, p_body: ab.value.trim(), ...att });
           asend.disabled = false;
           if (error) { say("تعذّر إرسال الإجابة"); return; }
           delete state.answerForm[q.id];
