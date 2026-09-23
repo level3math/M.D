@@ -64,6 +64,10 @@
   .links-row .icons span.dim svg { opacity:.25; }
   #saved-accounts { display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
   #saved-accounts .row { justify-content:center; }
+  #tg-widget-wrap { margin-top:12px; }
+  .account-help { font-size:14px; line-height:1.7; max-width:440px; margin:8px auto 12px; opacity:.85; }
+  #add-account-btn { margin-top:8px; border-style:dashed; }
+  #tg-slot { min-height:48px; }
   label.chk { display:inline-flex; align-items:center; gap:8px; margin-inline-end:20px; cursor:pointer; }
   input[type=checkbox] { width:22px; height:22px; accent-color:var(--accent); }
   input[type=text], input[type=url], input[type=datetime-local], textarea, select {
@@ -138,15 +142,12 @@
   </div>
   <div id="login-box" class="card center" hidden>
     <div id="saved-accounts"></div>
-    <div id="tg-widget-wrap">
+    <div id="tg-widget-wrap" hidden>
       <p id="login-label">الدخول بتيليجرام</p>
+      <p id="account-help" class="account-help" hidden></p>
       <div id="tg-slot"></div>
-      <script>
-        if (!window.IS_IOS) {
-          document.write('<script async src="https://telegram.org/js/telegram-widget.js?22" data-telegram-login="MATHDEPARTMENT_BOT" data-size="large" data-onauth="onTelegramAuth(user)" data-request-access="write"><\/script>');
-        }
-      </script>
     </div>
+    <button id="add-account-btn" type="button" hidden>＋ إضافة حساب تيليجرام آخر</button>
   </div>
   <div id="pending-box" class="card center" hidden>
     <p id="welcome"></p>
@@ -1544,8 +1545,9 @@ function hideAll() {
   $("links-fab").hidden = true;
   $("links-panel").hidden = true;
 }
-/* تبديل الحسابات (حد أقصى حسابين على نفس الجهاز) */
+/* تبديل الحسابات (حد أقصى حسابين محفوظين على نفس الجهاز) */
 const ACC_KEY = "tg_accounts";
+let addingAccount = false;
 function getAccounts() { try { return JSON.parse(localStorage.getItem(ACC_KEY) || "[]"); } catch (e) { return []; } }
 function setAccounts(list) { try { localStorage.setItem(ACC_KEY, JSON.stringify(list)); } catch (e) {} }
 function rememberAccount(session, firstName) {
@@ -1563,7 +1565,15 @@ function syncAccountTokens(session) {
   const a = list.find((x) => x.id === session.user.id);
   if (a) { a.access_token = session.access_token; a.refresh_token = session.refresh_token; setAccounts(list); }
 }
-function forgetAccount(id) { setAccounts(getAccounts().filter((a) => a.id !== id)); renderSavedAccounts(); }
+function forgetAccount(id) {
+  const account = getAccounts().find((a) => a.id === id);
+  if (!account) return;
+  if (!confirm("نسيان الحساب المحفوظ على هذا الجهاز؟\nلن يُحذف الحساب من الموقع أو تيليجرام، لكن ستحتاج لتسجيل الدخول مجددًا لاستخدامه هنا.")) return;
+  setAccounts(getAccounts().filter((a) => a.id !== id));
+  addingAccount = false;
+  renderSavedAccounts();
+  say("تم نسيان الحساب من هذا الجهاز فقط");
+}
 async function switchAccount(a) {
   showLoading(true);
   const { error } = await sb.auth.setSession({ access_token: a.access_token, refresh_token: a.refresh_token });
@@ -1581,14 +1591,43 @@ function renderSavedAccounts() {
     btn.addEventListener("click", () => switchAccount(a));
     row.appendChild(btn);
     const fg = el("button", "small danger", "نسيان");
+    fg.title = "إزالة بيانات الدخول المحفوظة من هذا الجهاز فقط";
     fg.addEventListener("click", () => forgetAccount(a.id));
     row.appendChild(fg);
     box.appendChild(row);
   });
-  $("login-label").textContent = list.length ? "إضافة حساب آخر" : "الدخول بتيليجرام";
-  $("login-label").hidden = list.length >= 2;
-  $("tg-slot").hidden = list.length >= 2;
+
+  const wrap = $("tg-widget-wrap");
+  const addBtn = $("add-account-btn");
+  const help = $("account-help");
+  addBtn.hidden = list.length === 0 || list.length >= 2;
+  addBtn.textContent = "＋ إضافة حساب تيليجرام آخر";
+  wrap.hidden = list.length > 0 && !addingAccount;
+  help.hidden = !addingAccount;
+  help.textContent = "قبل المتابعة، افتحي تيليجرام بالحساب اللي عايزة تضيفيه. أحيانًا تيليجرام بيستخدم الحساب المفتوح بالفعل تلقائيًا؛ لو ظهر نفس الحساب المحفوظ، مش هيتضاف حساب جديد. الحد الأقصى حسابين محفوظين على الجهاز.";
+  if (list.length >= 2) {
+    wrap.hidden = true;
+    addBtn.hidden = true;
+  }
+  if (list.length === 0) {
+    wrap.hidden = false;
+    $("login-label").textContent = "الدخول بتيليجرام";
+    addingAccount = false;
+    help.hidden = true;
+  } else if (addingAccount) {
+    $("login-label").textContent = "تسجيل حساب تيليجرام آخر";
+  }
 }
+$("add-account-btn").addEventListener("click", () => {
+  const list = getAccounts();
+  if (list.length >= 2) {
+    say("وصلتي للحد الأقصى (حسابين). انسي حسابًا محفوظًا أولًا لو عايزة تستبدليه.");
+    return;
+  }
+  addingAccount = true;
+  renderSavedAccounts();
+  mountTelegramRedirectButton();
+});
 sb.auth.onAuthStateChange((_e, session) => syncAccountTokens(session));
 async function showProfile() {
   showLoading(true);
@@ -1637,6 +1676,8 @@ async function showProfile() {
   else setView("app");
 }
 async function onTelegramAuth(user) {
+  const wasAdding = addingAccount;
+  const savedIds = getAccounts().map((a) => a.id);
   $("login-box").hidden = true;
   showLoading(true);
   say("");
@@ -1645,7 +1686,11 @@ async function onTelegramAuth(user) {
   if (error || !data || !data.token_hash) { fail("فشل الدخول، برجاء إعادة المحاولة"); return; }
   const { error: e2 } = await sb.auth.verifyOtp({ token_hash: data.token_hash, type: "magiclink" });
   if (e2) { fail("فشل إكمال الدخول"); return; }
+  const { data: { session } } = await sb.auth.getSession();
+  const isExisting = !!(session && savedIds.includes(session.user.id));
+  addingAccount = false;
   await showProfile();
+  if (wasAdding && isExisting) say("ده نفس الحساب المحفوظ بالفعل؛ ما اتضافش حساب جديد. بدّلي حساب تيليجرام المفتوح وحاولي تاني.");
 }
 /* البتاعة العائمة: جروبات التواصل بتاعة كل مادة */
 function renderLinksPanel() {
@@ -1697,18 +1742,23 @@ $("people-btn").addEventListener("click", () => setView("people"));
 $("log-btn").addEventListener("click", () => { state.logLimit = 100; setView("log"); });
 $("backup-btn").addEventListener("click", downloadBackup);
 $("logout").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
-/* دخول تيليجرام على الآيفون: بيرجع للصفحة برابط فيه بيانات الدخول */
+/* تحميل زر تيليجرام عند الحاجة؛ الآيفون يستخدم الرجوع عبر رابط المصادقة */
 function mountTelegramRedirectButton() {
-  if (!window.IS_IOS) return;
   var slot = $("tg-slot");
-  if (!slot || slot.firstChild) return;
+  if (!slot || $("tg-widget-wrap").hidden || slot.dataset.mounted === "1") return;
+  slot.replaceChildren();
   var s = document.createElement("script");
   s.async = true;
   s.src = "https://telegram.org/js/telegram-widget.js?22";
   s.setAttribute("data-telegram-login", "MATHDEPARTMENT_BOT");
   s.setAttribute("data-size", "large");
   s.setAttribute("data-request-access", "write");
-  s.setAttribute("data-auth-url", location.origin + location.pathname.replace(/index\.html$/, ""));
+  if (window.IS_IOS) {
+    s.setAttribute("data-auth-url", location.origin + location.pathname.replace(/index\.html$/, ""));
+  } else {
+    s.setAttribute("data-onauth", "onTelegramAuth(user)");
+  }
+  slot.dataset.mounted = "1";
   slot.appendChild(s);
 }
 function readTelegramReturn() {
