@@ -611,14 +611,6 @@ async function toggleBlock(p) {
   say(block ? "تم إيقاف الحساب" : "تم تفعيل الحساب");
   renderPeople(false);
 }
-async function deletePerson(p) {
-  if (!confirm("حذف " + (p.first_name || "هذا الحساب") + " من الـ users؟\nهيقدر يرجع يظهر تاني لو عمل تسجيل دخول بتيليجرام من جديد.")) return;
-  const { error } = await sb.rpc("delete_profile", { target: p.id });
-  if (error) { say(rpcMsg(error)); return; }
-  state.people = state.people.filter((x) => x.id !== p.id);
-  say("تم الحذف");
-  renderPeople(false);
-}
 function personCard(p) {
   const c = el("div", "card");
   c.appendChild(el("h3", "", p.first_name || "—"));
@@ -644,11 +636,6 @@ function personCard(p) {
   const bl = el("button", "small" + (p.approved ? " danger" : ""), p.approved ? "إيقاف الحساب" : "تفعيل الحساب");
   bl.addEventListener("click", () => toggleBlock(p));
   row.appendChild(bl);
-  if (isFull()) {
-    const del = el("button", "small danger", "حذف");
-    del.addEventListener("click", () => deletePerson(p));
-    row.appendChild(del);
-  }
   c.appendChild(row);
   return c;
 }
