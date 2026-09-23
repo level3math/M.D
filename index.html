@@ -65,7 +65,6 @@
   #saved-accounts { display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
   #saved-accounts .row { justify-content:center; }
   #tg-widget-wrap { margin-top:12px; }
-  .account-help { font-size:14px; line-height:1.7; max-width:440px; margin:8px auto 12px; opacity:.85; }
   #add-account-btn { margin-top:8px; border-style:dashed; }
   #tg-slot { min-height:48px; }
   label.chk { display:inline-flex; align-items:center; gap:8px; margin-inline-end:20px; cursor:pointer; }
@@ -144,7 +143,6 @@
     <div id="saved-accounts"></div>
     <div id="tg-widget-wrap" hidden>
       <p id="login-label">الدخول بتيليجرام</p>
-      <p id="account-help" class="account-help" hidden></p>
       <div id="tg-slot"></div>
     </div>
     <button id="add-account-btn" type="button" hidden>＋ إضافة حساب تيليجرام آخر</button>
@@ -1547,7 +1545,6 @@ function hideAll() {
 }
 /* تبديل الحسابات (حد أقصى حسابين محفوظين على نفس الجهاز) */
 const ACC_KEY = "tg_accounts";
-let addingAccount = false;
 function getAccounts() { try { return JSON.parse(localStorage.getItem(ACC_KEY) || "[]"); } catch (e) { return []; } }
 function setAccounts(list) { try { localStorage.setItem(ACC_KEY, JSON.stringify(list)); } catch (e) {} }
 function rememberAccount(session, firstName) {
@@ -1570,14 +1567,18 @@ function forgetAccount(id) {
   if (!account) return;
   if (!confirm("نسيان الحساب المحفوظ على هذا الجهاز؟\nلن يُحذف الحساب من الموقع أو تيليجرام، لكن ستحتاج لتسجيل الدخول مجددًا لاستخدامه هنا.")) return;
   setAccounts(getAccounts().filter((a) => a.id !== id));
-  addingAccount = false;
   renderSavedAccounts();
+  mountTelegramRedirectButton();
   say("تم نسيان الحساب من هذا الجهاز فقط");
 }
 async function switchAccount(a) {
   showLoading(true);
-  const { error } = await sb.auth.setSession({ access_token: a.access_token, refresh_token: a.refresh_token });
-  if (error) { showLoading(false); forgetAccount(a.id); say("انتهت صلاحية الجلسة، برجاء تسجيل الدخول من جديد"); return; }
+  const { data, error } = await sb.auth.setSession({ access_token: a.access_token, refresh_token: a.refresh_token });
+  if (error || !data || !data.session) {
+    showLoading(false);
+    say("تعذّر استرجاع جلسة الحساب. بيانات الحساب المحفوظة لم تُحذف؛ جرّبي تسجيل الدخول من تيليجرام.");
+    return;
+  }
   await showProfile();
 }
 function renderSavedAccounts() {
@@ -1587,7 +1588,7 @@ function renderSavedAccounts() {
   const list = getAccounts();
   list.forEach((a) => {
     const row = el("div", "row");
-    const btn = el("button", "small", "دخول باسم " + (a.first_name || "حساب"));
+    const btn = el("button", "small", "التبديل إلى " + (a.first_name || "الحساب"));
     btn.addEventListener("click", () => switchAccount(a));
     row.appendChild(btn);
     const fg = el("button", "small danger", "نسيان");
@@ -1599,34 +1600,17 @@ function renderSavedAccounts() {
 
   const wrap = $("tg-widget-wrap");
   const addBtn = $("add-account-btn");
-  const help = $("account-help");
+
+  // Keep Telegram login visible whenever there is room for another saved account.
+  // No extra click is required to reveal the Telegram widget.
+  wrap.hidden = list.length >= 2;
   addBtn.hidden = list.length === 0 || list.length >= 2;
   addBtn.textContent = "＋ إضافة حساب تيليجرام آخر";
-  wrap.hidden = list.length > 0 && !addingAccount;
-  help.hidden = !addingAccount;
-  help.textContent = "قبل المتابعة، افتحي تيليجرام بالحساب اللي عايزة تضيفيه. أحيانًا تيليجرام بيستخدم الحساب المفتوح بالفعل تلقائيًا؛ لو ظهر نفس الحساب المحفوظ، مش هيتضاف حساب جديد. الحد الأقصى حسابين محفوظين على الجهاز.";
-  if (list.length >= 2) {
-    wrap.hidden = true;
-    addBtn.hidden = true;
-  }
-  if (list.length === 0) {
-    wrap.hidden = false;
-    $("login-label").textContent = "الدخول بتيليجرام";
-    addingAccount = false;
-    help.hidden = true;
-  } else if (addingAccount) {
-    $("login-label").textContent = "تسجيل حساب تيليجرام آخر";
-  }
+  $("login-label").textContent = list.length ? "إضافة حساب تيليجرام آخر" : "الدخول بتيليجرام";
 }
 $("add-account-btn").addEventListener("click", () => {
-  const list = getAccounts();
-  if (list.length >= 2) {
-    say("وصلتي للحد الأقصى (حسابين). انسي حسابًا محفوظًا أولًا لو عايزة تستبدليه.");
-    return;
-  }
-  addingAccount = true;
-  renderSavedAccounts();
-  mountTelegramRedirectButton();
+  // The Telegram widget is already visible; this button simply brings it into view.
+  $("tg-widget-wrap").scrollIntoView({ behavior: "smooth", block: "center" });
 });
 sb.auth.onAuthStateChange((_e, session) => syncAccountTokens(session));
 async function showProfile() {
@@ -1676,8 +1660,6 @@ async function showProfile() {
   else setView("app");
 }
 async function onTelegramAuth(user) {
-  const wasAdding = addingAccount;
-  const savedIds = getAccounts().map((a) => a.id);
   $("login-box").hidden = true;
   showLoading(true);
   say("");
@@ -1686,11 +1668,7 @@ async function onTelegramAuth(user) {
   if (error || !data || !data.token_hash) { fail("فشل الدخول، برجاء إعادة المحاولة"); return; }
   const { error: e2 } = await sb.auth.verifyOtp({ token_hash: data.token_hash, type: "magiclink" });
   if (e2) { fail("فشل إكمال الدخول"); return; }
-  const { data: { session } } = await sb.auth.getSession();
-  const isExisting = !!(session && savedIds.includes(session.user.id));
-  addingAccount = false;
   await showProfile();
-  if (wasAdding && isExisting) say("ده نفس الحساب المحفوظ بالفعل؛ ما اتضافش حساب جديد. بدّلي حساب تيليجرام المفتوح وحاولي تاني.");
 }
 /* البتاعة العائمة: جروبات التواصل بتاعة كل مادة */
 function renderLinksPanel() {
