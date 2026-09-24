@@ -47,10 +47,10 @@
     border:2px solid var(--line); border-radius:12px; padding:8px;
     display:flex; flex-direction:column; gap:6px; box-shadow:0 6px 18px rgba(0,0,0,.2); }
   .dropdown .chip { display:block; width:100%; text-align:start; font-size:14px; }
-  .links-fab { position:fixed; top:14px; left:14px; z-index:70; width:44px; height:44px;
+  .links-fab { position:fixed; bottom:14px; left:14px; z-index:70; width:44px; height:44px;
     border-radius:50%; padding:0; display:flex; align-items:center; justify-content:center;
     font-size:20px; line-height:1; background:var(--card); box-shadow:0 4px 14px rgba(0,0,0,.3); }
-  .links-panel { position:fixed; top:64px; left:14px; z-index:70;
+  .links-panel { position:fixed; bottom:64px; left:14px; z-index:70;
     width:min(300px, calc(100vw - 28px)); max-height:70vh; overflow-y:auto;
     background:var(--card); border:2px solid var(--line); border-radius:12px; padding:10px;
     box-shadow:0 6px 18px rgba(0,0,0,.25); }
@@ -834,7 +834,7 @@ function buildPersonalForm(p) {
   const dl = el("input");
   dl.type = "datetime-local";
   dl.value = p && p.deadline ? toLocalInput(p.deadline) : "";
-  c.appendChild(field("الميعاد (اختياري)", dl));
+  c.appendChild(field("معاد التسليم (اختياري)", dl));
   const row = el("div", "row");
   const ok = el("button", "", "حفظ");
   const cancel = el("button", "", "إلغاء");
@@ -866,7 +866,7 @@ function personalCard(p) {
   c.appendChild(el("h3", "", p.title));
   c.appendChild(el("p", "meta", "شخصي"));
   if (p.body) c.appendChild(el("p", "body", p.body));
-  if (p.deadline) c.appendChild(el("p", "meta", "الميعاد: " + fmt(p.deadline)));
+  if (p.deadline) c.appendChild(el("p", "meta", "معاد التسليم: " + fmt(p.deadline)));
   const row = el("div");
   row.appendChild(check("خلّصت", p.done, (v) => setPersonalDone(p, v)));
   c.appendChild(row);
@@ -923,8 +923,8 @@ function buildForm(sec, it) {
     if (it && it.deadline) {
       dl.value = hasTime ? toLocalInput(it.deadline) : toLocalInput(it.deadline).slice(0, 10);
     }
-    c.appendChild(field("الميعاد", dl));
-    c.appendChild(check("تحديد ساعة الميعاد", hasTime, (v) => {
+    c.appendChild(field("معاد التسليم", dl));
+    c.appendChild(check("تحديد ساعة معاد التسليم", hasTime, (v) => {
       hasTime = v;
       const cur = dl.value;
       dl.type = hasTime ? "datetime-local" : "date";
@@ -964,7 +964,7 @@ function buildForm(sec, it) {
     if (sec.kind !== "news" && sec.kind !== "newsletter" && !csel.value) { say("المادة مطلوبة"); return; }
     if (csel) data.course_id = csel.value ? Number(csel.value) : null;
     if (dl) {
-      if (!dl.value) { say("الميعاد مطلوب"); return; }
+      if (!dl.value) { say("معاد التسليم مطلوب"); return; }
       data.deadline = localToISO(hasTime ? dl.value : dl.value + "T23:59");
       data.deadline_has_time = hasTime;
     }
@@ -1029,7 +1029,7 @@ function card(sec, it) {
   if (cn) c.appendChild(el("p", "meta", cn));
   if (it.body) c.appendChild(el("p", "body", it.body));
   if (sec.kind === "tasks") {
-    if (it.deadline) c.appendChild(el("p", "meta", "الميعاد: " + fmtDeadline(it)));
+    if (it.deadline) c.appendChild(el("p", "meta", "معاد التسليم: " + fmtDeadline(it)));
     if (!it.deleted_at) {
       const pr = state.progress[it.id] || { done: false, submitted: false };
       const row = el("div");
@@ -1345,9 +1345,7 @@ function renderQA(sec) {
     const c = el("div", "card");
     c.appendChild(el("h3", "", q.title));
     if (q.body) c.appendChild(el("p", "", q.body));
-    const metaBits = [fmt(q.created_at)];
-    if (isAdmin()) metaBits.push(displayName(q.asker_id));
-    c.appendChild(el("div", "meta", metaBits.join(" · ")));
+    if (isAdmin()) c.appendChild(el("div", "meta", displayName(q.asker_id)));
     const qAtt = renderQAAttachment(q);
     if (qAtt) c.appendChild(qAtt);
     const approved = approvedAnswers(q.id);
