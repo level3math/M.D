@@ -1584,20 +1584,9 @@ function renderSavedAccounts() {
   const box = $("saved-accounts");
   if (!box) return;
   box.replaceChildren();
-  const list = getAccounts();
-  list.forEach((a) => {
-    const row = el("div", "row");
-    const btn = el("button", "small", "دخول باسم " + (a.first_name || "حساب"));
-    btn.addEventListener("click", () => switchAccount(a));
-    row.appendChild(btn);
-    const fg = el("button", "small danger", "نسيان");
-    fg.addEventListener("click", () => forgetAccount(a.id));
-    row.appendChild(fg);
-    box.appendChild(row);
-  });
-  $("login-label").textContent = list.length ? "إضافة حساب آخر" : "الدخول بتيليجرام";
-  $("login-label").hidden = list.length >= 2;
-  $("tg-slot").hidden = list.length >= 2;
+  $("login-label").textContent = "الدخول بتيليجرام";
+  $("login-label").hidden = false;
+  $("tg-slot").hidden = false;
 }
 sb.auth.onAuthStateChange((_e, session) => syncAccountTokens(session));
 async function showProfile() {
