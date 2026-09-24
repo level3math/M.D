@@ -47,10 +47,10 @@
     border:2px solid var(--line); border-radius:12px; padding:8px;
     display:flex; flex-direction:column; gap:6px; box-shadow:0 6px 18px rgba(0,0,0,.2); }
   .dropdown .chip { display:block; width:100%; text-align:start; font-size:14px; }
-  .links-fab { position:fixed; bottom:14px; left:14px; z-index:70; width:44px; height:44px;
+  .links-fab { position:fixed; top:14px; left:14px; z-index:70; width:44px; height:44px;
     border-radius:50%; padding:0; display:flex; align-items:center; justify-content:center;
     font-size:20px; line-height:1; background:var(--card); box-shadow:0 4px 14px rgba(0,0,0,.3); }
-  .links-panel { position:fixed; bottom:64px; left:14px; z-index:70;
+  .links-panel { position:fixed; top:64px; left:14px; z-index:70;
     width:min(300px, calc(100vw - 28px)); max-height:70vh; overflow-y:auto;
     background:var(--card); border:2px solid var(--line); border-radius:12px; padding:10px;
     box-shadow:0 6px 18px rgba(0,0,0,.25); }
@@ -62,8 +62,8 @@
   .links-row .icons a { text-decoration:none; display:flex; }
   .links-row .icons svg { display:block; width:20px; height:20px; }
   .links-row .icons span.dim svg { opacity:.25; }
-  #tg-widget-wrap { margin-top:12px; }
-  #tg-slot { min-height:48px; }
+  #saved-accounts { display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
+  #saved-accounts .row { justify-content:center; }
   label.chk { display:inline-flex; align-items:center; gap:8px; margin-inline-end:20px; cursor:pointer; }
   input[type=checkbox] { width:22px; height:22px; accent-color:var(--accent); }
   input[type=text], input[type=url], input[type=datetime-local], textarea, select {
@@ -137,9 +137,15 @@
     <p>جاري التحميل...</p>
   </div>
   <div id="login-box" class="card center" hidden>
+    <div id="saved-accounts"></div>
     <div id="tg-widget-wrap">
       <p id="login-label">الدخول بتيليجرام</p>
       <div id="tg-slot"></div>
+      <script>
+        if (!window.IS_IOS) {
+          document.write('<script async src="https://telegram.org/js/telegram-widget.js?22" data-telegram-login="MATHDEPARTMENT_BOT" data-size="large" data-onauth="onTelegramAuth(user)" data-request-access="write"><\/script>');
+        }
+      </script>
     </div>
   </div>
   <div id="pending-box" class="card center" hidden>
@@ -211,10 +217,14 @@ applyTheme();
 const dateFmt = new Intl.DateTimeFormat("en-US", {
   timeZone: "Africa/Cairo", dateStyle: "full", timeStyle: "short",
 });
+const dateOnlyFmt = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Africa/Cairo", dateStyle: "full",
+});
 const logFmt = new Intl.DateTimeFormat("en-US", {
   timeZone: "Africa/Cairo", dateStyle: "medium", timeStyle: "short",
 });
 function fmt(iso) { return dateFmt.format(new Date(iso)); }
+function fmtDeadline(it) { return it.deadline_has_time === false ? dateOnlyFmt.format(new Date(it.deadline)) : fmt(it.deadline); }
 function tzOffset(ms) {
   const p = {};
   new Intl.DateTimeFormat("en-US", {
@@ -400,7 +410,7 @@ async function loadCourses() {
 async function fetchData() {
   const [s, i, p, pi, q, a] = await Promise.all([
     sb.from("sections").select("id,title,kind,sort_order").eq("is_active", true).order("sort_order"),
-    sb.from("items").select("id,section_id,course_id,title,body,url,deadline,created_at,deleted_at,attachment_kind,attachment_url,attachment_path,attachment_name,attachment_mime,attachment_size"),
+    sb.from("items").select("id,section_id,course_id,title,body,url,deadline,deadline_has_time,created_at,deleted_at,attachment_kind,attachment_url,attachment_path,attachment_name,attachment_mime,attachment_size"),
     sb.from("progress").select("item_id,done,submitted"),
     sb.from("personal_items").select("id,title,body,deadline,done,created_at"),
     sb.rpc("get_questions"),
@@ -611,6 +621,14 @@ async function toggleBlock(p) {
   say(block ? "تم إيقاف الحساب" : "تم تفعيل الحساب");
   renderPeople(false);
 }
+async function deletePerson(p) {
+  if (!confirm("حذف " + (p.first_name || "هذا الحساب") + " من الـ users؟\nهيقدر يرجع يظهر تاني لو عمل تسجيل دخول بتيليجرام من جديد.")) return;
+  const { error } = await sb.rpc("delete_profile", { target: p.id });
+  if (error) { say(rpcMsg(error)); return; }
+  state.people = state.people.filter((x) => x.id !== p.id);
+  say("تم الحذف");
+  renderPeople(false);
+}
 function personCard(p) {
   const c = el("div", "card");
   c.appendChild(el("h3", "", p.first_name || "—"));
@@ -636,6 +654,11 @@ function personCard(p) {
   const bl = el("button", "small" + (p.approved ? " danger" : ""), p.approved ? "إيقاف الحساب" : "تفعيل الحساب");
   bl.addEventListener("click", () => toggleBlock(p));
   row.appendChild(bl);
+  if (isFull()) {
+    const del = el("button", "small danger", "حذف");
+    del.addEventListener("click", () => deletePerson(p));
+    row.appendChild(del);
+  }
   c.appendChild(row);
   return c;
 }
@@ -885,7 +908,7 @@ function buildForm(sec, it) {
     csel.value = it && it.course_id != null ? String(it.course_id) : "";
     c.appendChild(field(sec.kind === "news" ? "التصنيف" : "المادة", csel));
   }
-  let url = null, dl = null;
+  let url = null, dl = null, hasTime = true;
   if (sec.kind === "links") {
     url = el("input");
     url.type = "url";
@@ -894,10 +917,19 @@ function buildForm(sec, it) {
     c.appendChild(field("الرابط", url));
   }
   if (sec.kind === "tasks") {
+    hasTime = it ? it.deadline_has_time !== false : true;
     dl = el("input");
-    dl.type = "datetime-local";
-    dl.value = it && it.deadline ? toLocalInput(it.deadline) : "";
-    c.appendChild(field("الميعاد (التاريخ والساعة)", dl));
+    dl.type = hasTime ? "datetime-local" : "date";
+    if (it && it.deadline) {
+      dl.value = hasTime ? toLocalInput(it.deadline) : toLocalInput(it.deadline).slice(0, 10);
+    }
+    c.appendChild(field("الميعاد", dl));
+    c.appendChild(check("تحديد ساعة الميعاد", hasTime, (v) => {
+      hasTime = v;
+      const cur = dl.value;
+      dl.type = hasTime ? "datetime-local" : "date";
+      dl.value = cur ? (hasTime ? (cur.length === 10 ? cur + "T23:59" : cur) : cur.slice(0, 10)) : "";
+    }));
   }
   let attFile = null, removeAtt = false;
   if (sec.kind !== "links") {
@@ -932,8 +964,9 @@ function buildForm(sec, it) {
     if (sec.kind !== "news" && sec.kind !== "newsletter" && !csel.value) { say("المادة مطلوبة"); return; }
     if (csel) data.course_id = csel.value ? Number(csel.value) : null;
     if (dl) {
-      if (!dl.value) { say("الميعاد مطلوب (التاريخ والساعة)"); return; }
-      data.deadline = localToISO(dl.value);
+      if (!dl.value) { say("الميعاد مطلوب"); return; }
+      data.deadline = localToISO(hasTime ? dl.value : dl.value + "T23:59");
+      data.deadline_has_time = hasTime;
     }
     if (url) {
       const u = safeUrl(url.value.trim());
@@ -996,7 +1029,7 @@ function card(sec, it) {
   if (cn) c.appendChild(el("p", "meta", cn));
   if (it.body) c.appendChild(el("p", "body", it.body));
   if (sec.kind === "tasks") {
-    if (it.deadline) c.appendChild(el("p", "meta", "الميعاد: " + fmt(it.deadline)));
+    if (it.deadline) c.appendChild(el("p", "meta", "الميعاد: " + fmtDeadline(it)));
     if (!it.deleted_at) {
       const pr = state.progress[it.id] || { done: false, submitted: false };
       const row = el("div");
@@ -1069,8 +1102,6 @@ function card(sec, it) {
       a.rel = "noopener noreferrer";
       c.appendChild(a);
     }
-  } else {
-    c.appendChild(el("p", "meta", fmt(it.created_at)));
   }
   if (isAdmin()) {
     const row = el("div", "row");
@@ -1525,8 +1556,52 @@ function hideAll() {
   $("links-fab").hidden = true;
   $("links-panel").hidden = true;
 }
-/* تسجيل الدخول العادي بتيليجرام؛ بدون حفظ/تبديل حسابات إضافية */
-try { localStorage.removeItem("tg_accounts"); } catch (e) {}
+/* تبديل الحسابات (حد أقصى حسابين على نفس الجهاز) */
+const ACC_KEY = "tg_accounts";
+function getAccounts() { try { return JSON.parse(localStorage.getItem(ACC_KEY) || "[]"); } catch (e) { return []; } }
+function setAccounts(list) { try { localStorage.setItem(ACC_KEY, JSON.stringify(list)); } catch (e) {} }
+function rememberAccount(session, firstName) {
+  if (!session) return;
+  const list = getAccounts().filter((a) => a.id !== session.user.id);
+  list.unshift({
+    id: session.user.id, first_name: firstName || "",
+    access_token: session.access_token, refresh_token: session.refresh_token,
+  });
+  setAccounts(list.slice(0, 2));
+}
+function syncAccountTokens(session) {
+  if (!session) return;
+  const list = getAccounts();
+  const a = list.find((x) => x.id === session.user.id);
+  if (a) { a.access_token = session.access_token; a.refresh_token = session.refresh_token; setAccounts(list); }
+}
+function forgetAccount(id) { setAccounts(getAccounts().filter((a) => a.id !== id)); renderSavedAccounts(); }
+async function switchAccount(a) {
+  showLoading(true);
+  const { error } = await sb.auth.setSession({ access_token: a.access_token, refresh_token: a.refresh_token });
+  if (error) { showLoading(false); forgetAccount(a.id); say("انتهت صلاحية الجلسة، برجاء تسجيل الدخول من جديد"); return; }
+  await showProfile();
+}
+function renderSavedAccounts() {
+  const box = $("saved-accounts");
+  if (!box) return;
+  box.replaceChildren();
+  const list = getAccounts();
+  list.forEach((a) => {
+    const row = el("div", "row");
+    const btn = el("button", "small", "دخول باسم " + (a.first_name || "حساب"));
+    btn.addEventListener("click", () => switchAccount(a));
+    row.appendChild(btn);
+    const fg = el("button", "small danger", "نسيان");
+    fg.addEventListener("click", () => forgetAccount(a.id));
+    row.appendChild(fg);
+    box.appendChild(row);
+  });
+  $("login-label").textContent = list.length ? "إضافة حساب آخر" : "الدخول بتيليجرام";
+  $("login-label").hidden = list.length >= 2;
+  $("tg-slot").hidden = list.length >= 2;
+}
+sb.auth.onAuthStateChange((_e, session) => syncAccountTokens(session));
 async function showProfile() {
   showLoading(true);
   hideAll();
@@ -1537,6 +1612,7 @@ async function showProfile() {
     showLoading(false);
     $("logout").hidden = true;
     $("login-box").hidden = false;
+    renderSavedAccounts();
     mountTelegramRedirectButton();
     return;
   }
@@ -1545,6 +1621,7 @@ async function showProfile() {
   const { data, error } = await sb.from("profiles")
     .select("first_name, role, approved, courses_chosen, bot_ok").eq("id", state.userId).single();
   if (error || !data) { showLoading(false); say("تعذّر تحميل الحساب", true); return; }
+  rememberAccount(session, data.first_name);
   state.role = data.role;
   state.chosen = !!data.courses_chosen;
   state.botOk = data.bot_ok;
@@ -1575,7 +1652,7 @@ async function onTelegramAuth(user) {
   $("login-box").hidden = true;
   showLoading(true);
   say("");
-  const fail = (m) => { showLoading(false); $("login-box").hidden = false; mountTelegramRedirectButton(); say(m); };
+  const fail = (m) => { showLoading(false); $("login-box").hidden = false; renderSavedAccounts(); mountTelegramRedirectButton(); say(m); };
   const { data, error } = await sb.functions.invoke("telegram-auth", { body: user });
   if (error || !data || !data.token_hash) { fail("فشل الدخول، برجاء إعادة المحاولة"); return; }
   const { error: e2 } = await sb.auth.verifyOtp({ token_hash: data.token_hash, type: "magiclink" });
@@ -1632,23 +1709,18 @@ $("people-btn").addEventListener("click", () => setView("people"));
 $("log-btn").addEventListener("click", () => { state.logLimit = 100; setView("log"); });
 $("backup-btn").addEventListener("click", downloadBackup);
 $("logout").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
-/* تحميل زر تيليجرام عند الحاجة؛ الآيفون يستخدم الرجوع عبر رابط المصادقة */
+/* دخول تيليجرام على الآيفون: بيرجع للصفحة برابط فيه بيانات الدخول */
 function mountTelegramRedirectButton() {
+  if (!window.IS_IOS) return;
   var slot = $("tg-slot");
-  if (!slot || $("tg-widget-wrap").hidden || slot.dataset.mounted === "1") return;
-  slot.replaceChildren();
+  if (!slot || slot.firstChild) return;
   var s = document.createElement("script");
   s.async = true;
   s.src = "https://telegram.org/js/telegram-widget.js?22";
   s.setAttribute("data-telegram-login", "MATHDEPARTMENT_BOT");
   s.setAttribute("data-size", "large");
   s.setAttribute("data-request-access", "write");
-  if (window.IS_IOS) {
-    s.setAttribute("data-auth-url", location.origin + location.pathname.replace(/index\.html$/, ""));
-  } else {
-    s.setAttribute("data-onauth", "onTelegramAuth(user)");
-  }
-  slot.dataset.mounted = "1";
+  s.setAttribute("data-auth-url", location.origin + location.pathname.replace(/index\.html$/, ""));
   slot.appendChild(s);
 }
 function readTelegramReturn() {
