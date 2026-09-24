@@ -403,7 +403,7 @@ function setView(v) {
 /* الدوس على الخلفية (أي حاجة مش زرار/كارت/تاب) يرجّع للهوم */
 document.addEventListener("click", (e) => {
   if ($("app").hidden || !state.active) return;
-  if (e.target.closest("header, button, a, input, textarea, select, .card")) return;
+  if (e.target.closest("button, a, input, textarea, select, .card")) return;
   goHome();
 });
 async function loadCourses() {
