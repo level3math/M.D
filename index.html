@@ -432,6 +432,7 @@ async function fetchData() {
   state.personal = pi.data;
   state.questions = q.data;
   state.answers = a.data;
+state.posts = posts.data;
   state.progress = {};
   p.data.forEach((r) => { state.progress[r.item_id] = r; });
   state.qaNames = {};
