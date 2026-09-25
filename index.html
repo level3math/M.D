@@ -1479,6 +1479,20 @@ function render() {
   renderBotBanner();
   const tabs = $("tabs");
   tabs.replaceChildren();
+
+  const postsBtn = el("button", "tab" + (state.active === "__posts__" ? " active" : ""), "المنشورات");
+postsBtn.addEventListener("click", () => {
+  state.active = "__posts__";
+  state.form = null;
+  state.pform = null;
+  state.trash = false;
+  state.filter = "all";
+  state.qform = null;
+  state.answerForm = {};
+  render();
+});
+tabs.appendChild(postsBtn);
+  
   state.sections.forEach((sec) => {
     const b = el("button", "tab" + (sec.id === state.active ? " active" : ""), sec.title);
     b.addEventListener("click", () => {
@@ -1490,6 +1504,13 @@ function render() {
   });
   const list = $("list");
   list.replaceChildren();
+
+  if (state.active === "__posts__") {
+  $("chips").replaceChildren();
+  list.appendChild(el("p", "center", "المنشورات"));
+  return;
+  }
+  
   const sec = state.sections.find((x) => x.id === state.active);
   if (!sec) { $("chips").replaceChildren(); return; }
   if (sec.kind === "qa") { renderQA(sec); return; }
