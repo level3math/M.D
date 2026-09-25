@@ -1642,7 +1642,7 @@ async function setPostDeleted(id, deleted) {
 async function purgePost(post) {
   if (!confirm("حذف المنشور نهائيًا؟")) return;
   const { error } = await sb.from("posts").delete().eq("id", post.id).not("deleted_at", "is", null);
-  if (error) { say("تعذّر الحذف النهائي"); return; }
+  if (error) { say("تعذّر الحذف النهائي: " + error.message, true); return; }
   const path = postStoragePath(post.image_url);
   if (path) await sb.storage.from("attachments").remove([path]);
   state.postFocus = null;
@@ -1651,11 +1651,15 @@ async function purgePost(post) {
 async function emptyPostsTrash(posts) {
   if (!posts.length || !confirm("تفريغ سلة منشورات المحذوفة نهائيًا؟")) return;
   for (const post of posts) {
-    const { error } = await sb.from("posts").delete().eq("id", post.id).not("deleted_at", "is", null);
-    if (!error) {
-      const path = postStoragePath(post.image_url);
-      if (path) await sb.storage.from("attachments").remove([path]);
-    }
+  const { error } = await sb.from("posts").delete().eq("id", post.id).not("deleted_at", "is", null);
+
+  if (error) {
+    say("تعذّر تفريغ السلة: " + error.message, true);
+    return;
+  }
+
+  const path = postStoragePath(post.image_url);
+  if (path) await sb.storage.from("attachments").remove([path]);
   }
   state.postFocus = null;
   await loadData();
