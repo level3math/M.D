@@ -209,7 +209,7 @@ let sayTimer = null;
 function say(t, keep) {
   $("msg").textContent = t;
   clearTimeout(sayTimer);
-  if (t && !keep) sayTimer = setTimeout(() => { $("msg").textContent = ""; }, 5000);
+  if (t) sayTimer = setTimeout(() => { $("msg").textContent = ""; }, 5000);
 }
 function el(tag, cls, text) {
   const e = document.createElement(tag);
