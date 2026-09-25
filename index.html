@@ -1760,19 +1760,9 @@ function renderPosts() {
         row.appendChild(edit);
         row.appendChild(del);
       }
-      const link = el("a", "btn small", "🔗 رابط المنشور");
-      link.href = postUrl(post.id);
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      row.appendChild(link);
+  
       card.appendChild(row);
-    } else {
-      const link = el("a", "btn small", "🔗 عرض المنشور");
-      link.href = postUrl(post.id);
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      card.appendChild(link);
-    }
+    
 
     list.appendChild(card);
   });
