@@ -1614,7 +1614,7 @@ function renderPostForm(post) {
         await sb.storage.from("attachments").remove([uploaded.data.image_path]);
       }
       save.disabled = false;
-      say("تعذّر حفظ المنشور");
+      say("تعذّر حفظ المنشور: " + error.message, true);
       return;
     }
 
