@@ -379,6 +379,7 @@ const state = { userId: null, role: null, sections: [], items: [], progress: {},
   personal: [], courses: [], mine: new Set(), chosen: false,
   people: [], peopleQuery: "", peopleLimit: 50,
   questions: [], answers: [], qaNames: {}, qform: null, answerForm: {},
+posts: [],
   active: null, filter: "all", trash: false, form: null, pform: null, logLimit: 100, botOk: null };
 const isAdmin = () => state.role === "admin" || state.role === "full_admin";
 const isFull = () => state.role === "full_admin";
