@@ -432,6 +432,13 @@ async function fetchData() {
   state.personal = pi.data;
   state.questions = q.data;
   state.answers = a.data;
+  const { data: postsData, error: postsError } = await sb
+  .from("posts")
+  .select("id,content,image_url,created_at,deleted_at")
+  .order("created_at", { ascending: false })
+  .order("id", { ascending: false });
+
+state.posts = postsError ? [] : postsData;
   state.progress = {};
   p.data.forEach((r) => { state.progress[r.item_id] = r; });
   state.qaNames = {};
