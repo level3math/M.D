@@ -418,7 +418,7 @@ async function loadCourses() {
   return true;
 }
 async function fetchData() {
-  const [s, i, p, pi, q, a, posts] = await Promise.all([
+  const [s, i, p, pi, q, a] = await Promise.all([
     sb.from("sections").select("id,title,kind,sort_order").eq("is_active", true).order("sort_order"),
     sb.from("items").select("id,section_id,course_id,title,body,url,deadline,deadline_has_time,created_at,deleted_at,attachment_kind,attachment_url,attachment_path,attachment_name,attachment_mime,attachment_size"),
     sb.from("progress").select("item_id,done,submitted"),
@@ -432,7 +432,6 @@ async function fetchData() {
   state.personal = pi.data;
   state.questions = q.data;
   state.answers = a.data;
-state.posts = posts.data;
   state.progress = {};
   p.data.forEach((r) => { state.progress[r.item_id] = r; });
   state.qaNames = {};
