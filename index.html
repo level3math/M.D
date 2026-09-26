@@ -54,7 +54,7 @@
   .post-image-wrap { margin-top:12px; text-align:center; }
   .post-image { display:block; width:100%; max-height:70vh; object-fit:contain; border-radius:8px; }
   .center { text-align:center; }
-  .body { white-space:pre-wrap; margin:8px 0; }
+  .body { white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word; margin:8px 0; }
   button, a.btn { font:inherit; padding:8px 18px; border:2px solid var(--line);
     border-radius:8px; background:transparent; color:var(--ink); cursor:pointer;
     text-decoration:none; display:inline-block; }
@@ -1667,6 +1667,33 @@ async function emptyPostsTrash(posts) {
   state.postFocus = null;
   await loadData();
 }
+function appendPostContent(parent, content) {
+  const text = String(content || "");
+  const re = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi;
+  let last = 0;
+  let m;
+  while ((m = re.exec(text))) {
+    if (m.index > last) parent.appendChild(document.createTextNode(text.slice(last, m.index)));
+    let raw = m[0];
+    let trailing = "";
+    while (/[.,!?;:)]$/.test(raw)) {
+      trailing = raw.slice(-1) + trailing;
+      raw = raw.slice(0, -1);
+    }
+    const a = document.createElement("a");
+    a.href = /^https?:\/\//i.test(raw) ? raw : "https://" + raw;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.textContent = raw;
+    a.style.overflowWrap = "anywhere";
+    a.style.wordBreak = "break-word";
+    parent.appendChild(a);
+    if (trailing) parent.appendChild(document.createTextNode(trailing));
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) parent.appendChild(document.createTextNode(text.slice(last)));
+}
+
 function renderPosts() {
   const list = $("list");
   list.replaceChildren();
@@ -1723,7 +1750,11 @@ function renderPosts() {
 
   posts.forEach((post) => {
     const card = el("div", "card");
-    if (post.content) card.appendChild(el("p", "body", post.content));
+    if (post.content) {
+      const body = el("p", "body");
+      appendPostContent(body, post.content);
+      card.appendChild(body);
+    }
 
     if (post.image_url) {
       const wrap = el("div", "post-image-wrap");
