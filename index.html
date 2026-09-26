@@ -55,6 +55,8 @@
   .post-image { display:block; width:100%; max-height:70vh; object-fit:contain; border-radius:8px; }
   .center { text-align:center; }
   .body { white-space:pre-wrap; margin:8px 0; }
+  .post-body { overflow-wrap:anywhere; word-break:break-word; max-width:100%; box-sizing:border-box; }
+  .post-link { overflow-wrap:anywhere; word-break:break-word; }
   button, a.btn { font:inherit; padding:8px 18px; border:2px solid var(--line);
     border-radius:8px; background:transparent; color:var(--ink); cursor:pointer;
     text-decoration:none; display:inline-block; }
@@ -1486,6 +1488,33 @@ function postUrl(id) {
   const base = location.pathname.replace(/\/(?:index\.html)?$/, "/");
   return new URL(base + "posts/" + encodeURIComponent(id), location.origin).href;
 }
+function appendPostContent(container, text) {
+  const re = /https?:\/\/[^\s<>"']+/gi;
+  let last = 0;
+  let m;
+  while ((m = re.exec(text))) {
+    let raw = m[0];
+    const trailingMatch = raw.match(/[.,!?،؛:)\]\}»]+$/);
+    const trailing = trailingMatch ? trailingMatch[0] : "";
+    const urlText = trailing ? raw.slice(0, -trailing.length) : raw;
+    const url = safeUrl(urlText);
+
+    if (!url) continue;
+    if (m.index > last) container.appendChild(document.createTextNode(text.slice(last, m.index)));
+
+    const a = document.createElement("a");
+    a.className = "post-link";
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.textContent = urlText;
+    container.appendChild(a);
+    if (trailing) container.appendChild(document.createTextNode(trailing));
+
+    last = m.index + raw.length;
+  }
+  if (last < text.length) container.appendChild(document.createTextNode(text.slice(last)));
+}
 function getPostIdFromLocation() {
   const m = location.pathname.match(/\/posts\/(\d+)\/?$/);
   if (m) return Number(m[1]);
@@ -1720,7 +1749,11 @@ function renderPosts() {
 
   posts.forEach((post) => {
     const card = el("div", "card");
-    if (post.content) card.appendChild(el("p", "body", post.content));
+    if (post.content) {
+      const body = el("p", "body post-body");
+      appendPostContent(body, post.content);
+      card.appendChild(body);
+    }
 
     if (post.image_url) {
       const wrap = el("div", "post-image-wrap");
@@ -1802,6 +1835,7 @@ function render() {
 
   if (state.active === "__posts__") {
     $("chips").replaceChildren();
+    $("links-fab").hidden = false;
     renderPosts();
     return;
   }
