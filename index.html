@@ -1485,10 +1485,6 @@ function renderQA(sec) {
     list.appendChild(c);
   });
 }
-function postUrl(id) {
-  const base = location.pathname.replace(/\/(?:index\.html)?$/, "/");
-  return new URL(base + "posts/" + encodeURIComponent(id), location.origin).href;
-}
 function getPostIdFromLocation() {
   const m = location.pathname.match(/\/posts\/(\d+)\/?$/);
   if (m) return Number(m[1]);
@@ -1921,41 +1917,17 @@ function hideAll() {
   $("links-fab").hidden = true;
   $("links-panel").hidden = true;
 }
-/* تبديل الحسابات (حد أقصى حسابين على نفس الجهاز) */
-const ACC_KEY = "tg_accounts";
-function getAccounts() { try { return JSON.parse(localStorage.getItem(ACC_KEY) || "[]"); } catch (e) { return []; } }
-function setAccounts(list) { try { localStorage.setItem(ACC_KEY, JSON.stringify(list)); } catch (e) {} }
-function rememberAccount(session, firstName) {
-  if (!session) return;
-  const list = getAccounts().filter((a) => a.id !== session.user.id);
-  list.unshift({
-    id: session.user.id, first_name: firstName || "",
-    access_token: session.access_token, refresh_token: session.refresh_token,
-  });
-  setAccounts(list.slice(0, 2));
-}
-function syncAccountTokens(session) {
-  if (!session) return;
-  const list = getAccounts();
-  const a = list.find((x) => x.id === session.user.id);
-  if (a) { a.access_token = session.access_token; a.refresh_token = session.refresh_token; setAccounts(list); }
-}
-function forgetAccount(id) { setAccounts(getAccounts().filter((a) => a.id !== id)); renderSavedAccounts(); }
-async function switchAccount(a) {
-  showLoading(true);
-  const { error } = await sb.auth.setSession({ access_token: a.access_token, refresh_token: a.refresh_token });
-  if (error) { showLoading(false); forgetAccount(a.id); say("انتهت صلاحية الجلسة، برجاء تسجيل الدخول من جديد"); return; }
-  await showProfile();
-}
 function renderSavedAccounts() {
   const box = $("saved-accounts");
   if (!box) return;
   box.replaceChildren();
-  $("login-label").textContent = "الدخول بتيليجرام";
+  let name = "";
+  try { name = localStorage.getItem("tg_login_name") || ""; } catch (e) {}
+  $("login-label").textContent = name ? "Login as " + name : "الدخول بتيليجرام";
   $("login-label").hidden = false;
   $("tg-slot").hidden = false;
 }
-sb.auth.onAuthStateChange((_e, session) => syncAccountTokens(session));
+
 async function showProfile() {
   showLoading(true);
   hideAll();
@@ -1975,7 +1947,7 @@ async function showProfile() {
   const { data, error } = await sb.from("profiles")
     .select("first_name, role, approved, courses_chosen, bot_ok").eq("id", state.userId).single();
   if (error || !data) { showLoading(false); say("تعذّر تحميل الحساب", true); return; }
-  rememberAccount(session, data.first_name);
+  try { localStorage.setItem("tg_login_name", data.first_name || ""); } catch (e) {}
   state.role = data.role;
   state.chosen = !!data.courses_chosen;
   state.botOk = data.bot_ok;
