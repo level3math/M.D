@@ -991,8 +991,9 @@ function buildForm(sec, it) {
     if (sec.kind !== "news" && sec.kind !== "newsletter" && !csel.value) { say("المادة مطلوبة"); return; }
     if (csel) data.course_id = csel.value ? Number(csel.value) : null;
     if (dl) {
-      if (!dl.value) { say("معاد التسليم مطلوب"); return; }
-      data.deadline = localToISO(hasTime ? dl.value : dl.value + "T23:59");
+      data.deadline = dl.value
+        ? localToISO(hasTime ? dl.value : dl.value + "T23:59")
+        : null;
       data.deadline_has_time = hasTime;
     }
     if (url) {
