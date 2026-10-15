@@ -1180,14 +1180,17 @@ function renderDashboard() {
   head.appendChild(headText);
   box.appendChild(head);
 
-  const grid = el("div", "dash-grid");
+  const stats = el("div", "dash-stats");
   [[activeCourses.length, "مادة متاحة"], [taskItems.length, "تكليف منشور"], [allPosts.length, "منشور متاح"]]
     .forEach(([n, label]) => {
-      const c = el("div", "dash-card");
+      const c = el("div", "dash-card dash-stat");
       c.appendChild(el("div", "dash-count", String(n)));
       c.appendChild(el("div", "dash-stat-label", label));
-      grid.appendChild(c);
+      stats.appendChild(c);
     });
+  box.appendChild(stats);
+
+  const grid = el("div", "dash-grid");
 
   const tasksCard = el("section", "dash-card dash-wide");
   tasksCard.appendChild(el("h3", "", "📌 التكاليف القادمة"));
@@ -1243,7 +1246,6 @@ function renderDashboard() {
   grid.appendChild(postsCard);
 
   const shortcuts = el("section", "dash-card dash-full");
-  shortcuts.appendChild(el("h3", "", "✨ اختصارات"));
   const r = el("div", "dash-actions");
   const shortcutList = [["📝 التكاليف", "tasks"], ["📰 النشرة الأسبوعية", "newsletter"], ["📬 المنشورات", "posts"], ["❓ الأسئلة", "qa"], ["📁 تبييض المحاضرات", "links"], ["📣 الأخبار", "news"]];
   shortcutList.forEach(([label, kind]) => {
@@ -1297,12 +1299,14 @@ function render() {
   if (state.active === "__sections_admin__") {
     $("chips").replaceChildren();
     $("chips").hidden = true; $("list").hidden = true;
+    tabs.hidden = true;
     $("dashboard").hidden = false;
     renderSectionsAdmin();
     return;
   }
 
   if (state.active === "__posts__") {
+    tabs.hidden = false;
     $("dashboard").hidden = true;
     $("chips").hidden = false; $("list").hidden = false;
     $("chips").replaceChildren();
@@ -1314,10 +1318,12 @@ function render() {
   if (!sec) {
     $("chips").replaceChildren();
     $("chips").hidden = true; $("list").hidden = true;
+    tabs.hidden = true;
     $("dashboard").hidden = false;
     renderDashboard();
     return;
   }
+  tabs.hidden = false;
   $("dashboard").hidden = true;
   $("chips").hidden = false; $("list").hidden = false;
   if (sec.kind === "qa") { renderQA(sec); return; }
