@@ -173,3 +173,11 @@ export {
   MAX_ATTACH, WARN_ATTACH, SHRINK_IMAGES, shrinkImage, humanSize,
   uploadAttachment, removeAttachmentFiles, uploadQAAttachment, renderQAAttachment
 };
+function getPostIdFromLocation() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('post')) {
+        return urlParams.get('post');
+    }
+    const hash = window.location.hash.replace('#', '');
+    return hash ? hash : null;
+}
