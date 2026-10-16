@@ -9,7 +9,7 @@ jobs:
     steps:
       - name: Ping Supabase
         run: |
-          curl -fsS --retry 3 --retry-delay 5 -X POST \
+          curl -fsS -X POST \
             "https://xwnjimsoframcqstdjfo.supabase.co/rest/v1/rpc/keepalive_ping" \
-            -H "apikey: sb_publishable_GxJNb-tD7jTgxskyPpgVLQ_ZNJZ9mm3" \
+            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3bmppbXNvZnJhbWNxc3RkamZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4NTAwODgsImV4cCI6MjEwNTQyNjA4OH0.JhyVa4l8qhK3_ZklbvJsK8fYvPyyWuCGeGzvZR6qu7c" \
             -H "Content-Type: application/json" -d '{}'
