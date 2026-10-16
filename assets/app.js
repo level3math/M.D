@@ -1,3 +1,199 @@
+
+/* نظام الجدول الدراسي الأسبوعي المتناغم مع الثيم والمتجاوب مع الموبايل */
+const ALL_DAYS = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
+let _activeSchedDay = "";
+
+function getTodayDayName() {
+  const map = { 0: "الأحد", 1: "الاثنين", 2: "الثلاثاء", 3: "الأربعاء", 4: "الخميس", 5: "الجمعة", 6: "السبت" };
+  return map[new Date().getDay()] || "السبت";
+}
+
+function renderScheduleCard() {
+  if (!_activeSchedDay) {
+    _activeSchedDay = getTodayDayName();
+  }
+
+  const card = el("section", "sched-card dash-full");
+  
+  const head = el("div", "sched-head");
+  const titleWrap = el("div");
+  titleWrap.appendChild(el("h3", "sched-title", "الجدول الدراسي"));
+  head.appendChild(titleWrap);
+
+  if (isAdmin()) {
+    const addBtn = el("button", "small btn-primary", "إضافة حصة");
+    addBtn.addEventListener("click", () => showScheduleModal(null));
+    head.appendChild(addBtn);
+  }
+  card.appendChild(head);
+
+  // شريط الأيام المدمج المناسب لشاشة الموبايل بدون أي سحب خارجي
+  const nav = el("div", "sched-days-nav");
+  ALL_DAYS.forEach((d) => {
+    const isToday = d === getTodayDayName();
+    const btn = el("button", "sched-day-btn" + (_activeSchedDay === d ? " active" : ""), d);
+    if (isToday && _activeSchedDay !== d) {
+      btn.style.borderColor = "var(--line)";
+      btn.title = "اليوم الحالي";
+    }
+    btn.addEventListener("click", () => {
+      _activeSchedDay = d;
+      render();
+    });
+    nav.appendChild(btn);
+  });
+  card.appendChild(nav);
+
+  // قائمة الحصص لليوم المختار
+  const dayItems = (state.schedule || [])
+    .filter((x) => x.day_of_week === _activeSchedDay)
+    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || a.id - b.id);
+
+  if (!dayItems.length) {
+    card.appendChild(el("p", "sched-empty", "لا توجد محاضرات أو سكاشن مسجلة ليوم " + _activeSchedDay));
+    return card;
+  }
+
+  const list = el("div", "sched-list");
+  dayItems.forEach((item) => {
+    const slot = el("div", "sched-slot");
+
+    const timeCol = el("div", "sched-slot-time", item.time_slot || "غير محدد");
+    slot.appendChild(timeCol);
+
+    const info = el("div", "sched-slot-info");
+    const cn = item.course_id ? courseName(item.course_id) : "";
+    const name = cn ? cn + (item.title ? " — " + item.title : "") : (item.title || "حصة دراسية");
+    info.appendChild(el("div", "sched-slot-name", name));
+
+    const metaParts = [];
+    if (item.location) metaParts.push(item.location);
+    if (item.instructor) metaParts.push(item.instructor);
+    if (item.notes) metaParts.push(item.notes);
+    if (metaParts.length) {
+      info.appendChild(el("div", "sched-slot-meta", metaParts.join(" | ")));
+    }
+    slot.appendChild(info);
+
+    if (isAdmin()) {
+      const act = el("div", "sched-slot-actions");
+      const editBtn = el("button", "small", "تعديل");
+      editBtn.addEventListener("click", () => showScheduleModal(item));
+      act.appendChild(editBtn);
+
+      const delBtn = el("button", "small danger", "حذف");
+      delBtn.addEventListener("click", async () => {
+        if (!confirm("حذف هذه الحصة من جدول يوم " + _activeSchedDay + "؟")) return;
+        const { error } = await sb.from("schedule").delete().eq("id", item.id);
+        if (error) { say("تعذّر الحذف"); return; }
+        say("تم الحذف");
+        if (typeof invalidateCache === "function") invalidateCache();
+        await loadData();
+      });
+      act.appendChild(delBtn);
+      slot.appendChild(act);
+    }
+
+    list.appendChild(slot);
+  });
+
+  card.appendChild(list);
+  return card;
+}
+
+function showScheduleModal(item) {
+  const isEdit = Boolean(item);
+  const modal = el("div", "card");
+  modal.style.marginTop = "12px";
+  modal.style.border = "2px solid var(--line)";
+  modal.style.padding = "14px";
+
+  modal.appendChild(el("h3", "", isEdit ? "تعديل حصة" : "إضافة حصة للجدول"));
+
+  const daySel = el("select");
+  ALL_DAYS.forEach((d) => {
+    const o = el("option", "", d);
+    o.value = d;
+    if (item ? item.day_of_week === d : _activeSchedDay === d) o.selected = true;
+    daySel.appendChild(o);
+  });
+  modal.appendChild(field("اليوم", daySel));
+
+  const courseSel = el("select");
+  const optGeneral = el("option", "", "— عام / مشترك —");
+  optGeneral.value = "";
+  courseSel.appendChild(optGeneral);
+  state.courses.filter((c) => c.is_active).forEach((c) => {
+    const o = el("option", "", c.name);
+    o.value = String(c.id);
+    if (item && item.course_id === c.id) o.selected = true;
+    courseSel.appendChild(o);
+  });
+  modal.appendChild(field("المادة", courseSel));
+
+  const titleInp = el("input");
+  titleInp.placeholder = "محاضرة / سكشن";
+  titleInp.value = item ? item.title : "محاضرة";
+  modal.appendChild(field("نوع الحصة", titleInp));
+
+  const timeInp = el("input");
+  timeInp.placeholder = "09:00 - 11:00";
+  timeInp.value = item ? item.time_slot : "";
+  modal.appendChild(field("الوقت", timeInp));
+
+  const locInp = el("input");
+  locInp.placeholder = "مدرج 1 / معمل";
+  locInp.value = item && item.location ? item.location : "";
+  modal.appendChild(field("المكان / القاعة", locInp));
+
+  const instInp = el("input");
+  instInp.placeholder = "د. فلان / م. فلان";
+  instInp.value = item && item.instructor ? item.instructor : "";
+  modal.appendChild(field("المحاضر (اختياري)", instInp));
+
+  const notesInp = el("input");
+  notesInp.placeholder = "أسبوع وأسبوع / ملاحظات";
+  notesInp.value = item && item.notes ? item.notes : "";
+  modal.appendChild(field("ملاحظات (اختياري)", notesInp));
+
+  const row = el("div", "row");
+  row.style.gap = "8px";
+  row.style.marginTop = "10px";
+
+  const ok = el("button", "btn-primary", isEdit ? "تحديث" : "حفظ");
+  ok.addEventListener("click", async () => {
+    const payload = {
+      day_of_week: daySel.value,
+      course_id: courseSel.value ? Number(courseSel.value) : null,
+      title: titleInp.value.trim() || "محاضرة",
+      time_slot: timeInp.value.trim() || "غير محدد",
+      location: locInp.value.trim() || null,
+      instructor: instInp.value.trim() || null,
+      notes: notesInp.value.trim() || null
+    };
+    ok.disabled = true;
+    const { error } = isEdit
+      ? await sb.from("schedule").update(payload).eq("id", item.id)
+      : await sb.from("schedule").insert(payload);
+    ok.disabled = false;
+    if (error) { say("تعذّر الحفظ"); return; }
+    say("تم الحفظ");
+    _activeSchedDay = daySel.value;
+    if (typeof invalidateCache === "function") invalidateCache();
+    await loadData();
+    modal.remove();
+  });
+  row.appendChild(ok);
+
+  const cancel = el("button", "", "إلغاء");
+  cancel.addEventListener("click", () => modal.remove());
+  row.appendChild(cancel);
+
+  modal.appendChild(row);
+  const box = $("dashboard") || $("list");
+  if (box) box.prepend(modal);
+}
+
 function truncatePostText(str, maxLen = 85) {
   if (!str) return "منشور بصورة";
   let clean = String(str).replace(/\s+/g, " ").trim();
@@ -522,7 +718,7 @@ function buildForm(sec, it) {
     if (it && it.deadline) {
       dl.value = hasTime ? toLocalInput(it.deadline) : toLocalInput(it.deadline).slice(0, 10);
     }
-    c.appendChild(field("معاد التسليم", dl));
+    c.appendChild(field("معاد التسليم (اختياري - اتركه فارغاً إذا لم يحدد موعد)", dl));
     c.appendChild(check("تحديد ساعة معاد التسليم", hasTime, (v) => {
       hasTime = v;
       const cur = dl.value;
@@ -630,7 +826,7 @@ function card(sec, it) {
   if (cn) c.appendChild(el("p", "meta", cn));
   if (it.body) c.appendChild(el("p", "body", it.body));
   if (sec.kind === "tasks") {
-    if (it.deadline) c.appendChild(el("p", "meta", "معاد التسليم: " + fmtDeadline(it)));
+    c.appendChild(el("p", "meta", it.deadline ? "معاد التسليم: " + fmtDeadline(it) : "معاد التسليم: لم يُحدد بعد"));
   }
   if (sec.kind !== "links" && it.attachment_kind) {
     const wrap = el("div");
@@ -1237,6 +1433,7 @@ function renderDashboard() {
       stats.appendChild(c);
     });
   box.appendChild(stats);
+  box.appendChild(renderScheduleCard());
 
   const grid = el("div", "dash-grid");
 

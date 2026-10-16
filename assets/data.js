@@ -52,13 +52,15 @@ async function fetchData(force = false) {
     return true;
   }
   const isGuest = state.role === "guest";
-  const [s, i, p, pi, q, a] = await Promise.all([
+  const schedPromise = sb.from("schedule").select("id,day_of_week,course_id,title,time_slot,location,instructor,notes,sort_order").order("sort_order").order("id");
+  const [s, i, p, pi, q, a, schedRes] = await Promise.all([
     sb.from("sections").select("id,title,kind,sort_order,is_active").order("sort_order"),
     sb.from("items").select("id,section_id,course_id,title,body,url,deadline,deadline_has_time,created_at,deleted_at,attachment_kind,attachment_url,attachment_path,attachment_name,attachment_mime,attachment_size"),
     isGuest ? Promise.resolve({ data: [] }) : sb.from("progress").select("item_id,done,submitted"),
     isGuest ? Promise.resolve({ data: [] }) : sb.from("personal_items").select("id,title,body,deadline,done,created_at"),
     sb.rpc("get_questions"),
     sb.rpc("get_answers"),
+    schedPromise
   ]);
   if (s.error || i.error || p.error || pi.error || q.error || a.error) { say("تعذّر تحميل البيانات", true); return false; }
   /* الأقسام المخفية: الأدمن يشوف المخفي من النوع custom بس، والباقي زي ما كان (نشط فقط) */
