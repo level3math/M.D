@@ -13,9 +13,68 @@
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/math3.css">
+<script>
+(function() {
+  try {
+    var raw = localStorage.getItem("math3_theme_v1");
+    if (raw) {
+      var t = JSON.parse(raw);
+      var r = document.documentElement;
+      var dark = !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+      if (t.accent) r.style.setProperty("--accent", dark ? (t.darkAccent || t.accent) : t.accent);
+      if (t.paper) r.style.setProperty("--paper", dark ? (t.darkPaper || t.paper) : t.paper);
+      if (t.card) r.style.setProperty("--card", dark ? (t.darkCard || t.card) : t.card);
+      if (t.ink) r.style.setProperty("--ink", dark ? (t.darkInk || t.ink) : t.ink);
+      if (t.line) r.style.setProperty("--line", dark ? (t.darkLine || t.line) : t.line);
+      if (t.radius) r.style.setProperty("--radius", t.radius + "px");
+      if (t.bgImage) {
+        r.style.setProperty("--site-bg-image", 'url("' + t.bgImage.replace(/["\\()\s]/g, encodeURIComponent) + '")');
+        r.style.setProperty("--site-bg-size", "cover");
+        r.style.setProperty("--site-bg-position", "center");
+      }
+    }
+  } catch(e) {}
+})();
+</script>
 </head>
 <body>
 <script src="assets/ios-compat.js"></script>
+
+
+<div id="drawer-backdrop" class="side-drawer-backdrop"></div>
+
+<nav id="side-drawer" class="side-drawer">
+  <div class="side-drawer-head">
+    <h3 class="side-drawer-title">أقسام المنصة</h3>
+    <button id="drawer-close" class="side-drawer-close" type="button" aria-label="إغلاق">✕</button>
+  </div>
+  <div class="side-drawer-list">
+    <button class="side-drawer-item active" data-kind="__home__">
+      <span class="side-drawer-icon">🏠</span>
+      <span>الرئيسية</span>
+    </button>
+    <button class="side-drawer-item" data-kind="tasks">
+      <span class="side-drawer-icon">📝</span>
+      <span>التكاليف</span>
+    </button>
+    <button class="side-drawer-item" data-kind="links">
+      <span class="side-drawer-icon">📁</span>
+      <span>مكتبة المواد</span>
+    </button>
+    <button class="side-drawer-item" data-kind="newsletter">
+      <span class="side-drawer-icon">📰</span>
+      <span>النشرة الأسبوعية</span>
+    </button>
+    <button class="side-drawer-item" data-kind="posts">
+      <span class="side-drawer-icon">📬</span>
+      <span>المنشورات</span>
+    </button>
+    <button class="side-drawer-item" data-kind="qa">
+      <span class="side-drawer-icon">❓</span>
+      <span>الأسئلة والأجوبة</span>
+    </button>
+  </div>
+</nav>
 <button id="links-fab" class="links-fab" hidden>🔗</button>
 <div id="links-panel" class="links-panel" hidden></div>
 <div class="wrap">
@@ -55,7 +114,7 @@
       <span style="flex: 1; height: 1px; background: var(--line);"></span>
     </div>
     <button id="anon-login-btn" type="button" class="btn" style="width: 100%; padding: 10px 16px; border-radius: 8px; border: 2px solid var(--line); background: var(--card); color: var(--ink); font-weight: bold; font-size: 14px; cursor: pointer;">
-      Log in anonymous
+      Log in as anonymous
     </button>
   </div>
   <div id="pending-box" class="card center" hidden>

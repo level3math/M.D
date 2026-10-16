@@ -1,11 +1,11 @@
-  :root {
-    --paper:#f8fbff; --card:#ffffff; --ink:#1e2b3a; --line:#b9cce0; --accent:#2b6f9f;
-    --pattern-color:#5f9fca; --pattern-opacity:.13; --wallpaper-opacity:.11; --wallpaper-filter:none; --wallpaper-blend:multiply; color-scheme:light;
+:root {
+    --paper:#f3f9f7; --card:#ffffff; --ink:#163d39; --line:#afd2ce; --accent:#0f766e;
+    --pattern-color:#0f766e; --pattern-opacity:.13; --wallpaper-opacity:.16; --wallpaper-filter:none; --wallpaper-blend:multiply; color-scheme:light;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --paper:#101820; --card:#18232d; --ink:#e7f2fb; --line:#385266; --accent:#72b6df;
-      --pattern-color:#86c8ed; --pattern-opacity:.15; --wallpaper-opacity:.13; --wallpaper-filter:invert(1); --wallpaper-blend:screen; color-scheme:dark;
+      --paper:#0b1f1d; --card:#12312e; --ink:#e7f2fb; --line:#235d58; --accent:#4fd1c5;
+      --pattern-color:#4fd1c5; --pattern-opacity:.15; --wallpaper-opacity:.16; --wallpaper-filter:invert(1); --wallpaper-blend:screen; color-scheme:dark;
     }
   }
   :root[data-theme="dark"] {
@@ -255,4 +255,114 @@
   .sched-slot-actions {
     align-self: flex-end;
   }
+}
+
+
+
+
+/* ===== القائمة الجانبية المنسابة الآمنة 100% ===== */
+.side-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: 1001;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.side-drawer-backdrop.active {
+  display: block;
+  opacity: 1;
+}
+
+.side-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 260px;
+  max-width: 80vw;
+  height: 100vh;
+  background: var(--card);
+  border-left: 1px solid var(--line);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.3);
+  z-index: 1002;
+  display: none;
+  flex-direction: column;
+  padding: 16px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  transform: translateX(100%);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.side-drawer.active {
+  display: flex;
+  transform: translateX(0);
+}
+
+.side-drawer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 12px;
+}
+.side-drawer-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.side-drawer-close {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: bold;
+}
+.side-drawer-close:hover {
+  background: var(--line);
+}
+
+.side-drawer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.side-drawer-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: var(--paper);
+  border: 1px solid transparent;
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: right;
+  transition: all 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+.side-drawer-item:hover {
+  border-color: var(--line);
+}
+.side-drawer-item.active {
+  border-color: var(--accent);
+  background: var(--card);
+}
+.side-drawer-icon {
+  font-size: 18px;
 }

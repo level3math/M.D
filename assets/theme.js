@@ -12,12 +12,12 @@ const COLOR_KEYS = ["accent", "paper", "card", "ink", "line", "patternColor",
   "darkAccent", "darkPaper", "darkCard", "darkInk", "darkLine", "darkPatternColor"];
 
 const DEFAULTS = {
-  accent: "#2b6f9f", paper: "#f8fbff", card: "#ffffff", ink: "#1e2b3a", line: "#b9cce0", patternColor: "#5f9fca",
-  darkAccent: "#72b6df", darkPaper: "#101820", darkCard: "#18232d", darkInk: "#e7f2fb", darkLine: "#385266", darkPatternColor: "#86c8ed",
-  bgType: "wallpaper",   /* wallpaper (المعادلات الحالية) | pattern | image | none */
-  pattern: "grid",       /* grid | dots | waves | triangles */
-  bgImage: "",
-  bgOpacity: null,       /* null = القيمة الافتراضية من الـ CSS */
+  accent: "#0f766e", paper: "#f3f9f7", card: "#ffffff", ink: "#163d39", line: "#afd2ce", patternColor: "#0f766e",
+  darkAccent: "#4fd1c5", darkPaper: "#0b1f1d", darkCard: "#12312e", darkInk: "#e7f2fb", darkLine: "#235d58", darkPatternColor: "#4fd1c5",
+  bgType: "image",
+  pattern: "grid",
+  bgImage: "https://thumbs.dreamstime.com/b/math-vector-seamless-background-formulas-plots-equations-handwritten-white-grid-copybook-paper-scientific-endless-145507710.jpg",
+  bgOpacity: 0.16,
   radius: 12, fontSize: 18, width: 720
 };
 
@@ -125,6 +125,8 @@ function initTheme() {
     const fn = () => reapply();
     try { mq.addEventListener("change", fn); } catch (e) { try { mq.addListener(fn); } catch (_) {} }
   }
+  // جلب أحدث ثيم منشور من قاعدة البيانات فور فتح الصفحة حتى للمتصفح المتخفي
+  loadThemeFromDb();
 }
 /* بعد الدخول: هات الهوية المنشورة للجميع (من غير ما نوقف الصفحة) */
 async function loadThemeFromDb() {
@@ -135,7 +137,9 @@ async function loadThemeFromDb() {
     cacheSaved();
     if (!draft) applyTheme(saved);
     return true;
-  } catch (e) { return false; }
+  } catch (e) {
+    return false;
+  }
 }
 async function saveThemeToDb(t) {
   const { error } = await sb.from("site_theme").upsert({ key: "theme", value: JSON.stringify(t) }, { onConflict: "key" });

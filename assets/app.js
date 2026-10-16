@@ -1420,10 +1420,22 @@ function renderDashboard() {
     : [];
 
   const head = el("div", "dash-head");
+  head.style.display = "flex";
+  head.style.justifyContent = "space-between";
+  head.style.alignItems = "center";
+  head.style.marginBottom = "10px";
+
   const headText = el("div");
   headText.appendChild(el("h2", "dash-title", "الرئيسية"));
   headText.appendChild(el("p", "dash-sub", "كل ما تحتاجه في مكان واحد."));
   head.appendChild(headText);
+
+  // زر الأقسام الأنيق فوق كارت المنشورات المتاحة مباشرة
+  const menuBtn = el("button", "dash-menu-pill", "");
+  menuBtn.innerHTML = '<span>📑 الأقسام</span> <span class="arrow">‹</span>';
+  menuBtn.addEventListener("click", openSideDrawer);
+  head.appendChild(menuBtn);
+
   box.appendChild(head);
 
   const stats = el("div", "dash-stats");
@@ -1492,22 +1504,7 @@ function renderDashboard() {
   postsCard.appendChild(pl);
   grid.appendChild(postsCard);
 
-  const shortcuts = el("section", "dash-card dash-full");
-  const r = el("div", "dash-actions");
-  const shortcutList = [["📝 التكاليف", "tasks"], ["📰 النشرة الأسبوعية", "newsletter"], ["📬 المنشورات", "posts"], ["❓ الأسئلة", "qa"], ["📁 مكتبة المواد", "links"], ["📣 الأخبار", "news"]];
-  shortcutList.forEach(([label, kind]) => {
-    if (kind !== "posts" && !findSectionByKind(kind)) return;
-    const b = el("button", "small", label);
-    b.addEventListener("click", () => openSection(kind));
-    r.appendChild(b);
-  });
-  state.sections.filter((x) => x.kind === "custom" && x.is_active !== false).forEach((sec) => {
-    const b = el("button", "small", "📁 " + sec.title);
-    b.addEventListener("click", () => openSectionById(sec.id));
-    r.appendChild(b);
-  });
-  shortcuts.appendChild(r);
-  grid.appendChild(shortcuts);
+  /* تم حذف الصندوق المربع بالكامل */
 
   box.appendChild(grid);
 }
@@ -1654,6 +1651,7 @@ function hideAll() {
   $("backup-btn").hidden = true;
   $("links-fab").hidden = true;
   $("links-panel").hidden = true;
+  
 }
 function renderSavedAccounts() {
   const box = $("saved-accounts");
@@ -1702,6 +1700,7 @@ async function showProfile() {
   if (!okC || !okD) return;
   $("courses-btn").hidden = false;
   $("links-fab").hidden = false;
+  
   $("manage-btn").hidden = !isAdmin();
   $("sections-btn").hidden = !isAdmin();
   $("theme-btn").hidden = !isFull();
@@ -1772,7 +1771,7 @@ document.addEventListener("click", (e) => {
 });
 $("courses-btn").addEventListener("click", () => setView("picker"));
 $("manage-btn").addEventListener("click", () => setView("courses"));
-$("sections-btn").addEventListener("click", openSectionsAdmin);
+$("sections-btn").addEventListener("click", () => { const dr = $("side-drawer"); const bd = $("drawer-backdrop"); if (dr && bd) { dr.classList.add("active"); bd.classList.add("active"); } });
 $("theme-btn").addEventListener("click", () => setView("theme"));
 $("people-btn").addEventListener("click", () => setView("people"));
 $("log-btn").addEventListener("click", () => { state.logLimit = 100; setView("log"); });
@@ -1822,13 +1821,14 @@ async function loginAsAnonymous() {
     sessionStorage.setItem("auth_mode", "anonymous");
   } catch (e) {}
 
-  await Promise.allSettled([loadCourses(), fetchData()]);
+  await Promise.allSettled([loadCourses(), fetchData(), loadThemeFromDb()]);
   
   showLoading(false);
   $("hello").textContent = "LOGGED IN AS ANONYMOUS";
   $("logout").hidden = false;
   $("courses-btn").hidden = false;
   $("links-fab").hidden = false;
+  
   
   // حجب صلاحيات وأزرار الإدارة تماماً للزائر المجهول
   $("manage-btn").hidden = true;
@@ -1862,3 +1862,60 @@ if (switchTgBtn) {
     mountTelegramRedirectButton();
   });
 }
+
+
+
+/* دوال فتح وغلق درج الأقسام الجانبي */
+function openSideDrawer() {
+  const dr = $("side-drawer");
+  const bd = $("drawer-backdrop");
+  if (!dr || !bd) return;
+  dr.style.display = "flex";
+  bd.style.display = "block";
+  requestAnimationFrame(() => {
+    dr.classList.add("active");
+    bd.classList.add("active");
+  });
+}
+
+function closeSideDrawer() {
+  const dr = $("side-drawer");
+  const bd = $("drawer-backdrop");
+  if (!dr || !bd) return;
+  dr.classList.remove("active");
+  bd.classList.remove("active");
+  setTimeout(() => {
+    if (!dr.classList.contains("active")) {
+      dr.style.display = "none";
+      bd.style.display = "none";
+    }
+  }, 250);
+}
+
+function initSideDrawer() {
+  const dr = $("side-drawer");
+  const bd = $("drawer-backdrop");
+  const closeBtn = $("drawer-close");
+
+  if (closeBtn) closeBtn.addEventListener("click", closeSideDrawer);
+  if (bd) bd.addEventListener("click", closeSideDrawer);
+
+  if (dr) {
+    const items = dr.querySelectorAll(".side-drawer-item");
+    items.forEach((item) => {
+      item.addEventListener("click", () => {
+        const kind = item.getAttribute("data-kind");
+        items.forEach((b) => b.classList.remove("active"));
+        item.classList.add("active");
+        closeSideDrawer();
+
+        if (kind === "__home__") {
+          goHome();
+        } else {
+          openSection(kind);
+        }
+      });
+    });
+  }
+}
+initSideDrawer();
