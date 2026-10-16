@@ -1429,10 +1429,9 @@ function renderSavedAccounts() {
   const box = $("saved-accounts");
   if (!box) return;
   box.replaceChildren();
-  let name = "";
-  try { name = localStorage.getItem("tg_login_name") || ""; } catch (e) {}
-  $("login-label").textContent = name ? "Login as " + name : "الدخول بتيليجرام";
-  $("login-label").hidden = false;
+  // Don't show "Login as SALMA" header - keep only the Telegram widget!
+  const lbl = $("login-label");
+  if (lbl) lbl.hidden = true;
   $("tg-slot").hidden = false;
 }
 
@@ -1576,3 +1575,60 @@ function readTelegramReturn() {
 }
 
 export { readTelegramReturn, onTelegramAuth, showProfile };
+
+/* تسجيل الدخول المجهول (Anonymous Login) للقراءة فقط */
+async function loginAsAnonymous() {
+  showLoading(true);
+  hideAll();
+  $("login-box").hidden = true;
+  $("pending-box").hidden = true;
+  
+  state.userId = "anon-guest";
+  state.role = "guest";
+  state.chosen = true;
+  state.botOk = true;
+
+  try {
+    sessionStorage.setItem("auth_mode", "anonymous");
+  } catch (e) {}
+
+  await Promise.allSettled([loadCourses(), fetchData()]);
+  
+  showLoading(false);
+  $("hello").textContent = "LOGGED IN AS ANONYMOUS";
+  $("logout").hidden = false;
+  $("courses-btn").hidden = false;
+  $("links-fab").hidden = false;
+  
+  // حجب صلاحيات وأزرار الإدارة تماماً للزائر المجهول
+  $("manage-btn").hidden = true;
+  $("sections-btn").hidden = true;
+  $("theme-btn").hidden = true;
+  $("people-btn").hidden = true;
+  $("log-btn").hidden = true;
+  $("backup-btn").hidden = true;
+
+  const anonBanner = $("anon-banner");
+  if (anonBanner) anonBanner.hidden = false;
+
+  setView("app");
+}
+
+const anonBtn = $("anon-login-btn");
+if (anonBtn) {
+  anonBtn.addEventListener("click", loginAsAnonymous);
+}
+
+const switchTgBtn = $("switch-to-telegram-btn");
+if (switchTgBtn) {
+  switchTgBtn.addEventListener("click", async () => {
+    try { sessionStorage.removeItem("auth_mode"); } catch (e) {}
+    hideAll();
+    const ab = $("anon-banner");
+    if (ab) ab.hidden = true;
+    $("login-box").hidden = false;
+    $("logout").hidden = true;
+    renderSavedAccounts();
+    mountTelegramRedirectButton();
+  });
+}

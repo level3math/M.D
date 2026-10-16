@@ -3,21 +3,31 @@ import { state, isAdmin, render } from "./state.js";
 import { getPostIdFromLocation } from "./ui.js";
 
 async function loadCourses() {
+  const isGuest = state.role === "guest";
+  const courseQuery = sb.from("courses").select("id,name,sort_order,is_active,drive_url,whatsapp_link,teams_link,telegram_link,youtube_link").order("sort_order").order("name");
+  if (isGuest) {
+    const c = await courseQuery;
+    if (c.error || !c.data) { say("تعذّر تحميل المواد", true); return false; }
+    state.courses = c.data;
+    state.mine = new Set(c.data.map((r) => r.id));
+    return true;
+  }
   const [c, u] = await Promise.all([
-    sb.from("courses").select("id,name,sort_order,is_active,drive_url,whatsapp_link,teams_link,telegram_link,youtube_link").order("sort_order").order("name"),
+    courseQuery,
     sb.from("user_courses").select("course_id"),
   ]);
   if (c.error || u.error) { say("تعذّر تحميل المواد", true); return false; }
   state.courses = c.data;
-  state.mine = new Set(u.data.map((r) => r.course_id));
+  state.mine = new Set((u.data || []).map((r) => r.course_id));
   return true;
 }
 async function fetchData() {
+  const isGuest = state.role === "guest";
   const [s, i, p, pi, q, a] = await Promise.all([
     sb.from("sections").select("id,title,kind,sort_order,is_active").order("sort_order"),
     sb.from("items").select("id,section_id,course_id,title,body,url,deadline,deadline_has_time,created_at,deleted_at,attachment_kind,attachment_url,attachment_path,attachment_name,attachment_mime,attachment_size"),
-    sb.from("progress").select("item_id,done,submitted"),
-    sb.from("personal_items").select("id,title,body,deadline,done,created_at"),
+    isGuest ? Promise.resolve({ data: [] }) : sb.from("progress").select("item_id,done,submitted"),
+    isGuest ? Promise.resolve({ data: [] }) : sb.from("personal_items").select("id,title,body,deadline,done,created_at"),
     sb.rpc("get_questions"),
     sb.rpc("get_answers"),
   ]);

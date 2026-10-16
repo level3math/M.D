@@ -41,7 +41,7 @@
   <div id="login-box" class="card center" hidden>
     <div id="saved-accounts"></div>
     <div id="tg-widget-wrap">
-      <p id="login-label">الدخول بتيليجرام</p>
+      <p id="login-label" hidden></p>
       <div id="tg-slot"></div>
       <script>
         if (!window.IS_IOS) {
@@ -49,6 +49,14 @@
         }
       </script>
     </div>
+    <div class="login-divider" style="margin: 16px 0 12px; display: flex; align-items: center; justify-content: center; gap: 10px; opacity: 0.6; font-size: 13px; font-weight: 600; text-transform: uppercase;">
+      <span style="flex: 1; height: 1px; background: var(--line);"></span>
+      <span>or</span>
+      <span style="flex: 1; height: 1px; background: var(--line);"></span>
+    </div>
+    <button id="anon-login-btn" type="button" class="btn" style="width: 100%; padding: 10px 16px; border-radius: 8px; border: 2px solid var(--line); background: var(--card); color: var(--ink); font-weight: bold; font-size: 14px; cursor: pointer;">
+      Log in anonymous
+    </button>
   </div>
   <div id="pending-box" class="card center" hidden>
     <p id="welcome"></p>
@@ -61,6 +69,15 @@
   <div id="log-box" hidden></div>
   <div id="theme-box" hidden></div>
   <div id="app" hidden>
+    <div id="anon-banner" class="card" hidden style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding:10px 14px; margin-bottom:12px; border:1px solid var(--line); background:var(--card);">
+      <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:bold;">
+        <span>👤</span>
+        <span>Logged in as anonymous</span>
+      </div>
+      <button id="switch-to-telegram-btn" class="small btn-primary" type="button" style="padding:6px 14px !important;">
+        📱 تسجيل الدخول بتيليجرام (Login with Telegram)
+      </button>
+    </div>
     <p id="hello" class="label"></p>
     <div id="bot-banner" class="card" hidden></div>
     <div id="dashboard" hidden></div>
