@@ -1,3 +1,20 @@
+function truncatePostText(str, maxLen = 85) {
+  if (!str) return "منشور بصورة";
+  let clean = String(str).replace(/\s+/g, " ").trim();
+  if (clean.length <= maxLen) return clean;
+  let cut = clean.slice(0, maxLen);
+  const lastSpace = cut.lastIndexOf(" ");
+  if (lastSpace > 25) {
+    cut = cut.slice(0, lastSpace);
+  }
+  cut = cut.replace(/[\s،,.\-_:؛]+$/, "").trim();
+  const words = cut.split(" ");
+  if (words.length > 1 && words[words.length - 1].length <= 1) {
+    words.pop();
+    cut = words.join(" ").replace(/[\s،,.\-_:؛]+$/, "").trim();
+  }
+  return cut + "...";
+}
 import {
   sb, $, say, el, showLoading, fmt, fmtDeadline, logFmt, localToISO, toLocalInput, safeUrl,
   MAX_ATTACH, WARN_ATTACH, shrinkImage, humanSize,
@@ -1235,7 +1252,7 @@ function renderDashboard() {
   posts.forEach((p) => {
     const row = el("div", "dash-item");
     const main = el("div", "dash-item-main");
-    main.appendChild(el("div", "dash-item-title", p.content ? String(p.content).slice(0, 90) : "منشور بصورة"));
+    main.appendChild(el("div", "dash-item-title", truncatePostText(p.content, 85)));
     row.appendChild(main);
     const b = el("button", "small", "فتح");
     b.addEventListener("click", () => openSection("posts"));

@@ -1,6 +1,6 @@
 
 const SUPABASE_URL = "https://xwnjimsoframcqstdjfo.supabase.co";
-const SUPABASE_KEY = "sb_publishable_GxJNb-tD7jTgxskyPpgVLQ_ZNJZ9mm3";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3bmppbXNvZnJhbWNxc3RkamZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4NTAwODgsImV4cCI6MjEwNTQyNjA4OH0.JhyVa4l8qhK3_ZklbvJsK8fYvPyyWuCGeGzvZR6qu7c";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = (id) => document.getElementById(id);
 /* الرسائل تختفي بعد 5 ثواني (إلا لو keep) */
