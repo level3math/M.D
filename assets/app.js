@@ -817,12 +817,12 @@ async function retryBot() {
   setTimeout(refreshBotStatus, 75000);
   setTimeout(refreshBotStatus, 150000);
 }
-/* تبييض المحاضرات: فولدر درايف ثابت لكل مادة */
+/* مكتبة المواد: فولدرات درايف لكل مادة (المحاضرات + الاسايمنتات) */
 function renderLinks(sec) {
   $("chips").replaceChildren();
   const list = $("list");
   list.replaceChildren();
-  const courses = state.courses.filter((c) => c.is_active || (isAdmin() && c.drive_url));
+  const courses = state.courses.filter((c) => c.is_active || (isAdmin() && (c.drive_url || c.assignment_drive_url)));
   if (!courses.length) {
     list.appendChild(el("p", "center", "لا توجد مواد بعد"));
     return;
@@ -830,44 +830,75 @@ function renderLinks(sec) {
   courses.forEach((c) => {
     const card = el("div", "card");
     card.appendChild(el("h3", "", c.name + (c.is_active ? "" : " (متوقفة)")));
+    
+    const linksRow = el("div", "row");
+    linksRow.style.gap = "8px";
+    linksRow.style.flexWrap = "wrap";
+    linksRow.style.marginBottom = "8px";
+
     if (c.drive_url) {
-      const a = el("a", "btn", "📁 فتح فولدر المحاضرات");
-      a.href = c.drive_url;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      card.appendChild(a);
+      const aLect = el("a", "btn", "📁 فولدر المحاضرات");
+      aLect.href = c.drive_url;
+      aLect.target = "_blank";
+      aLect.rel = "noopener noreferrer";
+      linksRow.appendChild(aLect);
     } else {
-      card.appendChild(el("p", "meta", "الرابط لسه مش متاح"));
+      const noLect = el("span", "meta", "المحاضرات: غير متوفر");
+      linksRow.appendChild(noLect);
     }
+
+    if (c.assignment_drive_url) {
+      const aAssign = el("a", "btn btn-primary", "📝 فولدر الاسايمنتات");
+      aAssign.href = c.assignment_drive_url;
+      aAssign.target = "_blank";
+      aAssign.rel = "noopener noreferrer";
+      linksRow.appendChild(aAssign);
+    } else {
+      const noAssign = el("span", "meta", "الاسايمنت: غير متوفر");
+      linksRow.appendChild(noAssign);
+    }
+    card.appendChild(linksRow);
+
     if (isAdmin()) {
-      const row = el("div", "row");
-      const edit = el("button", "small", c.drive_url ? "تعديل الرابط" : "إضافة رابط");
-      edit.addEventListener("click", async () => {
-        const url = (prompt("رابط فولدر Drive بتاع " + c.name, c.drive_url || "") || "").trim();
+      const adminRow = el("div", "row");
+      adminRow.style.gap = "8px";
+      adminRow.style.marginTop = "10px";
+      adminRow.style.paddingTop = "10px";
+      adminRow.style.borderTop = "1px dashed var(--line)";
+
+      const editLect = el("button", "small", c.drive_url ? "تعديل درايف المحاضرات" : "إضافة درايف محاضرات");
+      editLect.addEventListener("click", async () => {
+        const url = (prompt("رابط درايف المحاضرات لمادة " + c.name, c.drive_url || "") || "").trim();
         if (url === "") return;
         const u = safeUrl(url);
         if (!u) { say("الرابط غير صالح"); return; }
         const { error } = await sb.from("courses").update({ drive_url: u }).eq("id", c.id);
         if (error) { say("تعذّر الحفظ"); return; }
-        say("تم الحفظ");
-        await loadCourses();
+        say("تم حفظ رابط المحاضرات");
+        if (typeof invalidateCache === "function") invalidateCache();
+        await loadCourses(true);
         render();
       });
-      row.appendChild(edit);
-      if (c.drive_url) {
-        const rm = el("button", "small danger", "حذف الرابط");
-        rm.addEventListener("click", async () => {
-          if (!confirm("حذف رابط الفولدر لمادة " + c.name + "؟")) return;
-          const { error } = await sb.from("courses").update({ drive_url: null }).eq("id", c.id);
-          if (error) { say("تعذّر الحذف"); return; }
-          say("تم الحذف");
-          await loadCourses();
-          render();
-        });
-        row.appendChild(rm);
-      }
-      card.appendChild(row);
+      adminRow.appendChild(editLect);
+
+      const editAssign = el("button", "small", c.assignment_drive_url ? "تعديل درايف الاسايمنت" : "إضافة درايف اسايمنت");
+      editAssign.addEventListener("click", async () => {
+        const url = (prompt("رابط درايف الاسايمنتات لمادة " + c.name, c.assignment_drive_url || "") || "").trim();
+        if (url === "") return;
+        const u = safeUrl(url);
+        if (!u) { say("الرابط غير صالح"); return; }
+        const { error } = await sb.from("courses").update({ assignment_drive_url: u }).eq("id", c.id);
+        if (error) { say("تعذّر الحفظ"); return; }
+        say("تم حفظ رابط الاسايمنتات");
+        if (typeof invalidateCache === "function") invalidateCache();
+        await loadCourses(true);
+        render();
+      });
+      adminRow.appendChild(editAssign);
+
+      card.appendChild(adminRow);
     }
+
     list.appendChild(card);
   });
 }
@@ -1264,7 +1295,7 @@ function renderDashboard() {
 
   const shortcuts = el("section", "dash-card dash-full");
   const r = el("div", "dash-actions");
-  const shortcutList = [["📝 التكاليف", "tasks"], ["📰 النشرة الأسبوعية", "newsletter"], ["📬 المنشورات", "posts"], ["❓ الأسئلة", "qa"], ["📁 تبييض المحاضرات", "links"], ["📣 الأخبار", "news"]];
+  const shortcutList = [["📝 التكاليف", "tasks"], ["📰 النشرة الأسبوعية", "newsletter"], ["📬 المنشورات", "posts"], ["❓ الأسئلة", "qa"], ["📁 مكتبة المواد", "links"], ["📣 الأخبار", "news"]];
   shortcutList.forEach(([label, kind]) => {
     if (kind !== "posts" && !findSectionByKind(kind)) return;
     const b = el("button", "small", label);
