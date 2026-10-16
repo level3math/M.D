@@ -12,7 +12,7 @@ const state = { userId: null, role: null, sections: [], items: [], progress: {},
   people: [], peopleQuery: "", peopleLimit: 50,
   questions: [], answers: [], qaNames: {}, qform: null, answerForm: {},
 posts: [], postForm: null, postFocus: null,
-  active: null, filter: "all", trash: false, form: null, pform: null, logLimit: 100, botOk: null };
+  active: null, filter: "all", trash: false, form: null, pform: null, logLimit: 100, botOk: null, schedule: [] };
 const isAdmin = () => state.role === "admin" || state.role === "full_admin";
 const isFull = () => state.role === "full_admin";
 const courseName = (id) => (state.courses.find((c) => c.id === id) || {}).name || "";

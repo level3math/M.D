@@ -5,7 +5,7 @@ let _coursesCache = null;
 let _cacheTime = 0;
 const CACHE_LIFETIME = 3 * 60 * 1000; // 3 دقائق كاش للقراءة والتصفح
 
-export function invalidateCache() {
+function invalidateCache() {
   _dataCache = null;
   _coursesCache = null;
   _cacheTime = 0;
@@ -49,6 +49,7 @@ async function fetchData(force = false) {
     state.answers = _dataCache.answers;
     state.posts = _dataCache.posts;
     state.progress = _dataCache.progress;
+    state.schedule = _dataCache.schedule || [];
     return true;
   }
   const isGuest = state.role === "guest";
@@ -69,6 +70,7 @@ async function fetchData(force = false) {
   state.personal = pi.data;
   state.questions = q.data;
   state.answers = a.data;
+  state.schedule = (schedRes && schedRes.data) || [];
   const { data: postsData, error: postsError } = await sb
   .from("posts")
   .select("id,content,image_url,created_at,deleted_at")
@@ -107,7 +109,8 @@ state.posts = postsError ? [] : postsData;
     questions: state.questions,
     answers: state.answers,
     posts: state.posts,
-    progress: state.progress
+    progress: state.progress,
+    schedule: state.schedule || []
   };
   _cacheTime = Date.now();
   return true;
@@ -116,4 +119,4 @@ async function loadData() {
   if (await fetchData()) render();
 }
 
-export { loadCourses, fetchData, loadData };
+export { loadCourses, fetchData, loadData, invalidateCache };

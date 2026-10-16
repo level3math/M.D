@@ -86,9 +86,10 @@ function renderScheduleCard() {
         if (!confirm("حذف هذه الحصة من جدول يوم " + _activeSchedDay + "؟")) return;
         const { error } = await sb.from("schedule").delete().eq("id", item.id);
         if (error) { say("تعذّر الحذف"); return; }
-        say("تم الحذف");
-        if (typeof invalidateCache === "function") invalidateCache();
-        await loadData();
+        say("تم الحذف بنجاح");
+        invalidateCache();
+        await fetchData(true);
+        render();
       });
       act.appendChild(delBtn);
       slot.appendChild(act);
@@ -177,11 +178,12 @@ function showScheduleModal(item) {
       : await sb.from("schedule").insert(payload);
     ok.disabled = false;
     if (error) { say("تعذّر الحفظ"); return; }
-    say("تم الحفظ");
+    say("تم الحفظ بنجاح");
     _activeSchedDay = daySel.value;
-    if (typeof invalidateCache === "function") invalidateCache();
-    await loadData();
+    invalidateCache();
+    await fetchData(true);
     modal.remove();
+    render();
   });
   row.appendChild(ok);
 
@@ -217,7 +219,7 @@ import {
   uploadAttachment, removeAttachmentFiles, uploadQAAttachment, renderQAAttachment
 } from "./core.js";
 import { roleLabels, roleRank, state, isAdmin, isFull, courseName, rpcMsg, setRender } from "./state.js";
-import { loadCourses, fetchData, loadData } from "./data.js";
+import { loadCourses, fetchData, loadData, invalidateCache } from "./data.js";
 import { check, field } from "./ui.js";
 import { renderPosts } from "./posts.js";
 import { loadThemeFromDb, discardThemeDraft, renderThemeEditor } from "./theme.js";
