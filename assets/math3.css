@@ -366,3 +366,7 @@
 .side-drawer-icon {
   font-size: 18px;
 }
+
+  /* مسافات الرئيسية: كل كتلة تحت التانية بمسافة ثابتة، مهما كانت الكتل */
+  #dashboard { display:flex; flex-direction:column; gap:14px; }
+  #dashboard > * { margin-top:0 !important; margin-bottom:0 !important; }

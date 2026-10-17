@@ -178,7 +178,7 @@ function renderThemeEditor(box, onBack) {
   head.appendChild(el("h2", "", "🎨 المظهر"));
   const back = el("button", "small", "← الرئيسية");
   back.addEventListener("click", () => {
-    if (dirty() && !confirm("فيه تعديلات لسه ما اتحفظتش. الرجوع هيلغيها. متأكدة؟")) return;
+    if (dirty() && !confirm("فيه تعديلات لسه ما اتحفظتش، والرجوع هيلغيها. هل تريد المتابعة؟")) return;
     discardThemeDraft();
     onBack();
   });
@@ -186,7 +186,7 @@ function renderThemeEditor(box, onBack) {
   top.appendChild(head);
   const status = el("p", "meta", "");
   top.appendChild(status);
-  top.appendChild(el("p", "meta theme-note", "الوضع (فاتح/داكن) بيتحدد تلقائيًا من جهاز كل مستخدم. هنا بتظبطي شكل الاتنين. التعديلات معاينة عندك بس لحد ما تدوسي «حفظ للجميع»."));
+  top.appendChild(el("p", "meta theme-note", "الوضع (فاتح/داكن) بيتحدد تلقائيًا من جهاز كل مستخدم، وهنا يتم ضبط شكل الاتنين. التعديلات معاينة على جهازك فقط إلى أن يتم الضغط على «حفظ للجميع»."));
   box.appendChild(top);
 
   const updateStatus = () => { status.textContent = dirty() ? "● تعديلات غير محفوظة" : "✓ مطابق للمنشور حاليًا"; };
@@ -327,7 +327,7 @@ function renderThemeEditor(box, onBack) {
     try {
       const clean = sanitize(draft);
       if (contrast(clean.paper, clean.ink) < 3 || contrast(clean.darkPaper, clean.darkInk) < 3) {
-        say("التباين بين النص والخلفية ضعيف جدًا. عدّلي الألوان قبل الحفظ.", true);
+        say("التباين بين النص والخلفية ضعيف جدًا. يلزم تعديل الألوان قبل الحفظ.", true);
         saveBtn.disabled = false;
         return;
       }
@@ -335,7 +335,7 @@ function renderThemeEditor(box, onBack) {
       saved = clean; draft = { ...saved }; cacheSaved(); reapply();
       say("تم حفظ المظهر للجميع ✅"); updateStatus();
     } catch (e) {
-      say("تعذّر الحفظ: " + ((e && e.message) || "") + " — تأكدي إنك شغّلتي ملف SQL الخاص بالمظهر", true);
+      say("تعذّر الحفظ: " + ((e && e.message) || "") + " — يلزم التأكد من تشغيل ملف SQL الخاص بالمظهر", true);
     }
     saveBtn.disabled = false;
   });
@@ -343,7 +343,7 @@ function renderThemeEditor(box, onBack) {
   undo.addEventListener("click", () => { draft = { ...saved }; reapply(); renderThemeEditor(box, onBack); });
   const reset = el("button", "danger", "الافتراضي");
   reset.addEventListener("click", () => {
-    if (!confirm("إرجاع الألوان والأشكال للافتراضي (معاينة، ولسه محتاج حفظ)؟")) return;
+    if (!confirm("إرجاع الألوان والأشكال للافتراضي؟ (معاينة فقط، ويلزم الحفظ لتطبيقه)")) return;
     draft = { ...DEFAULTS }; reapply(); renderThemeEditor(box, onBack);
   });
   row.append(saveBtn, undo, reset);
