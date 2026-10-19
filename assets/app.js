@@ -1,3 +1,4 @@
+import { showNotificationModal } from "./notifications.js";
 
 /* نظام الجدول الدراسي الأسبوعي المتناغم مع الثيم والمتجاوب مع الموبايل */
 const ALL_DAYS = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
@@ -14,6 +15,7 @@ function renderScheduleCard() {
   }
 
   const card = el("section", "sched-card dash-full");
+  card.style.marginBottom = "24px";
   
   const head = el("div", "sched-head");
   const titleWrap = el("div");
@@ -1046,13 +1048,13 @@ function renderLinks(sec) {
     }
 
     if (c.assignment_drive_url) {
-      const aAssign = el("a", "btn btn-primary", "📝 فولدر الاسايمنتات");
+      const aAssign = el("a", "btn btn-primary", "📝 فولدر التكاليف");
       aAssign.href = c.assignment_drive_url;
       aAssign.target = "_blank";
       aAssign.rel = "noopener noreferrer";
       linksRow.appendChild(aAssign);
     } else {
-      const noAssign = el("span", "meta", "الاسايمنت: غير متوفر");
+      const noAssign = el("span", "meta", "التكاليف: غير متوفر");
       linksRow.appendChild(noAssign);
     }
     card.appendChild(linksRow);
@@ -1079,15 +1081,15 @@ function renderLinks(sec) {
       });
       adminRow.appendChild(editLect);
 
-      const editAssign = el("button", "small", c.assignment_drive_url ? "تعديل درايف الاسايمنت" : "إضافة درايف اسايمنت");
+      const editAssign = el("button", "small", c.assignment_drive_url ? "تعديل درايف التكاليف" : "إضافة درايف تكاليف");
       editAssign.addEventListener("click", async () => {
-        const url = (prompt("رابط درايف الاسايمنتات لمادة " + c.name, c.assignment_drive_url || "") || "").trim();
+        const url = (prompt("رابط درايف التكاليف لمادة " + c.name, c.assignment_drive_url || "") || "").trim();
         if (url === "") return;
         const u = safeUrl(url);
         if (!u) { say("الرابط غير صالح"); return; }
         const { error } = await sb.from("courses").update({ assignment_drive_url: u }).eq("id", c.id);
         if (error) { say("تعذّر الحفظ"); return; }
-        say("تم حفظ رابط الاسايمنتات");
+        say("تم حفظ رابط درايف التكاليف");
         if (typeof invalidateCache === "function") invalidateCache();
         await loadCourses(true);
         render();
@@ -1391,10 +1393,10 @@ function renderSectionsAdmin() {
     const del = el("button", "small danger", "حذف");
     del.addEventListener("click", async () => {
       const n = state.items.filter((x) => String(x.section_id) === String(sec.id)).length;
-      if (n) { say("القسم فيه عناصر، يلزم حذفها أو نقلها أولًا."); return; }
+      if (n) { say("القسم يحتوي على عناصر. يُرجى حذفها أو نقلها أولاً."); return; }
       if (!confirm("حذف قسم «" + sec.title + "» نهائيًا؟")) return;
       const { data: gone, error } = await sb.from("sections").delete().eq("id", sec.id).select("id");
-      if (error || !gone || !gone.length) { say("تعذّر حذف القسم (يلزم مراجعة صلاحية الحذف في Supabase)", true); return; }
+      if (error || !gone || !gone.length) { say("تعذّر حذف القسم (يُرجى التحقق من صلاحية الحذف في Supabase)", true); return; }
       state.sections = state.sections.filter((x) => x.id !== sec.id); say("تم حذف القسم"); render();
     });
     act.append(up, down, open, edit, toggle, del);
@@ -1432,7 +1434,7 @@ function renderDashboard() {
 
   // زر الأقسام الأنيق فوق كارت المنشورات المتاحة مباشرة
   const menuBtn = el("button", "dash-menu-pill", "");
-  menuBtn.innerHTML = '<span>📑 الأقسام</span> <span class="arrow">‹</span>';
+  menuBtn.innerHTML = '<span>📑 تصفح الأقسام</span> <span class="arrow">‹</span>';
   menuBtn.addEventListener("click", openSideDrawer);
   head.appendChild(menuBtn);
 
@@ -1644,6 +1646,7 @@ function hideAll() {
   $("theme-box").hidden = true;
   $("theme-btn").hidden = true;
   $("courses-btn").hidden = true;
+  const nb = $("notif-btn"); if (nb) nb.hidden = true;
   $("manage-btn").hidden = true;
   $("sections-btn").hidden = true;
   $("people-btn").hidden = true;
@@ -1699,6 +1702,7 @@ async function showProfile() {
   showLoading(false);
   if (!okC || !okD) return;
   $("courses-btn").hidden = false;
+  const nb = $("notif-btn"); if (nb) nb.hidden = false;
   $("links-fab").hidden = false;
   
   $("manage-btn").hidden = !isAdmin();
@@ -1827,6 +1831,7 @@ async function loginAsAnonymous() {
   $("hello").textContent = "LOGGED IN AS ANONYMOUS";
   $("logout").hidden = false;
   $("courses-btn").hidden = false;
+  const nb = $("notif-btn"); if (nb) nb.hidden = false;
   $("links-fab").hidden = false;
   
   
@@ -1867,7 +1872,6 @@ if (switchTgBtn) {
 
 /* دوال فتح وغلق درج الأقسام الجانبي */
 function openSideDrawer() {
-  renderDrawerItems();
   const dr = $("side-drawer");
   const bd = $("drawer-backdrop");
   if (!dr || !bd) return;
@@ -1893,37 +1897,6 @@ function closeSideDrawer() {
   }, 250);
 }
 
-/* القايمة الجانبية: بتتبني من الأقسام الفعلية (بما فيها الأقسام الديناميكية) */
-const DRAWER_ORDER = ["tasks", "links", "newsletter", "__posts__", "qa", "news"];
-const DRAWER_ICON = { tasks: "📝", links: "📁", newsletter: "📰", __posts__: "📬", qa: "❓", news: "📣", custom: "📁" };
-const DRAWER_LABEL = { tasks: "التكاليف", links: "مكتبة المواد", newsletter: "النشرة الأسبوعية", __posts__: "المنشورات", qa: "الأسئلة والأجوبة" };
-function renderDrawerItems() {
-  const list = document.querySelector("#side-drawer .side-drawer-list");
-  if (!list) return;
-  list.replaceChildren();
-  const live = (state.sections || []).filter((x) => x.is_active !== false);
-  const entries = [{ key: "__home__", icon: "🏠", label: "الرئيسية", on: state.active == null }];
-  DRAWER_ORDER.forEach((kind) => {
-    if (kind === "__posts__") {
-      entries.push({ key: "__posts__", icon: DRAWER_ICON.__posts__, label: DRAWER_LABEL.__posts__, on: state.active === "__posts__" });
-      return;
-    }
-    live.filter((x) => x.kind === kind).forEach((sec) => {
-      entries.push({ key: "id:" + sec.id, icon: DRAWER_ICON[kind], label: DRAWER_LABEL[kind] || sec.title, on: String(state.active) === String(sec.id) });
-    });
-  });
-  live.filter((x) => x.kind === "custom").forEach((sec) => {
-    entries.push({ key: "id:" + sec.id, icon: DRAWER_ICON.custom, label: sec.title, on: String(state.active) === String(sec.id) });
-  });
-  entries.forEach((e) => {
-    const b = el("button", "side-drawer-item" + (e.on ? " active" : ""));
-    b.type = "button";
-    b.dataset.key = e.key;
-    b.appendChild(el("span", "side-drawer-icon", e.icon));
-    b.appendChild(el("span", "", e.label));
-    list.appendChild(b);
-  });
-}
 function initSideDrawer() {
   const dr = $("side-drawer");
   const bd = $("drawer-backdrop");
@@ -1932,17 +1905,28 @@ function initSideDrawer() {
   if (closeBtn) closeBtn.addEventListener("click", closeSideDrawer);
   if (bd) bd.addEventListener("click", closeSideDrawer);
 
-  const list = dr && dr.querySelector(".side-drawer-list");
-  if (list) {
-    list.addEventListener("click", (ev) => {
-      const item = ev.target.closest(".side-drawer-item");
-      if (!item) return;
-      const key = item.dataset.key || "";
-      closeSideDrawer();
-      if (key === "__home__") goHome();
-      else if (key === "__posts__") openSection("posts");
-      else if (key.indexOf("id:") === 0) openSectionById(key.slice(3));
+  if (dr) {
+    const items = dr.querySelectorAll(".side-drawer-item");
+    items.forEach((item) => {
+      item.addEventListener("click", () => {
+        const kind = item.getAttribute("data-kind");
+        items.forEach((b) => b.classList.remove("active"));
+        item.classList.add("active");
+        closeSideDrawer();
+
+        if (kind === "__home__") {
+          goHome();
+        } else {
+          openSection(kind);
+        }
+      });
     });
   }
 }
 initSideDrawer();
+
+// ربط زر إعدادات إشعارات الويب
+const nb1 = $("notif-btn");
+if (nb1) nb1.addEventListener("click", showNotificationModal);
+
+

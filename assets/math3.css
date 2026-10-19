@@ -140,11 +140,12 @@
 /* ===== الجدول الدراسي الأسبوعي المتناغم مع الثيم ===== */
 .sched-card {
   width: 100%;
-  border-radius: 14px;
+  border-radius: 16px;
   background: var(--card);
-  border: 1px solid var(--line);
-  padding: 14px;
+  border: 2px solid var(--line);
+  padding: 16px;
   box-sizing: border-box;
+  margin-bottom: 24px !important;
 }
 .sched-head {
   display: flex;
@@ -366,7 +367,3 @@
 .side-drawer-icon {
   font-size: 18px;
 }
-
-  /* مسافات الرئيسية: كل كتلة تحت التانية بمسافة ثابتة، مهما كانت الكتل */
-  #dashboard { display:flex; flex-direction:column; gap:14px; }
-  #dashboard > * { margin-top:0 !important; margin-bottom:0 !important; }
