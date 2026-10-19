@@ -9,35 +9,76 @@ function getTodayDayName() {
   return map[new Date().getDay()] || "السبت";
 }
 
+let _schedFilterMine = false;
+
 function renderScheduleCard() {
+  const todayName = getTodayDayName();
   if (!_activeSchedDay) {
-    _activeSchedDay = getTodayDayName();
+    _activeSchedDay = todayName;
   }
 
   const card = el("section", "sched-card dash-full");
   card.style.marginBottom = "24px";
   
   const head = el("div", "sched-head");
+  head.style.display = "flex";
+  head.style.flexWrap = "wrap";
+  head.style.justifyContent = "space-between";
+  head.style.alignItems = "center";
+  head.style.gap = "8px";
+
   const titleWrap = el("div");
-  titleWrap.appendChild(el("h3", "sched-title", "الجدول الدراسي"));
+  const h3 = el("h3", "sched-title", "الجدول الدراسي");
+  h3.style.margin = "0";
+  titleWrap.appendChild(h3);
   head.appendChild(titleWrap);
 
-  if (isAdmin()) {
-    const addBtn = el("button", "small btn-primary", "إضافة حصة");
-    addBtn.addEventListener("click", () => showScheduleModal(null));
-    head.appendChild(addBtn);
+  const actHead = el("div", "row");
+  actHead.style.gap = "6px";
+
+  // فلتر موادي للطالب
+  if (state.mine && state.mine.size > 0 && state.courses && state.courses.length > state.mine.size) {
+    const filterBtn = el("button", "small", _schedFilterMine ? "كل المواد 🌐" : "موادي فقط ⭐");
+    filterBtn.style.fontSize = "12px";
+    filterBtn.addEventListener("click", () => {
+      _schedFilterMine = !_schedFilterMine;
+      render();
+    });
+    actHead.appendChild(filterBtn);
   }
+
+  if (isAdmin()) {
+    const addBtn = el("button", "small btn-primary", "+ إضافة حصة");
+    addBtn.addEventListener("click", () => showScheduleModal(null));
+    actHead.appendChild(addBtn);
+  }
+  head.appendChild(actHead);
   card.appendChild(head);
 
-  // شريط الأيام المدمج المناسب لشاشة الموبايل بدون أي سحب خارجي
+  // شريط الأيام المطور للموبايل مع عدد الحصص وتمييز اليوم الحالي
   const nav = el("div", "sched-days-nav");
+  nav.style.display = "flex";
+  nav.style.gap = "6px";
+  nav.style.overflowX = "auto";
+  nav.style.paddingBottom = "6px";
+  nav.style.webkitOverflowScrolling = "touch";
+
   ALL_DAYS.forEach((d) => {
-    const isToday = d === getTodayDayName();
-    const btn = el("button", "sched-day-btn" + (_activeSchedDay === d ? " active" : ""), d);
-    if (isToday && _activeSchedDay !== d) {
-      btn.style.borderColor = "var(--line)";
-      btn.title = "اليوم الحالي";
+    const isToday = d === todayName;
+    const isSelected = _activeSchedDay === d;
+    const label = d;
+    const btn = el("button", "sched-day-btn" + (isSelected ? " active" : ""), label);
+    btn.style.whiteSpace = "nowrap";
+    btn.style.position = "relative";
+    
+    if (isToday) {
+      btn.style.border = "1.5px solid var(--accent)";
+      if (!isSelected) {
+        btn.style.fontWeight = "bold";
+        btn.style.color = "var(--accent)";
+      }
     }
+
     btn.addEventListener("click", () => {
       _activeSchedDay = d;
       render();
@@ -46,34 +87,52 @@ function renderScheduleCard() {
   });
   card.appendChild(nav);
 
-  // قائمة الحصص لليوم المختار
-  const dayItems = (state.schedule || [])
+  // قائمة الحصص لليوم المختار مع الفلترة
+  let dayItems = (state.schedule || [])
     .filter((x) => x.day_of_week === _activeSchedDay)
     .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || a.id - b.id);
 
+  if (_schedFilterMine && state.mine && state.mine.size > 0) {
+    dayItems = dayItems.filter((x) => !x.course_id || state.mine.has(x.course_id));
+  }
+
   if (!dayItems.length) {
-    card.appendChild(el("p", "sched-empty", "لا توجد محاضرات أو سكاشن مسجلة ليوم " + _activeSchedDay));
+    const emptyP = el("p", "sched-empty", "لا توجد محاضرات أو سكاشن مسجلة ليوم " + _activeSchedDay + (_schedFilterMine ? " لموادك المختارة" : ""));
+    card.appendChild(emptyP);
     return card;
   }
 
   const list = el("div", "sched-list");
-  dayItems.forEach((item) => {
+  dayItems.forEach((item, idx) => {
     const slot = el("div", "sched-slot");
+    slot.style.transition = "transform 0.15s ease";
 
-    const timeCol = el("div", "sched-slot-time", item.time_slot || "غير محدد");
+    const timeCol = el("div", "sched-slot-time");
+    timeCol.textContent = item.time_slot || "غير محدد";
+    timeCol.style.fontWeight = "700";
+    timeCol.style.fontSize = "13px";
     slot.appendChild(timeCol);
 
     const info = el("div", "sched-slot-info");
     const cn = item.course_id ? courseName(item.course_id) : "";
     const name = cn ? cn + (item.title ? " — " + item.title : "") : (item.title || "حصة دراسية");
-    info.appendChild(el("div", "sched-slot-name", name));
+    
+    const nameEl = el("div", "sched-slot-name", name);
+    nameEl.style.fontSize = "14.5px";
+    nameEl.style.fontWeight = "bold";
+    nameEl.style.color = "var(--ink)";
+    info.appendChild(nameEl);
 
     const metaParts = [];
-    if (item.location) metaParts.push(item.location);
-    if (item.instructor) metaParts.push(item.instructor);
-    if (item.notes) metaParts.push(item.notes);
+    if (item.location) metaParts.push("📍 " + item.location);
+    if (item.instructor) metaParts.push("👤 " + item.instructor);
+    if (item.notes) metaParts.push("📝 " + item.notes);
     if (metaParts.length) {
-      info.appendChild(el("div", "sched-slot-meta", metaParts.join(" | ")));
+      const metaEl = el("div", "sched-slot-meta", metaParts.join(" • "));
+      metaEl.style.fontSize = "12.5px";
+      metaEl.style.marginTop = "4px";
+      metaEl.style.opacity = "0.85";
+      info.appendChild(metaEl);
     }
     slot.appendChild(info);
 
@@ -96,10 +155,8 @@ function renderScheduleCard() {
       act.appendChild(delBtn);
       slot.appendChild(act);
     }
-
     list.appendChild(slot);
   });
-
   card.appendChild(list);
   return card;
 }
@@ -969,6 +1026,226 @@ document.addEventListener("click", (e) => {
   }
 });
 /* نسخة احتياطية (للمالك) */
+
+/* نظام النسخ الاحتياطي والاستعادة المتقدم الشامل */
+async function showBackupRestoreModal() {
+  const existing = $("backup-restore-modal");
+  if (existing) existing.remove();
+
+  const backdrop = el("div");
+  backdrop.id = "backup-restore-modal";
+  backdrop.style.position = "fixed";
+  backdrop.style.inset = "0";
+  backdrop.style.background = "rgba(0, 0, 0, 0.65)";
+  backdrop.style.backdropFilter = "blur(5px)";
+  backdrop.style.webkitBackdropFilter = "blur(5px)";
+  backdrop.style.zIndex = "99999";
+  backdrop.style.display = "flex";
+  backdrop.style.alignItems = "center";
+  backdrop.style.justifyContent = "center";
+  backdrop.style.padding = "16px";
+  backdrop.style.boxSizing = "border-box";
+
+  const modal = el("div", "card");
+  modal.style.position = "relative";
+  modal.style.maxWidth = "520px";
+  modal.style.width = "100%";
+  modal.style.maxHeight = "90vh";
+  modal.style.overflowY = "auto";
+  modal.style.background = "var(--card)";
+  modal.style.border = "2px solid var(--line)";
+  modal.style.borderRadius = "16px";
+  modal.style.padding = "20px";
+  modal.style.boxShadow = "0 20px 40px rgba(0,0,0,0.5)";
+
+  backdrop.addEventListener("click", (e) => {
+    if (e.target === backdrop) backdrop.remove();
+  });
+
+  const head = el("div", "row");
+  head.style.justifyContent = "space-between";
+  head.style.alignItems = "center";
+  head.style.marginBottom = "16px";
+  head.appendChild(el("h3", "", "النسخ الاحتياطي والاستعادة المتقدمة 💾"));
+  
+  const closeBtn = el("button", "small", "✕");
+  closeBtn.addEventListener("click", () => backdrop.remove());
+  head.appendChild(closeBtn);
+  modal.appendChild(head);
+
+  // القسم الأول: تصدير نسخة احتياطية كاملة
+  const exportCard = el("div", "card");
+  exportCard.style.background = "var(--paper)";
+  exportCard.style.border = "1px solid var(--line)";
+  exportCard.style.padding = "14px";
+  exportCard.style.marginBottom = "14px";
+  
+  exportCard.innerHTML = `
+    <h4 style="margin:0 0 6px; font-size:15px; color:var(--accent);">📥 1. تصدير نسخة احتياطية كاملة (Full Backup):</h4>
+    <p style="margin:0 0 10px; font-size:12.5px; opacity:0.85; line-height:1.5;">
+      يقوم بإنشاء ملف JSON شامل لجميع محتويات المنصة (المواد، التكاليف، الجدول الدراسي، المنشورات، والأقسام).
+    </p>
+  `;
+
+  const exportBtn = el("button", "btn-primary", "تنزيل النسخة الاحتياطية الكاملة");
+  exportBtn.addEventListener("click", async () => {
+    exportBtn.disabled = true;
+    exportBtn.textContent = "جاري تجهيز النسخة...";
+    try {
+      const backupData = {
+        version: "2.0.0",
+        platform: "Math 3 Batch Board",
+        exported_at: new Date().toISOString(),
+        courses: state.courses || [],
+        sections: state.sections || [],
+        items: state.items || [],
+        schedule: state.schedule || [],
+        posts: state.posts || []
+      };
+
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "math3-full-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+      say("تم تنزيل النسخة الكاملة بنجاح! احتفظي بها في مكان آمن.");
+    } catch (e) {
+      say("تعذّر التصدير: " + e.message);
+    } finally {
+      exportBtn.disabled = false;
+      exportBtn.textContent = "تنزيل النسخة الاحتياطية الكاملة";
+    }
+  });
+  exportCard.appendChild(exportBtn);
+  modal.appendChild(exportCard);
+
+  // القسم الثاني: استيراد واستعادة البيانات
+  const importCard = el("div", "card");
+  importCard.style.background = "var(--paper)";
+  importCard.style.border = "1.5px dashed var(--accent)";
+  importCard.style.padding = "14px";
+  
+  importCard.innerHTML = `
+    <h4 style="margin:0 0 6px; font-size:15px; color:var(--accent);">📤 2. استيراد واستعادة البيانات (Restore from File):</h4>
+    <p style="margin:0 0 10px; font-size:12.5px; opacity:0.85; line-height:1.5;">
+      في حال ضياع أي بيانات أو رغبتك في استرجاع حالة سابقة، اختاري ملف النسخة الاحتياطية (.json) واضغطي استعادة:
+    </p>
+  `;
+
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.accept = ".json,application/json";
+  fileInput.style.display = "block";
+  fileInput.style.marginBottom = "10px";
+  fileInput.style.fontSize = "13px";
+  importCard.appendChild(fileInput);
+
+  const previewBox = el("div");
+  previewBox.style.fontSize = "12.5px";
+  previewBox.style.padding = "8px";
+  previewBox.style.background = "var(--card)";
+  previewBox.style.borderRadius = "8px";
+  previewBox.style.marginBottom = "10px";
+  previewBox.style.display = "none";
+  importCard.appendChild(previewBox);
+
+  const restoreBtn = el("button", "btn-primary", "استعادة البيانات من الملف 🔄");
+  restoreBtn.style.display = "none";
+
+  let loadedBackup = null;
+
+  fileInput.addEventListener("change", (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) {
+      previewBox.style.display = "none";
+      restoreBtn.style.display = "none";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const json = JSON.parse(evt.target.result);
+        loadedBackup = json;
+        const cCount = (json.courses && json.courses.length) || 0;
+        const sCount = (json.sections && json.sections.length) || 0;
+        const iCount = (json.items && json.items.length) || 0;
+        const scCount = (json.schedule && json.schedule.length) || 0;
+        const pCount = (json.posts && json.posts.length) || 0;
+
+        previewBox.innerHTML = `
+          <strong>✅ تم فحص الملف بنجاح:</strong><br>
+          • تاريخ النسخة: ${json.exported_at ? new Date(json.exported_at).toLocaleString("ar-EG") : "غير محدد"}<br>
+          • المواد: ${cCount} | الأقسام: ${sCount}<br>
+          • العناصر والتكاليف: ${iCount}<br>
+          • حصص الجدول: ${scCount} | المنشورات: ${pCount}
+        `;
+        previewBox.style.display = "block";
+        restoreBtn.style.display = "block";
+      } catch (err) {
+        alert("الملف غير صالح أو تالف: " + err.message);
+        fileInput.value = "";
+        previewBox.style.display = "none";
+        restoreBtn.style.display = "none";
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  restoreBtn.addEventListener("click", async () => {
+    if (!loadedBackup) return;
+    if (!confirm("هل أنت متأكدة من استعادة كافة بيانات هذه النسخة؟ سيتم دمج وإعادة إدراج المواد والتكاليف والجدول.")) return;
+
+    restoreBtn.disabled = true;
+    restoreBtn.textContent = "جاري استعادة البيانات في سوبابيز...";
+    showLoading(true);
+
+    try {
+      // 1. استعادة المواد
+      if (loadedBackup.courses && loadedBackup.courses.length) {
+        await sb.from("courses").upsert(loadedBackup.courses);
+      }
+      // 2. استعادة الأقسام
+      if (loadedBackup.sections && loadedBackup.sections.length) {
+        await sb.from("sections").upsert(loadedBackup.sections);
+      }
+      // 3. استعادة العناصر والتكاليف
+      if (loadedBackup.items && loadedBackup.items.length) {
+        await sb.from("items").upsert(loadedBackup.items);
+      }
+      // 4. استعادة الجدول الدراسي
+      if (loadedBackup.schedule && loadedBackup.schedule.length) {
+        await sb.from("schedule").upsert(loadedBackup.schedule);
+      }
+      // 5. استعادة المنشورات
+      if (loadedBackup.posts && loadedBackup.posts.length) {
+        await sb.from("posts").upsert(loadedBackup.posts);
+      }
+
+      say("تمت استعادة كافة البيانات بنجاح! تم تحديث المنصة.");
+      if (typeof invalidateCache === "function") invalidateCache();
+      await Promise.all([loadCourses(true), fetchData(true)]);
+      render();
+      backdrop.remove();
+    } catch (err) {
+      say("حدث خطأ أثناء الاستعادة: " + err.message);
+    } finally {
+      showLoading(false);
+      restoreBtn.disabled = false;
+      restoreBtn.textContent = "استعادة البيانات من الملف 🔄";
+    }
+  });
+
+  importCard.appendChild(restoreBtn);
+  modal.appendChild(importCard);
+
+  backdrop.appendChild(modal);
+  document.body.appendChild(backdrop);
+}
+
 async function downloadBackup() {
   showLoading(true);
   const { data, error } = await sb.rpc("export_backup");
@@ -1577,8 +1854,14 @@ function render() {
   renderChips(sec);
   const inSec = state.items.filter((x) => x.section_id === sec.id);
   const dead = inSec.filter((x) => x.deleted_at);
-  const live = inSec.filter((x) => !x.deleted_at && visible(sec, x));
+  const liveAll = inSec.filter((x) => !x.deleted_at && visible(sec, x));
   const isTasks = sec.kind === "tasks";
+
+  // إخفاء التكاليف المنتهية تلقائياً بمجرد انتهاء موعد التسليم
+  const nowTs = Date.now();
+  const isExpired = (item) => Boolean(item.deadline && new Date(item.deadline).getTime() < nowTs);
+  const expiredCount = isTasks ? liveAll.filter(isExpired).length : 0;
+  const live = (isTasks && !state.showExpiredTasks) ? liveAll.filter((it) => !isExpired(it)) : liveAll;
   const bar = el("div", "row");
   if (isAdmin()) {
     const add = el("button", "", "+ إضافة");
@@ -1597,6 +1880,16 @@ function render() {
     const pa = el("button", "", "+ عنصر شخصي");
     pa.addEventListener("click", () => { state.pform = { id: null }; state.form = null; say(""); render(); });
     bar.appendChild(pa);
+
+    if (expiredCount > 0) {
+      const expBtn = el("button", "small", state.showExpiredTasks ? "إخفاء المنتهية" : "التكاليف السابقة المنتهية (" + expiredCount + ")");
+      expBtn.style.fontSize = "12px";
+      expBtn.addEventListener("click", () => {
+        state.showExpiredTasks = !state.showExpiredTasks;
+        render();
+      });
+      bar.appendChild(expBtn);
+    }
   }
   if (bar.children.length) list.appendChild(bar);
   if (state.form) {
@@ -1646,7 +1939,7 @@ function hideAll() {
   $("theme-box").hidden = true;
   $("theme-btn").hidden = true;
   $("courses-btn").hidden = true;
-  const nb = $("notif-btn"); if (nb) nb.hidden = true;
+  // notif-btn remains visible across the entire site
   $("manage-btn").hidden = true;
   $("sections-btn").hidden = true;
   $("people-btn").hidden = true;
@@ -1779,7 +2072,7 @@ $("sections-btn").addEventListener("click", openSectionsAdmin);
 $("theme-btn").addEventListener("click", () => setView("theme"));
 $("people-btn").addEventListener("click", () => setView("people"));
 $("log-btn").addEventListener("click", () => { state.logLimit = 100; setView("log"); });
-$("backup-btn").addEventListener("click", downloadBackup);
+$("backup-btn").addEventListener("click", showBackupRestoreModal);
 $("logout").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
 /* دخول تيليجرام على الآيفون: بيرجع للصفحة برابط فيه بيانات الدخول */
 function mountTelegramRedirectButton() {

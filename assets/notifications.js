@@ -118,28 +118,68 @@ export function startRealtimeNotifications() {
 }
 
 export function showNotificationModal() {
-  const existing = $("notif-modal");
-  if (existing) existing.remove();
+  const existingBackdrop = $("notif-backdrop");
+  if (existingBackdrop) { existingBackdrop.remove(); return; }
 
-  const enabled = isPushEnabled();
-  const modal = el("div", "card", "");
+  const supported = isPushSupported();
+  const enabled = supported && isPushEnabled();
+
+  // خلفية معتمة تغطي الشاشة بالكامل في أي مكان بالموقع
+  const backdrop = el("div");
+  backdrop.id = "notif-backdrop";
+  backdrop.style.position = "fixed";
+  backdrop.style.inset = "0";
+  backdrop.style.background = "rgba(0, 0, 0, 0.65)";
+  backdrop.style.backdropFilter = "blur(5px)";
+  backdrop.style.webkitBackdropFilter = "blur(5px)";
+  backdrop.style.zIndex = "99999";
+  backdrop.style.display = "flex";
+  backdrop.style.alignItems = "center";
+  backdrop.style.justifyContent = "center";
+  backdrop.style.padding = "16px";
+  backdrop.style.boxSizing = "border-box";
+
+  // نافذة الإشعارات العائمة
+  const modal = el("div", "card");
   modal.id = "notif-modal";
+  modal.style.position = "relative";
+  modal.style.maxWidth = "480px";
+  modal.style.width = "100%";
+  modal.style.maxHeight = "90vh";
+  modal.style.overflowY = "auto";
+  modal.style.background = "var(--card)";
   modal.style.border = "2px solid var(--line)";
-  modal.style.padding = "16px";
-  modal.style.marginTop = "12px";
+  modal.style.borderRadius = "16px";
+  modal.style.padding = "20px";
+  modal.style.boxShadow = "0 20px 40px rgba(0,0,0,0.45)";
+  modal.style.margin = "0";
+
+  // إغلاق عند الضغط خارج النافذة
+  backdrop.addEventListener("click", (e) => {
+    if (e.target === backdrop) backdrop.remove();
+  });
 
   const head = el("div", "row");
   head.style.justifyContent = "space-between";
+  head.style.alignItems = "center";
+  head.style.marginBottom = "14px";
   head.appendChild(el("h3", "", "إشعارات الويب 🔔"));
+  
   const closeBtn = el("button", "small", "✕");
-  closeBtn.addEventListener("click", () => modal.remove());
+  closeBtn.style.padding = "4px 10px";
+  closeBtn.style.fontSize = "16px";
+  closeBtn.style.borderRadius = "8px";
+  closeBtn.addEventListener("click", () => backdrop.remove());
   head.appendChild(closeBtn);
   modal.appendChild(head);
 
-  const statusP = el("p", "meta", "الحالة الحالية: " + (enabled ? "مفعّلة ✅" : "معطلة 🔕"));
+  let statusText = "الحالة الحالية: " + (enabled ? "مفعّلة ✅" : "معطلة 🔕");
+  if (!supported) statusText = "الحالة: غير مدعوم على هذا الإصدار ⚠️";
+  const statusP = el("p", "meta", statusText);
   statusP.style.fontSize = "14px";
   statusP.style.fontWeight = "bold";
   statusP.style.color = enabled ? "var(--accent)" : "inherit";
+  statusP.style.marginBottom = "12px";
   modal.appendChild(statusP);
 
   const notice = el("div", "card");
@@ -155,11 +195,68 @@ export function showNotificationModal() {
   `;
   modal.appendChild(notice);
 
+  // نوت مخصصة لآيفون فقط مع خطوات التفعيل الواضحة
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIOS) {
+    const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+    const iosBox = el("div", "card");
+    iosBox.style.background = "var(--paper)";
+    iosBox.style.border = "1.5px solid var(--accent)";
+    iosBox.style.borderRadius = "12px";
+    iosBox.style.padding = "12px 14px";
+    iosBox.style.marginTop = "10px";
+    iosBox.style.fontSize = "13px";
+    iosBox.style.lineHeight = "1.7";
+    
+    if (!isStandalone) {
+      iosBox.innerHTML = `
+        <div style="font-weight:bold; color:var(--accent); margin-bottom:6px; font-size:14px; display:flex; align-items:center; gap:6px;">
+          <span>🍎</span>
+          <span>خطوات تفعيل الإشعارات لمستخدمي آيفون (iPhone):</span>
+        </div>
+        <div style="font-size:12px; opacity:0.9; margin-bottom:6px;">
+          تشترط شركة آبل إضافة المنصة إلى الشاشة الرئيسية أولاً لتتمكن من استقبال إشعارات الويب:
+        </div>
+        <ol style="margin:0; padding-right:20px; font-size:12.5px;">
+          <li>اضغط على زر المشاركة بالأسفل في متصفح سفاري (<strong>⬆️ Share</strong>).</li>
+          <li>اختر من القائمة <strong>«إضافة إلى الشاشة الرئيسية» (Add to Home Screen)</strong>.</li>
+          <li>افتح المنصة من أيقونة الشاشة، ثم اضغط على الجرس <strong>🔔</strong> للتفعيل فوراً.</li>
+        </ol>
+      `;
+    } else {
+      iosBox.innerHTML = `
+        <div style="font-weight:bold; color:var(--accent); font-size:13.5px; display:flex; align-items:center; gap:6px;">
+          <span>🍏</span>
+          <span>أنت الآن تستخدم تطبيق الشاشة الرئيسية - يمكنك تفعيل الإشعارات بضغطة واحدة أدناه!</span>
+        </div>
+      `;
+    }
+    modal.appendChild(iosBox);
+  }
+
   const actions = el("div", "row");
-  actions.style.marginTop = "12px";
+  actions.style.marginTop = "14px";
   actions.style.gap = "8px";
 
-  if (!enabled) {
+  if (!supported) {
+    const tgFallbackBox = el("div", "card");
+    tgFallbackBox.style.background = "var(--paper)";
+    tgFallbackBox.style.border = "1px solid var(--line)";
+    tgFallbackBox.style.padding = "10px 12px";
+    tgFallbackBox.style.fontSize = "13px";
+    tgFallbackBox.style.lineHeight = "1.6";
+    tgFallbackBox.innerHTML = `
+      <strong>💡 بديل ممتاز لجهازك:</strong><br>
+      إصدار هذا الجهاز لا يدعم إشعارات الويب المباشرة. يمكنك تفعيل واستقبال كافة التنبيهات والإشعارات فورياً عبر <strong>بوت التيليجرام</strong>.
+    `;
+    modal.appendChild(tgFallbackBox);
+
+    const tgBtn = el("a", "btn btn-primary", "فتح بوت التيليجرام ✈️");
+    tgBtn.href = "https://t.me/MATHDEPARTMENT_BOT";
+    tgBtn.target = "_blank";
+    tgBtn.rel = "noopener noreferrer";
+    actions.appendChild(tgBtn);
+  } else if (!enabled) {
     const enableBtn = el("button", "btn-primary", "تفعيل إشعارات الويب");
     enableBtn.addEventListener("click", async () => {
       enableBtn.disabled = true;
@@ -167,7 +264,7 @@ export function showNotificationModal() {
       enableBtn.disabled = false;
       if (ok) {
         say("تم التفعيل بنجاح!");
-        modal.remove();
+        backdrop.remove();
       }
     });
     actions.appendChild(enableBtn);
@@ -183,13 +280,12 @@ export function showNotificationModal() {
     disableBtn.addEventListener("click", () => {
       disablePushNotifications();
       say("تم إيقاف إشعارات الويب.");
-      modal.remove();
+      backdrop.remove();
     });
     actions.appendChild(disableBtn);
   }
 
   modal.appendChild(actions);
-
-  const box = $("dashboard") || $("list") || $("app");
-  if (box) box.prepend(modal);
+  backdrop.appendChild(modal);
+  document.body.appendChild(backdrop);
 }
