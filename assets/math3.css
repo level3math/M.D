@@ -367,3 +367,7 @@
 .side-drawer-icon {
   font-size: 18px;
 }
+
+  .theme-icon-row { display:flex; align-items:center; gap:12px; margin-top:12px; }
+  .theme-icon-row img { border-radius:16px; border:2px solid var(--line); flex:none; background:var(--card); }
+  .theme-icon-row p { margin:0; line-height:1.6; }

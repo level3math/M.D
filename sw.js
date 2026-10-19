@@ -17,10 +17,11 @@ self.addEventListener('push', (event) => {
     if (event.data) data.body = event.data.text();
   }
 
+  const appIcon = new URL('assets/icon.png', self.registration.scope).href;
   const options = {
     body: data.body,
-    icon: 'icon.svg',
-    badge: 'icon.svg',
+    icon: appIcon,
+    badge: appIcon,
     data: { url: data.url || './' },
     dir: 'rtl',
     lang: 'ar',

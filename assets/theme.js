@@ -1,71 +1,8 @@
-
-/* توليد أيقونة التطبيق ديناميكياً لتتوافق 100% مع ألوان الثيم المختار */
-function updateDynamicAppIcon(accent, bg) {
-  if (typeof document === "undefined") return;
-  try {
-    const canvas = document.createElement("canvas");
-    canvas.width = 512;
-    canvas.height = 512;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    // رسم خلفية دائرية مستديرة الحواف (Squircle) بألوان الثيم
-    const r = 110;
-    ctx.beginPath();
-    ctx.moveTo(r, 0);
-    ctx.lineTo(512 - r, 0);
-    ctx.quadraticCurveTo(512, 0, 512, r);
-    ctx.lineTo(512, 512 - r);
-    ctx.quadraticCurveTo(512, 512, 512 - r, 512);
-    ctx.lineTo(r, 512);
-    ctx.quadraticCurveTo(0, 512, 0, 512 - r);
-    ctx.lineTo(0, r);
-    ctx.quadraticCurveTo(0, 0, r, 0);
-    ctx.closePath();
-
-    const grad = ctx.createLinearGradient(0, 0, 512, 512);
-    grad.addColorStop(0, bg || "#0b1f1d");
-    grad.addColorStop(1, "#050f0e");
-    ctx.fillStyle = grad;
-    ctx.fill();
-
-    // إطار مضيء بلون الـ Accent
-    ctx.lineWidth = 14;
-    ctx.strokeStyle = accent || "#0f766e";
-    ctx.shadowColor = accent || "#0f766e";
-    ctx.shadowBlur = 18;
-    ctx.stroke();
-
-    // رسم حرف M³ المضيء بلون الثيم
-    ctx.shadowBlur = 24;
-    ctx.shadowColor = accent || "#4fd1c5";
-    ctx.fillStyle = accent || "#4fd1c5";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    
-    // حرف M
-    ctx.font = "bold 230px 'Noto Sans', system-ui, sans-serif";
-    ctx.fillText("M", 215, 275);
-    
-    // الرقم 3 العلوي
-    ctx.font = "bold 130px 'Noto Sans', system-ui, sans-serif";
-    ctx.fillText("3", 370, 195);
-
-    const dataUrl = canvas.toDataURL("image/png");
-
-    // تحديث أيقونة الموقع وأيقونة الهوم سكرين
-    const fav = document.querySelector('link[rel="icon"]');
-    if (fav) fav.href = dataUrl;
-
-    const apple = document.querySelector('link[rel="apple-touch-icon"]');
-    if (apple) apple.href = dataUrl;
-
-    // تحديث صندوق المعاينة في محرر المظهر إذا كان مفتوحاً
-    const previewImg = document.getElementById("theme-icon-preview");
-    if (previewImg) previewImg.src = dataUrl;
-  } catch (e) {
-    console.warn("Failed to generate dynamic icon:", e);
-  }
+/* أيقونة Math 3 ثابتة؛ تغيير ألوان الثيم لا يغيّر الأيقونة. */
+const _iconUrl = "./assets/icon.png";
+function updateDynamicAppIcon() {
+  const previewImg = document.getElementById("theme-icon-preview");
+  if (previewImg) previewImg.src = _iconUrl;
 }
 
 /* Math 3 — محرر الهوية البصرية (للأونر) + تطبيقها على الموقع كله
@@ -153,6 +90,7 @@ function applyTheme(t) {
   set("--base-font-size", t.fontSize + "px");
   set("--content-width", t.width + "px");
   r.setAttribute("data-theme", dark ? "dark" : "light");
+  updateDynamicAppIcon(t.darkAccent, t.darkPaper);
 
   const defOpacity = dark ? 0.13 : 0.11;
   set("--wallpaper-opacity", String(t.bgOpacity == null ? defOpacity : t.bgOpacity));
@@ -287,6 +225,15 @@ function renderThemeEditor(box, onBack) {
   };
   pvGrid.append(mkPrev("☀️ نهار", false), mkPrev("🌙 ليل", true));
   pv.appendChild(pvGrid);
+  const iconRow = el("div", "theme-icon-row");
+  const iconImg = el("img");
+  iconImg.id = "theme-icon-preview";
+  iconImg.width = 64; iconImg.height = 64;
+  iconImg.alt = "أيقونة التطبيق";
+  iconImg.src = _iconUrl;
+  iconRow.appendChild(iconImg);
+  iconRow.appendChild(el("p", "meta", "أيقونة Math 3 ثابتة ولا تتغير مع ألوان الثيم. قد تحتاج الأجهزة التي ثبّتت الموقع سابقًا إلى إزالة الاختصار وإضافته مجددًا لالتقاط الأيقونة الجديدة."));
+  pv.appendChild(iconRow);
   box.appendChild(pv);
 
   /* ألوان جاهزة */

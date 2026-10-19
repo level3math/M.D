@@ -320,7 +320,9 @@ function renderPicker() {
   const box = $("picker-box");
   box.replaceChildren();
   box.appendChild(el("h3", "", "اختيار المواد"));
-  box.appendChild(el("p", "", "اختيار المواد المسجَّل فيها. تظهر التكاليف الخاصة بها فقط، ويمكن تغيير الاختيار في أي وقت."));
+  box.appendChild(el("p", "", state.role === "guest"
+    ? "اختاري المواد التي تريدين ظهورها للزائر. يُحفظ الاختيار على هذا الجهاز فقط، ويمكن تغييره في أي وقت."
+    : "اختيار المواد المسجَّل فيها. تظهر التكاليف الخاصة بها فقط، ويمكن تغيير الاختيار في أي وقت."));
   const sel = new Set(state.mine);
   const act = state.courses.filter((c) => c.is_active);
   if (!act.length) box.appendChild(el("p", "meta", "لا توجد مواد بعد"));
@@ -333,6 +335,26 @@ function renderPicker() {
   const ok = el("button", "", "حفظ");
   ok.addEventListener("click", async () => {
     ok.disabled = true;
+
+    // Anonymous visitors are read-only in Supabase. Save their course selection locally.
+    if (state.role === "guest") {
+      try {
+        const selectedIds = [...sel];
+        localStorage.setItem("anon_mine_courses", JSON.stringify(selectedIds));
+        state.mine = new Set(selectedIds);
+        state.chosen = true;
+        state.filter = "all";
+        ok.disabled = false;
+        say("تم حفظ اختيار المواد على هذا الجهاز");
+        await loadData();
+        setView("app");
+      } catch (err) {
+        ok.disabled = false;
+        say("تعذّر الحفظ على هذا الجهاز");
+      }
+      return;
+    }
+
     let e = (await sb.from("user_courses").delete().eq("user_id", state.userId)).error;
     if (!e && sel.size) {
       e = (await sb.from("user_courses").insert(
