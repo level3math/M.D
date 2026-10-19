@@ -1,3 +1,4 @@
+import { openSectionSchemaBuilder, buildDynamicContentForm, renderDynamicCard } from "./dynamic_sections.js";
 import { showNotificationModal } from "./notifications.js";
 
 /* نظام الجدول الدراسي الأسبوعي المتناغم مع الثيم والمتجاوب مع الموبايل */
@@ -1111,7 +1112,7 @@ async function showBackupRestoreModal() {
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 10000);
-      say("تم تنزيل النسخة الكاملة بنجاح! احتفظي بها في مكان آمن.");
+      say("تم تنزيل النسخة الكاملة بنجاح! يُرجى حفظ الملف في مكان آمن.");
     } catch (e) {
       say("تعذّر التصدير: " + e.message);
     } finally {
@@ -1131,7 +1132,7 @@ async function showBackupRestoreModal() {
   importCard.innerHTML = `
     <h4 style="margin:0 0 6px; font-size:15px; color:var(--accent);">📤 2. استيراد واستعادة البيانات (Restore from File):</h4>
     <p style="margin:0 0 10px; font-size:12.5px; opacity:0.85; line-height:1.5;">
-      في حال ضياع أي بيانات أو رغبتك في استرجاع حالة سابقة، اختاري ملف النسخة الاحتياطية (.json) واضغطي استعادة:
+      في حال ضياع أي بيانات أو رغبتك في استرجاع حالة سابقة، يتم اختيار ملف النسخة الاحتياطية (.json) ثم الضغط على زر الاستعادة:
     </p>
   `;
 
@@ -1197,7 +1198,7 @@ async function showBackupRestoreModal() {
 
   restoreBtn.addEventListener("click", async () => {
     if (!loadedBackup) return;
-    if (!confirm("هل أنت متأكدة من استعادة كافة بيانات هذه النسخة؟ سيتم دمج وإعادة إدراج المواد والتكاليف والجدول.")) return;
+    if (!confirm("تأكيد استعادة كافة بيانات هذه النسخة؟ سيتم دمج وإعادة إدراج المواد والتكاليف والجدول.")) return;
 
     restoreBtn.disabled = true;
     restoreBtn.textContent = "جاري استعادة البيانات في سوبابيز...";
@@ -1650,6 +1651,12 @@ function renderSectionsAdmin() {
     const up = el("button", "small", "↑"); up.disabled = idx === 0; up.addEventListener("click", () => move(-1));
     const down = el("button", "small", "↓"); down.disabled = idx === customs.length - 1; down.addEventListener("click", () => move(1));
     const open = el("button", "small", "فتح"); open.addEventListener("click", () => openSectionById(sec.id));
+    const schemaBtn = el("button", "small btn-primary", "⚙️ تصميم الحقول");
+    schemaBtn.title = "تعديل حقول هذا القسم وترتيبها";
+    schemaBtn.addEventListener("click", () => {
+      openSectionSchemaBuilder(sec, () => render());
+    });
+    act.appendChild(schemaBtn);
     const edit = el("button", "small", "تعديل");
     edit.addEventListener("click", async () => {
       const name = prompt("اسم القسم", sec.title);
@@ -1894,7 +1901,31 @@ function render() {
   if (bar.children.length) list.appendChild(bar);
   if (state.form) {
     const it = state.form.id ? state.items.find((x) => x.id === state.form.id) : null;
-    list.appendChild(buildForm(sec, it));
+    if (sec.kind === "custom") {
+      list.appendChild(buildDynamicContentForm(sec, it, async () => {
+        state.form = null;
+        if (typeof invalidateCache === "function") invalidateCache();
+        await fetchData(true);
+        render();
+      }, () => {
+        state.form = null;
+        render();
+      }));
+    } else {
+      if (sec.kind === "custom") {
+      list.appendChild(buildDynamicContentForm(sec, it, async () => {
+        state.form = null;
+        if (typeof invalidateCache === "function") invalidateCache();
+        await fetchData(true);
+        render();
+      }, () => {
+        state.form = null;
+        render();
+      }));
+    } else {
+      list.appendChild(buildForm(sec, it));
+    }
+    }
   }
   if (state.pform && isTasks && !state.trash) {
     const p = state.pform.id ? state.personal.find((x) => x.id === state.pform.id) : null;
@@ -1927,7 +1958,27 @@ function render() {
   if (!entries.length) {
     list.appendChild(el("p", "center", state.trash ? "السلة فارغة" : "لا يوجد شيء هنا حتى الآن"));
   }
-  entries.forEach((e) => list.appendChild(e.k === "c" ? card(sec, e.it) : personalCard(e.p)));
+  entries.forEach((e) => {
+    if (e.k === "p") {
+      list.appendChild(personalCard(e.p));
+    } else if (sec.kind === "custom") {
+      const dynCard = renderDynamicCard(sec, e.it, isAdmin(), (item) => {
+        state.form = { id: item.id };
+        render();
+      }, async (item) => {
+        if (!confirm("حذف هذا المحتوى؟")) return;
+        const { error } = await sb.from("items").update({ deleted_at: new Date().toISOString() }).eq("id", item.id);
+        if (error) { say("تعذّر الحذف"); return; }
+        say("تم الحذف بنجاح");
+        if (typeof invalidateCache === "function") invalidateCache();
+        await fetchData(true);
+        render();
+      });
+      list.appendChild(dynCard || card(sec, e.it));
+    } else {
+      list.appendChild(card(sec, e.it));
+    }
+  });
 }
 /* الدخول والحساب */
 function hideAll() {

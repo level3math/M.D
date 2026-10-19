@@ -100,7 +100,7 @@ const PATTERNS = {
 
 /* ألوان جاهزة: [اسم، accent، paper، card، ink، darkAccent، darkPaper، darkCard] */
 const PRESETS = [
-  ["classic", "الحالي", "#2b6f9f", "#f8fbff", "#ffffff", "#1e2b3a", "#72b6df", "#101820", "#18232d"],
+  ["sunset", "غروب", "#ea580c", "#fff8f5", "#ffffff", "#431407", "#fb923c", "#1c0d06", "#2c150a"],
   ["mint", "نعناع", "#0f766e", "#f3f9f7", "#ffffff", "#163d39", "#4fd1c5", "#0b1f1d", "#12312e"],
   ["violet", "بنفسجي", "#6d3fd4", "#f8f6fc", "#ffffff", "#2f2650", "#a78bfa", "#171126", "#261b3b"],
   ["amber", "كهرماني", "#b45309", "#fbf8f1", "#ffffff", "#49351e", "#fbbf24", "#21180b", "#33230d"],
