@@ -1600,7 +1600,7 @@ function renderSectionsAdmin() {
   back.addEventListener("click", goHome);
   head.appendChild(back);
   box.appendChild(head);
-  box.appendChild(el("p", "meta", "أقسام جديدة تظهر للطلاب تلقائيًا بدون تعديل كود. القسم الجديد فيه عنوان وتفاصيل ومرفق."));
+  box.appendChild(el("p", "meta", "نظام بناء المحتوى الحر: أنشئ أقساماً جديدة وصمّم حقولها (نصوص، ملفات PDF، صور، فيديوهات، معادلات، وروابط) بحرية تامة دون تعديل كود."));
 
   const create = el("div", "card");
   create.appendChild(el("h3", "", "قسم جديد"));
@@ -1623,7 +1623,11 @@ function renderSectionsAdmin() {
     add.disabled = false;
     if (error) { say("تعذّر إنشاء القسم: " + (error.message || ""), true); return; }
     state.sections.push(data); sortSections();
-    say("تم إنشاء القسم"); render();
+    say("تم إنشاء القسم بنجاح! يتم الآن فتح محرر تصميم الحقول...");
+    render();
+    setTimeout(() => {
+      openSectionSchemaBuilder(data, () => render());
+    }, 200);
   });
   create.appendChild(add);
   box.appendChild(create);

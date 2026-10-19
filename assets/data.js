@@ -54,6 +54,13 @@ async function loadCourses(force = false) {
   state.courses = c.data;
 
   if (isGuest) {
+    try {
+      const storedAnon = localStorage.getItem("anon_mine_courses");
+      if (storedAnon) {
+        state.mine = new Set(JSON.parse(storedAnon));
+        return true;
+      }
+    } catch (err) {}
     state.mine = new Set(c.data.map((r) => r.id));
     return true;
   }
