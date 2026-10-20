@@ -5,21 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <title>math 3</title>
-<meta name="description" content="منصة الدفعة - جدول المحاضرات، التكاليف، روابط درايف، والمنشورات">
-<!-- Theme color for status bar & app header: black for dark mode, white for light mode -->
-<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
-<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
-<meta id="theme-color-meta" name="theme-color" content="#000000">
 <script>
   try {
-    var dark = !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
     var t = localStorage.getItem("theme");
-    if (t === "dark") dark = true;
-    else if (t === "light") dark = false;
-    document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
-    var topColor = dark ? "#000000" : "#ffffff";
-    var tm = document.getElementById("theme-color-meta");
-    if (tm) tm.content = topColor;
+    if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t);
   } catch (e) {}
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
@@ -28,17 +17,10 @@
 (function() {
   try {
     var raw = localStorage.getItem("math3_theme_v1");
-    var dark = !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
-    var tTheme = localStorage.getItem("theme");
-    if (tTheme === "dark") dark = true;
-    else if (tTheme === "light") dark = false;
-    var topColor = dark ? "#000000" : "#ffffff";
-    var tm = document.getElementById("theme-color-meta");
-    if (tm) tm.content = topColor;
-
     if (raw) {
       var t = JSON.parse(raw);
       var r = document.documentElement;
+      var dark = !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
       if (t.accent) r.style.setProperty("--accent", dark ? (t.darkAccent || t.accent) : t.accent);
       if (t.paper) r.style.setProperty("--paper", dark ? (t.darkPaper || t.paper) : t.paper);
       if (t.card) r.style.setProperty("--card", dark ? (t.darkCard || t.card) : t.card);
@@ -54,9 +36,9 @@
   } catch(e) {}
 })();
 </script>
-  <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" href="assets/icon.png">
-  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="apple-touch-icon" href="assets/icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Math 3">
@@ -193,31 +175,5 @@ if (!Element.prototype.replaceChildren) {
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script type="module" src="assets/main.js"></script>
-<script>
-if (window.location.search.indexOf('download') !== -1) {
-  window.addEventListener('load', function() {
-    var a = document.createElement('a');
-    a.href = 'deploy.zip';
-    a.download = 'deploy.zip';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  });
-}
-document.addEventListener('DOMContentLoaded', function() {
-  var h = document.querySelector('header .label');
-  if (h) {
-    h.title = 'اضغط هنا لتحميل deploy.zip';
-    h.addEventListener('click', function() {
-      var a = document.createElement('a');
-      a.href = 'deploy.zip';
-      a.download = 'deploy.zip';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    });
-  }
-});
-</script>
 </body>
 </html>

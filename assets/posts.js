@@ -1,3 +1,4 @@
+import { broadcastNewPost } from "./notifications.js";
 import { sb, $, say, el, fmt, MAX_ATTACH } from "./core.js";
 import { state, isFull } from "./state.js";
 import { loadData } from "./data.js";

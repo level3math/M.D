@@ -1,10 +1,28 @@
-/* Math 3 Service Worker - Web Push Notifications */
+/* Math 3 Service Worker - Web Push Notifications & Background Sync */
 self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    const appIcon = new URL('assets/icon.png', self.registration.scope).href;
+    const badgeIcon = new URL('assets/badge-96.png', self.registration.scope).href;
+    self.registration.showNotification(event.data.title || 'Math 3 🔔', {
+      body: event.data.body || '',
+      icon: appIcon,
+      badge: badgeIcon,
+      data: { url: event.data.url || './' },
+      dir: 'rtl',
+      lang: 'ar',
+      vibrate: [200, 100, 200],
+      tag: 'math3-' + Date.now(),
+      renotify: true
+    });
+  }
 });
 
 self.addEventListener('push', (event) => {
@@ -18,14 +36,17 @@ self.addEventListener('push', (event) => {
   }
 
   const appIcon = new URL('assets/icon.png', self.registration.scope).href;
+  const badgeIcon = new URL('assets/badge-96.png', self.registration.scope).href;
   const options = {
     body: data.body,
     icon: appIcon,
-    badge: appIcon,
+    badge: badgeIcon,
     data: { url: data.url || './' },
     dir: 'rtl',
     lang: 'ar',
-    vibrate: [100, 50, 100]
+    vibrate: [200, 100, 200],
+    tag: 'math3-' + Date.now(),
+    renotify: true
   };
 
   event.waitUntil(

@@ -1,3 +1,4 @@
+import { broadcastNewItem } from "./notifications.js";
 import { sb, say, el } from "./core.js";
 import { state, courseName } from "./state.js";
 import { field } from "./ui.js";
@@ -468,6 +469,7 @@ export function buildDynamicContentForm(sec, item, onSave, onCancel) {
         say("تعذّر الحفظ: " + error.message);
       } else {
         say(isEdit ? "تم تحديث المحتوى بنجاح!" : "تمت إضافة المحتوى بنجاح!");
+        if (!isEdit) broadcastNewItem(primaryTitle, primaryCourseId);
         if (onSave) onSave();
       }
     } catch (err) {

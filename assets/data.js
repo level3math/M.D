@@ -38,16 +38,7 @@ async function loadCourses(force = false) {
 
   if (!force && cachedCourses && (now - cachedTime < CACHE_LIFETIME)) {
     state.courses = cachedCourses;
-    if (state.role === "guest") {
-      try {
-        const storedAnon = localStorage.getItem("anon_mine_courses");
-        state.mine = storedAnon !== null
-          ? new Set(JSON.parse(storedAnon))
-          : new Set(cachedCourses.filter((r) => r.is_active).map((r) => r.id));
-      } catch (err) {
-        state.mine = new Set(cachedCourses.filter((r) => r.is_active).map((r) => r.id));
-      }
-    }
+    if (state.role === "guest") state.mine = new Set(cachedCourses.map((r) => r.id));
     return true;
   }
 
@@ -65,12 +56,12 @@ async function loadCourses(force = false) {
   if (isGuest) {
     try {
       const storedAnon = localStorage.getItem("anon_mine_courses");
-      if (storedAnon !== null) {
+      if (storedAnon) {
         state.mine = new Set(JSON.parse(storedAnon));
         return true;
       }
     } catch (err) {}
-    state.mine = new Set(c.data.filter((r) => r.is_active).map((r) => r.id));
+    state.mine = new Set(c.data.map((r) => r.id));
     return true;
   }
 

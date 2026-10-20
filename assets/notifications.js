@@ -1,3 +1,34 @@
+
+// إرسال تنبيه محلي وبث فوري لكافة الأجهزة عند رفع مادة أو محاضرة أو تكليف
+export function broadcastNewItem(title, courseId) {
+  try {
+    triggerLocalNotification("محتوى / محاضرة جديدة 📁", title || "تم إضافة عنصر جديد للمنصة");
+    const ch = sb.channel("public-changes");
+    ch.send({
+      type: "broadcast",
+      event: "new_item",
+      payload: { title, course_id: courseId }
+    });
+  } catch (e) {
+    console.warn("broadcast error:", e);
+  }
+}
+
+// إرسال تنبيه محلي وبث فوري لكافة الأجهزة عند نشر بوست جديد
+export function broadcastNewPost(content) {
+  try {
+    triggerLocalNotification("منشور جديد 📬", content ? content.slice(0, 80) : "يوجد منشور جديد في المنصة");
+    const ch = sb.channel("public-changes");
+    ch.send({
+      type: "broadcast",
+      event: "new_post",
+      payload: { content }
+    });
+  } catch (e) {
+    console.warn("broadcast error:", e);
+  }
+}
+
 import { sb, say, el, $ } from "./core.js";
 
 const STORAGE_KEY = "math3_web_push";
@@ -56,30 +87,69 @@ export async function registerServiceWorker() {
 export async function triggerLocalNotification(title, body, url = "./") {
   if (!isPushEnabled()) return;
   try {
+    const iconUrl = new URL("assets/icon.png", location.href).href;
+    const badgeUrl = new URL("assets/badge-96.png", location.href).href;
+    const notifOptions = {
+      body,
+      icon: iconUrl,
+      badge: badgeUrl,
+      data: { url: url || "./" },
+      dir: "rtl",
+      lang: "ar",
+      vibrate: [200, 100, 200],
+      tag: "math3-" + Date.now(),
+      renotify: true
+    };
+
+    // المحاولة 1: عبر ServiceWorker المباشر
     if ("serviceWorker" in navigator) {
-      const reg = await navigator.serviceWorker.ready;
+      const reg = await navigator.serviceWorker.getRegistration();
       if (reg && reg.showNotification) {
-        reg.showNotification(title, {
-          body,
-          icon: "icon.svg",
-          badge: "icon.svg",
-          data: { url },
-          dir: "rtl",
-          lang: "ar"
-        });
+        await reg.showNotification(title, notifOptions);
         return;
       }
     }
-    new Notification(title, { body, icon: "icon.svg" });
+
+    // المحاولة 2: عبر جاهزية ServiceWorker (مع Timeout ثانية واحدة عشان ميعلقش)
+    if ("serviceWorker" in navigator) {
+      const regReady = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise((resolve) => setTimeout(() => resolve(null), 1000))
+      ]);
+      if (regReady && regReady.showNotification) {
+        await regReady.showNotification(title, notifOptions);
+        return;
+      }
+      if (regReady && regReady.active) {
+        regReady.active.postMessage({ type: "SHOW_NOTIFICATION", title, body, url });
+        return;
+      }
+    }
+
+    // المحاولة 3 (Fallback فوري لنظام أندرويد والمتصفح):
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification(title, notifOptions);
+    }
   } catch (e) {
     console.error("Local notification error:", e);
+    try {
+      new Notification(title, { body });
+    } catch (err) {}
   }
 }
 
 export function startRealtimeNotifications() {
   if (!isPushEnabled() || _realtimeChannel) return;
   try {
-    _realtimeChannel = sb.channel("public-changes")
+    _realtimeChannel = sb.channel("public-changes", { config: { broadcast: { self: false } } })
+      .on("broadcast", { event: "new_item" }, (payload) => {
+        const it = (payload && payload.payload) || {};
+        triggerLocalNotification("محتوى / محاضرة جديدة 📁", it.title || "تم إضافة عنصر جديد للمنصة");
+      })
+      .on("broadcast", { event: "new_post" }, (payload) => {
+        const p = (payload && payload.payload) || {};
+        triggerLocalNotification("منشور جديد 📬", p.content ? p.content.slice(0, 80) : "يوجد منشور جديد في المنصة");
+      })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "posts" }, (payload) => {
         const p = payload.new;
         if (p && !p.deleted_at) {
@@ -100,8 +170,9 @@ export function startRealtimeNotifications() {
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, (payload) => {
         const n = payload.new;
+        // استثناء الريمايندرز وتذكيرات المواعيد لتظل حصرية على تيليجرام 100%
         if (n && !n.is_reminder) {
-          triggerLocalNotification(n.title || "تنبيه جديد 🔔", n.body || n.message || "تحديث جديد في درايف");
+          triggerLocalNotification(n.title || "تنبيه جديد 🔔", n.body || n.message || "تحديث جديد في المنصة");
         }
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "drive_seen_files" }, (payload) => {
@@ -109,6 +180,24 @@ export function startRealtimeNotifications() {
         if (f) {
           const fname = f.file_name || f.name || f.title || "تم رفع ملف جديد في مجلدات درايف";
           triggerLocalNotification("ملف درايف جديد 📁", fname);
+        }
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "qa_questions" }, (payload) => {
+        const q = payload.new;
+        if (q && !q.deleted_at) {
+          triggerLocalNotification("سؤال جديد في قسم الأسئلة ❓", q.title || q.body || "يوجد سؤال جديد");
+        }
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "qa_answers" }, (payload) => {
+        const a = payload.new;
+        if (a && !a.deleted_at) {
+          triggerLocalNotification("إجابة جديدة على سؤال 💬", a.body || "تمت إضافة إجابة جديدة");
+        }
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "schedule" }, (payload) => {
+        const sc = payload.new;
+        if (sc) {
+          triggerLocalNotification("تحديث في الجدول الدراسي 📅", "تمت إضافة حصة/محاضرة ليوم " + (sc.day_of_week || ""));
         }
       })
       .subscribe();
