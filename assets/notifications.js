@@ -182,18 +182,7 @@ export function startRealtimeNotifications() {
           triggerLocalNotification("ملف درايف جديد 📁", fname);
         }
       })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "qa_questions" }, (payload) => {
-        const q = payload.new;
-        if (q && !q.deleted_at) {
-          triggerLocalNotification("سؤال جديد في قسم الأسئلة ❓", q.title || q.body || "يوجد سؤال جديد");
-        }
-      })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "qa_answers" }, (payload) => {
-        const a = payload.new;
-        if (a && !a.deleted_at) {
-          triggerLocalNotification("إجابة جديدة على سؤال 💬", a.body || "تمت إضافة إجابة جديدة");
-        }
-      })
+      
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "schedule" }, (payload) => {
         const sc = payload.new;
         if (sc) {
