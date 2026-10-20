@@ -76,6 +76,28 @@ let saved = { ...DEFAULTS };   /* النسخة المنشورة للجميع */
 let draft = null;              /* تعديلات الأونر قيد المعاينة */
 const isDark = () => !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
+function updateMetaThemeColor(dark) {
+  const topColor = dark ? "#000000" : "#ffffff";
+  const mLight = document.querySelector('meta[name="theme-color"][media*="light"]');
+  if (mLight) mLight.content = "#ffffff";
+  const mDark = document.querySelector('meta[name="theme-color"][media*="dark"]');
+  if (mDark) mDark.content = "#000000";
+
+  let meta = document.getElementById("theme-color-meta") || document.querySelector('meta[name="theme-color"]:not([media])');
+  if (!meta) {
+    meta = document.createElement("meta");
+    meta.id = "theme-color-meta";
+    meta.name = "theme-color";
+    document.head.appendChild(meta);
+  }
+  meta.content = topColor;
+
+  const appleMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+  if (appleMeta) {
+    appleMeta.content = dark ? "black-translucent" : "default";
+  }
+}
+
 function applyTheme(t) {
   const r = document.documentElement;
   const dark = isDark();
@@ -91,6 +113,7 @@ function applyTheme(t) {
   set("--content-width", t.width + "px");
   r.setAttribute("data-theme", dark ? "dark" : "light");
   updateDynamicAppIcon(t.darkAccent, t.darkPaper);
+  updateMetaThemeColor(dark);
 
   const defOpacity = dark ? 0.13 : 0.11;
   set("--wallpaper-opacity", String(t.bgOpacity == null ? defOpacity : t.bgOpacity));
