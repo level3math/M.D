@@ -89,10 +89,66 @@ export function calculateCourseReadiness(courseData) {
   return { overall, studyPct, revisePct, solvePct, closedMistakesPct, weakestTitle, minScore, count: total };
 }
 
-function ensureCourseData(courseData, defaultExamDays = 15) {
+// حساب الاستريك الحقيقي بدقة (الأيام المتتالية الفعلية)
+export function calculateRealStreak(data) {
+  const sessions = (data && data.sessions) || [];
+  const uniqueDays = new Set();
+  sessions.forEach((s) => {
+    if (s.date && s.minutes > 0) {
+      const d = String(s.date).split("T")[0];
+      uniqueDays.add(d);
+    }
+  });
+
+  if (!uniqueDays.size) {
+    return { count: 0, isActiveToday: false, isAlive: false };
+  }
+
+  const getDayStr = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const today = new Date();
+  const todayStr = getDayStr(today);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = getDayStr(yesterday);
+
+  const studiedToday = uniqueDays.has(todayStr);
+  const studiedYesterday = uniqueDays.has(yesterdayStr);
+
+  // إذا لم يذاكر اليوم ولا أمس، ينطفئ الاستريك فوراً (0) واللاين يختفي
+  if (!studiedToday && !studiedYesterday) {
+    return { count: 0, isActiveToday: false, isAlive: false };
+  }
+
+  // عد الأيام المتتالية إلى الوراء
+  let count = 0;
+  let check = new Date(studiedToday ? today : yesterday);
+
+  while (true) {
+    const s = getDayStr(check);
+    if (uniqueDays.has(s)) {
+      count++;
+      check.setDate(check.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+
+  return {
+    count,
+    isActiveToday: studiedToday,
+    isAlive: count > 0
+  };
+}
+
+function ensureCourseData(courseData) {
   if (!courseData) courseData = {};
   if (!courseData.items) courseData.items = [];
-  if (courseData.examDays === undefined) courseData.examDays = defaultExamDays;
   return courseData;
 }
 
@@ -125,10 +181,9 @@ export function renderStudyTracker(container, onBack, initialTab = "readiness") 
 
   const courseList = studentCourses.length ? studentCourses : (state.courses || []);
 
-  courseList.forEach((c, idx) => {
+  courseList.forEach((c) => {
     if (!data.courses[c.name]) {
-      const defaultDays = [9, 12, 20, 25, 30, 35][idx % 6];
-      data.courses[c.name] = ensureCourseData({}, defaultDays);
+      data.courses[c.name] = ensureCourseData({});
     } else {
       ensureCourseData(data.courses[c.name]);
     }
@@ -252,15 +307,15 @@ export function renderStudyTracker(container, onBack, initialTab = "readiness") 
   }
 
   // =========================================================================
-  // 1. شاشة إنجاز المواد والامتحانات (Readiness Dashboard)
+  // 1. شاشة إنجاز المواد والمذاكرة (Readiness Dashboard)
   // =========================================================================
   function renderReadinessDashboard(box) {
     const freshData = getTrackerData();
-    breadcrumb.textContent = "math 3 · إنجاز المواد";
+    const streakInfo = calculateRealStreak(freshData);
 
     const header = el("div");
     header.style.marginBottom = "14px";
-    const h = el("h2", "", "إنجاز المواد والامتحانات 🎯");
+    const h = el("h2", "", "إنجاز المواد والمذاكرة 🎯");
     h.style.margin = "0 0 6px 0";
     h.style.fontSize = "22px";
     header.appendChild(h);
@@ -269,30 +324,25 @@ export function renderStudyTracker(container, onBack, initialTab = "readiness") 
     sub.style.margin = "0";
     sub.style.fontSize = "13px";
     sub.style.opacity = "0.75";
-    sub.textContent = "موادك مرتّبة حسب الأولوية: الأقرب امتحاناً والمحتاجة تركيز أولاً.";
+    sub.textContent = "متابعة حية لنسب إنجازك في كل مادة واستمرارية الاستريك اليومي.";
     header.appendChild(sub);
     box.appendChild(header);
 
     let totalScore = 0;
-    let minExamDays = 999;
     const coursesStats = [];
 
     courseList.forEach((c) => {
       const cData = freshData.courses[c.name] || ensureCourseData({});
       const st = calculateCourseReadiness(cData);
-      const days = cData.examDays !== undefined ? cData.examDays : 15;
-      if (days < minExamDays) minExamDays = days;
       totalScore += st.overall;
       coursesStats.push({
         course: c,
         name: c.name,
-        stats: st,
-        examDays: days
+        stats: st
       });
     });
 
     const avgOverall = coursesStats.length ? Math.round(totalScore / coursesStats.length) : 0;
-    const nearestDays = minExamDays === 999 ? 9 : minExamDays;
 
     const statsGrid = el("div");
     statsGrid.style.display = "grid";
@@ -311,23 +361,48 @@ export function renderStudyTracker(container, onBack, initialTab = "readiness") 
       <div style="font-size:12px; opacity:0.8; margin-top:4px;">إجمالي نسبة إنجازك</div>`;
     statsGrid.appendChild(cardPct);
 
-    const cardDays = el("div", "card");
-    cardDays.style.margin = "0";
-    cardDays.style.padding = "16px 14px";
-    cardDays.style.textAlign = "center";
-    cardDays.style.background = "var(--card)";
-    cardDays.style.border = "1.5px solid var(--line)";
-    cardDays.style.borderRadius = "14px";
-    cardDays.innerHTML = `<div style="font-size:32px; font-weight:bold; color:var(--ink);">${nearestDays}</div>
-      <div style="font-size:12px; opacity:0.8; margin-top:4px;">أيام لأقرب امتحان</div>`;
-    statsGrid.appendChild(cardDays);
+    const cardStreak = el("div", "card");
+    cardStreak.style.margin = "0";
+    cardStreak.style.padding = "14px 12px";
+    cardStreak.style.textAlign = "center";
+    cardStreak.style.background = "var(--card)";
+    cardStreak.style.border = `1.5px solid ${streakInfo.isAlive ? "rgba(245, 158, 11, 0.5)" : "var(--line)"}`;
+    cardStreak.style.borderRadius = "14px";
+
+    let streakLineHtml = "";
+    let streakCountHtml = "";
+    let streakDesc = "";
+
+    if (streakInfo.isAlive) {
+      streakCountHtml = `<div style="font-size:30px; font-weight:bold; color:#f59e0b; display:flex; align-items:center; justify-content:center; gap:6px;">
+        <span>${streakInfo.count}</span> <span style="font-size:24px;">🔥</span>
+      </div>`;
+      // اللاين المضيء يظهر فقط عندما يكون الاستريك شغالاً
+      streakLineHtml = `<div style="width:100%; height:4px; background:linear-gradient(90deg, #f59e0b, #ea580c); border-radius:4px; margin:8px 0 6px 0; box-shadow:0 0 10px rgba(245,158,11,0.5);"></div>`;
+      streakDesc = streakInfo.isActiveToday 
+        ? "ستريك مشتعل! ذاكرت اليوم ✅" 
+        : "الستريك حيّ · ذاكر اليوم للحفاظ عليه ⏳";
+    } else {
+      streakCountHtml = `<div style="font-size:30px; font-weight:bold; color:var(--ink); opacity:0.35; display:flex; align-items:center; justify-content:center; gap:6px;">
+        <span>0</span> <span style="font-size:20px;">💤</span>
+      </div>`;
+      // اللاين ميبقاش موجود تماماً
+      streakLineHtml = "";
+      streakDesc = "الستريك مطفأ · ابدأ جلسة لإشعاله ⚡";
+    }
+
+    cardStreak.innerHTML = `
+      ${streakCountHtml}
+      ${streakLineHtml}
+      <div style="font-size:12px; font-weight:bold; color:var(--ink); margin-top:${streakInfo.isAlive ? '0' : '8px'};">ستريك المذاكرة</div>
+      <div style="font-size:10.5px; opacity:0.75; margin-top:2px;">${streakDesc}</div>
+    `;
+    statsGrid.appendChild(cardStreak);
 
     box.appendChild(statsGrid);
 
-    coursesStats.sort((a, b) => {
-      if (a.examDays !== b.examDays) return a.examDays - b.examDays;
-      return a.stats.overall - b.stats.overall;
-    });
+    // ترتيب المواد حسب الأقل إنجازاً لتظهر المواد المحتاجة تركيز في المقدمة
+    coursesStats.sort((a, b) => a.stats.overall - b.stats.overall);
 
     const list = el("div");
     list.style.display = "flex";
@@ -381,8 +456,8 @@ export function renderStudyTracker(container, onBack, initialTab = "readiness") 
       row2.style.fontSize = "12px";
       row2.style.opacity = "0.75";
 
-      const examText = el("span", "", `الامتحان بعد ${item.examDays} يوم`);
-      row2.appendChild(examText);
+      const countText = el("span", "", item.stats.count > 0 ? `${item.stats.count} عنصر / محاضرة` : "لا توجد عناصر بعد");
+      row2.appendChild(countText);
 
       const weakText = el("span", "", item.stats.count > 0 ? `محتاجة تركيز: ${item.stats.weakestTitle}` : `(اضغط لإضافة المحاضرات)`);
       weakText.style.color = item.stats.overall < 60 && item.stats.count > 0 ? "#f87171" : "inherit";
@@ -422,21 +497,6 @@ export function renderStudyTracker(container, onBack, initialTab = "readiness") 
       renderActiveTab();
     });
     backBar.appendChild(returnBtn);
-
-    const examDaysBtn = el("button", "small", `الامتحان بعد ${cData.examDays || 12} يوم ✏️`);
-    examDaysBtn.title = "اضغط لتعديل عدد الأيام المتبقية للامتحان";
-    examDaysBtn.addEventListener("click", () => {
-      openPromptModal("موعد الامتحان", "كم يوماً متبقياً على امتحان هذه المادة؟", String(cData.examDays || 12), (val) => {
-        const num = Number(val);
-        if (!isNaN(num) && num >= 0) {
-          const d = getTrackerData();
-          if (d.courses[courseName]) d.courses[courseName].examDays = num;
-          saveTrackerData(d);
-          renderActiveTab();
-        }
-      });
-    });
-    backBar.appendChild(examDaysBtn);
     box.appendChild(backBar);
 
     const h = el("h2", "", courseName);
@@ -739,7 +799,7 @@ export function renderStudyTracker(container, onBack, initialTab = "readiness") 
     });
 
     const monthHours = Math.round(monthMinutes / 60);
-    const streakDays = freshData.streak || 0;
+    const realStreak = calculateRealStreak(freshData);
 
     const statsRow = el("div");
     statsRow.style.display = "grid";
@@ -748,9 +808,11 @@ export function renderStudyTracker(container, onBack, initialTab = "readiness") 
     statsRow.style.marginBottom = "16px";
 
     statsRow.innerHTML = `
-      <div class="card" style="margin:0; padding:14px 8px; text-align:center; background:var(--card); border-radius:12px; border:1px solid var(--line);">
-        <div style="font-size:24px; font-weight:bold; color:var(--accent);">${streakDays}</div>
-        <div style="font-size:11px; opacity:0.8; margin-top:2px;">أيام متتالية 🔥</div>
+      <div class="card" style="margin:0; padding:14px 8px; text-align:center; background:var(--card); border-radius:12px; border:1px solid ${realStreak.isAlive ? '#f59e0b' : 'var(--line)'};">
+        <div style="font-size:24px; font-weight:bold; color:${realStreak.isAlive ? '#f59e0b' : 'var(--ink)'}; opacity:${realStreak.isAlive ? '1' : '0.4'};">
+          ${realStreak.count} ${realStreak.isAlive ? '🔥' : '💤'}
+        </div>
+        <div style="font-size:11px; opacity:0.8; margin-top:2px;">${realStreak.isAlive ? 'أيام متتالية' : 'الستريك مطفأ'}</div>
       </div>
       <div class="card" style="margin:0; padding:14px 8px; text-align:center; background:var(--card); border-radius:12px; border:1px solid var(--line);">
         <div style="font-size:24px; font-weight:bold; color:var(--ink);">${weekSessionsCount}</div>
@@ -1286,10 +1348,8 @@ export function renderStudyTracker(container, onBack, initialTab = "readiness") 
         }
       }
 
-      if (tData.lastActiveDate !== todayIso) {
-        tData.streak = (tData.streak || 0) + 1;
-        tData.lastActiveDate = todayIso;
-      }
+      tData.lastActiveDate = todayIso;
+      tData.streak = calculateRealStreak(tData).count;
 
       saveTrackerData(tData);
 

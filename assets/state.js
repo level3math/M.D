@@ -1,4 +1,4 @@
-const roleLabels = { student: "Student", admin: "Admin", full_admin: "Owner" };
+const roleLabels = { student: "طالب", admin: "ادمن", full_admin: "اونر", guest: "زائر" };
 const roleRank = { full_admin: 0, admin: 1, student: 2 };
 function rpcMsg(error) {
   const m = (error && error.message) || "";

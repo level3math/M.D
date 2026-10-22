@@ -1,169 +1,6 @@
-import { renderStudyTracker, getTrackerData, calculateCourseReadiness } from "./study_tracker.js";
+import { renderStudyTracker, getTrackerData, calculateCourseReadiness, calculateRealStreak } from "./study_tracker.js";
 
-/* نافذة تنبيه طلب الحذف والإضافة */
-let _dropAddModalOpen = false;
 
-export function checkDropAddNotice() {
-  try {
-    // 1. فحص خيار "متفكرنيش تاني" للجهاز أو الحساب
-    if (localStorage.getItem("drop_add_never_show") === "1") return;
-    if (state.userId && localStorage.getItem("drop_add_never_show_" + state.userId) === "1") return;
-
-    // 2. فحص إذا كانت أُغلقت مؤقتاً في هذه الجلسة
-    if (sessionStorage.getItem("drop_add_dismissed_session") === "1") return;
-
-    // 3. منع التكرار إذا كانت النافذة مفتوحة بالفعل
-    if (_dropAddModalOpen || document.getElementById("drop-add-modal")) return;
-
-    showDropAddModal();
-  } catch (e) {
-    console.warn("Notice check error:", e);
-  }
-}
-
-function showDropAddModal() {
-  const existing = document.getElementById("drop-add-modal");
-  if (existing) existing.remove();
-
-  _dropAddModalOpen = true;
-
-  const backdrop = el("div");
-  backdrop.id = "drop-add-modal";
-  backdrop.style.position = "fixed";
-  backdrop.style.inset = "0";
-  backdrop.style.background = "rgba(0, 0, 0, 0.72)";
-  backdrop.style.backdropFilter = "blur(6px)";
-  backdrop.style.webkitBackdropFilter = "blur(6px)";
-  backdrop.style.zIndex = "99999";
-  backdrop.style.display = "flex";
-  backdrop.style.alignItems = "center";
-  backdrop.style.justifyContent = "center";
-  backdrop.style.padding = "16px";
-  backdrop.style.boxSizing = "border-box";
-
-  const modal = el("div", "card");
-  modal.style.maxWidth = "440px";
-  modal.style.width = "100%";
-  modal.style.background = "var(--card)";
-  modal.style.border = "2px solid var(--accent)";
-  modal.style.borderRadius = "20px";
-  modal.style.padding = "24px 20px";
-  modal.style.boxShadow = "0 25px 50px -12px rgba(0, 0, 0, 0.65)";
-  modal.style.textAlign = "center";
-  modal.style.position = "relative";
-
-  // أيقونة بارزة في المنتصف
-  const iconWrap = el("div");
-  iconWrap.style.width = "64px";
-  iconWrap.style.height = "64px";
-  iconWrap.style.borderRadius = "50%";
-  iconWrap.style.background = "rgba(15, 118, 110, 0.15)";
-  iconWrap.style.display = "flex";
-  iconWrap.style.alignItems = "center";
-  iconWrap.style.justifyContent = "center";
-  iconWrap.style.fontSize = "32px";
-  iconWrap.style.margin = "0 auto 14px auto";
-  iconWrap.textContent = "📝";
-  modal.appendChild(iconWrap);
-
-  // العنوان
-  const title = el("h3");
-  title.style.margin = "0 0 10px 0";
-  title.style.fontSize = "19px";
-  title.style.fontWeight = "bold";
-  title.style.color = "var(--ink)";
-  title.textContent = "تنبيه هام 📢";
-  modal.appendChild(title);
-
-  // التيكست المطلوب
-  const text = el("p");
-  text.style.margin = "0 0 18px 0";
-  text.style.fontSize = "16px";
-  text.style.lineHeight = "1.6";
-  text.style.fontWeight = "600";
-  text.style.color = "var(--ink)";
-  text.textContent = "متنساش تقدم طلب الحذف و الإضافة";
-  modal.appendChild(text);
-
-  // بطاقة الرابط التفاعلية القابلة للنقر المباشر (تفتح الصفحة في تبويب جديد)
-  const linkBox = el("a");
-  linkBox.href = "https://forms.cloud.microsoft/r/8ghZLxwQQd";
-  linkBox.target = "_blank";
-  linkBox.rel = "noopener noreferrer";
-  linkBox.style.display = "flex";
-  linkBox.style.alignItems = "center";
-  linkBox.style.justifyContent = "center";
-  linkBox.style.gap = "8px";
-  linkBox.style.padding = "14px 16px";
-  linkBox.style.background = "var(--paper)";
-  linkBox.style.border = "1.5px solid var(--accent)";
-  linkBox.style.borderRadius = "12px";
-  linkBox.style.color = "var(--accent)";
-  linkBox.style.textDecoration = "none";
-  linkBox.style.fontWeight = "bold";
-  linkBox.style.fontSize = "14.5px";
-  linkBox.style.marginBottom = "20px";
-  linkBox.style.wordBreak = "break-all";
-  linkBox.style.transition = "transform 0.15s ease, background 0.15s ease";
-
-  const linkIcon = el("span", "", "📋");
-  linkIcon.style.fontSize = "18px";
-  linkBox.appendChild(linkIcon);
-
-  const linkText = el("span", "", "لينك طلب الحذف و الإضافة ↗");
-  linkBox.appendChild(linkText);
-
-  linkBox.addEventListener("mouseenter", () => {
-    linkBox.style.transform = "translateY(-2px)";
-  });
-  linkBox.addEventListener("mouseleave", () => {
-    linkBox.style.transform = "translateY(0)";
-  });
-  modal.appendChild(linkBox);
-
-  // شريط الأزرار (زر تمام، وزر تمام متفكرنيش تاني) - بدون علامة X
-  const btnRow = el("div");
-  btnRow.style.display = "flex";
-  btnRow.style.flexDirection = "column";
-  btnRow.style.gap = "10px";
-
-  // 1. زر "تمام" (يغلق الآن ويظهر كل مرة يفتح الموقع ويظهر الهوم)
-  const okBtn = el("button", "btn-primary", "تمام");
-  okBtn.style.width = "100%";
-  okBtn.style.padding = "12px";
-  okBtn.style.fontSize = "15px";
-  okBtn.style.fontWeight = "bold";
-  okBtn.style.cursor = "pointer";
-  okBtn.addEventListener("click", () => {
-    sessionStorage.setItem("drop_add_dismissed_session", "1");
-    _dropAddModalOpen = false;
-    backdrop.remove();
-  });
-  btnRow.appendChild(okBtn);
-
-  // 2. زر "تمام متفكرنيش تاني" (يغلق ولا يظهر للجهاز أو الحساب مجدداً)
-  const neverBtn = el("button", "small", "تمام متفكرنيش تاني");
-  neverBtn.style.width = "100%";
-  neverBtn.style.padding = "10px";
-  neverBtn.style.fontSize = "13.5px";
-  neverBtn.style.opacity = "0.85";
-  neverBtn.style.background = "transparent";
-  neverBtn.style.border = "1px solid var(--line)";
-  neverBtn.style.cursor = "pointer";
-  neverBtn.addEventListener("click", () => {
-    localStorage.setItem("drop_add_never_show", "1");
-    if (state.userId) {
-      localStorage.setItem("drop_add_never_show_" + state.userId, "1");
-    }
-    _dropAddModalOpen = false;
-    backdrop.remove();
-  });
-  btnRow.appendChild(neverBtn);
-
-  modal.appendChild(btnRow);
-  backdrop.appendChild(modal);
-  document.body.appendChild(backdrop);
-}
 
 import { broadcastNewItem } from "./notifications.js";
 import { openSectionSchemaBuilder, buildDynamicContentForm, renderDynamicCard } from "./dynamic_sections.js";
@@ -1900,8 +1737,8 @@ function renderDashboard() {
       const st = calculateCourseReadiness(cd);
       totalScore += st.overall;
     });
-    const avgScore = activeC.length ? Math.round(totalScore / activeC.length) : 59;
-    const streak = tData.streak || 9;
+    const avgScore = activeC.length ? Math.round(totalScore / activeC.length) : 0;
+    const streakInfo = calculateRealStreak(tData);
 
     const banner = el("div", "card");
     banner.style.margin = "0 0 16px 0";
@@ -1916,9 +1753,14 @@ function renderDashboard() {
     banner.style.gap = "10px";
 
     const bLeft = el("div");
-        let subtitleHtml = `<div style="font-size:12.5px; opacity:0.8; margin-top:2px;">نسبة إنجازك: <strong style="color:var(--accent);">${avgScore}%</strong> · الالتزام: <strong style="color:var(--ink);">${streak} يوم 🔥</strong></div>`;
-    if (avgScore === 0 && streak === 0) {
-      subtitleHtml = `<div style="font-size:12.5px; opacity:0.8; margin-top:2px;">ابدأ رحلتك: اضغط بومودورو وسجّل أول إنجاز اليوم 🚀</div>`;
+    let subtitleHtml = "";
+    if (streakInfo.isAlive) {
+      subtitleHtml = `<div style="font-size:12.5px; opacity:0.8; margin-top:2px;">نسبة إنجازك: <strong style="color:var(--accent);">${avgScore}%</strong> · الاستريك: <strong style="color:#f59e0b;">${streakInfo.count} ${streakInfo.count === 1 ? "يوم" : "أيام"} 🔥</strong></div>`;
+    } else {
+      subtitleHtml = `<div style="font-size:12.5px; opacity:0.8; margin-top:2px;">نسبة إنجازك: <strong style="color:var(--accent);">${avgScore}%</strong> · الاستريك: <span style="opacity:0.65;">مطفأ 💤 (ابدأ جلسة اليوم)</span></div>`;
+    }
+    if (avgScore === 0 && !streakInfo.isAlive) {
+      subtitleHtml = `<div style="font-size:12.5px; opacity:0.8; margin-top:2px;">ابدأ رحلتك: اضغط بومودورو وسجّل أول إنجاز اليوم لإشعال الاستريك 🚀</div>`;
     }
     bLeft.innerHTML = `<div style="font-size:16px; font-weight:bold; color:var(--ink);">تراك المذاكرة والإنجاز 📚</div>` + subtitleHtml;
     banner.appendChild(bLeft);
@@ -2096,7 +1938,6 @@ function render() {
     tabs.hidden = true;
     $("dashboard").hidden = false;
     renderDashboard();
-    setTimeout(checkDropAddNotice, 350);
     return;
   }
   tabs.hidden = false;
@@ -2299,9 +2140,9 @@ async function showProfile() {
   const nb = $("notif-btn"); if (nb) nb.hidden = false;
   $("links-fab").hidden = false;
   if ($("header-menu-wrap")) $("header-menu-wrap").hidden = false;
-  if ($("header-menu-label")) $("header-menu-label").textContent = isFull() ? "👑 المالك" : (isAdmin() ? "⚙️ الإدارة" : "👤 حسابي");
+  if ($("header-menu-label")) $("header-menu-label").textContent = isFull() ? "👑 اونر" : (isAdmin() ? "⚙️ ادمن" : "👤 طالب");
   if ($("dropdown-user-name")) $("dropdown-user-name").textContent = data.first_name || "مستخدم";
-  if ($("dropdown-user-role")) $("dropdown-user-role").textContent = roleLabels[data.role] || data.role;
+  if ($("dropdown-user-role")) $("dropdown-user-role").textContent = isFull() ? "اونر" : (isAdmin() ? "ادمن" : (roleLabels[data.role] || data.role));
   
   $("manage-btn").hidden = !isAdmin();
   $("sections-btn").hidden = !isAdmin();
@@ -2467,7 +2308,7 @@ async function loginAsAnonymous() {
   if ($("header-menu-wrap")) $("header-menu-wrap").hidden = false;
   if ($("header-menu-label")) $("header-menu-label").textContent = "👤 زائر";
   if ($("dropdown-user-name")) $("dropdown-user-name").textContent = "زائر المنصة";
-  if ($("dropdown-user-role")) $("dropdown-user-role").textContent = "وضع الزائر";
+  if ($("dropdown-user-role")) $("dropdown-user-role").textContent = "زائر";
   
   
   // حجب صلاحيات وأزرار الإدارة تماماً للزائر المجهول
