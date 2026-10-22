@@ -1,4 +1,37 @@
-const VAPID_PUBLIC_KEY = "BMNfM_QGnTIokAHFYR76cXduilrsVHe_90uzFbnkqEQkf0nVXoEekyhdsZSgssd2K__882GKh4-2XeLQ9tSdrfI";
+import { sb, say, el, $ } from "./core.js";
+
+const DEFAULT_VAPID_PUBLIC_KEY = "BNngc09Q2an6fPp6f_emVxzsNZ-zfmyz1JqB0qE3X0IY9IrWcjPLCRC1bLkIhuHdrVrSCqJq2YdxBtPX5M8hGcg";
+let cachedVapidKey = null;
+
+const PUSH_SERVER_ORIGIN = (function() {
+  if (typeof window !== "undefined") {
+    const h = window.location.hostname;
+    if (h === "localhost" || h === "127.0.0.1" || h.includes("run.app")) {
+      return "";
+    }
+  }
+  return "https://ais-pre-dqh3svjw5d2pz7fjndql5z-878821481434.europe-west2.run.app";
+})();
+
+function getPushUrl(path) {
+  return PUSH_SERVER_ORIGIN ? `${PUSH_SERVER_ORIGIN}${path}` : path;
+}
+
+async function getVapidPublicKey() {
+  if (cachedVapidKey) return cachedVapidKey;
+  try {
+    const res = await fetch(getPushUrl("/api/vapid-public-key"));
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.publicKey) {
+        cachedVapidKey = data.publicKey;
+        return cachedVapidKey;
+      }
+    }
+  } catch (e) {}
+  cachedVapidKey = DEFAULT_VAPID_PUBLIC_KEY;
+  return cachedVapidKey;
+}
 
 function urlB64ToUint8Array(base64String) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -11,16 +44,35 @@ function urlB64ToUint8Array(base64String) {
   return outputArray;
 }
 
+// إرسال تنبيه Web Push حقيقي لجميع الأجهزة المسجلة عبر السيرفر
+export async function sendServerPush(title, body, url = "./", delaySeconds = 0) {
+  try {
+    const res = await fetch(getPushUrl("/api/send-push"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title,
+        body,
+        url,
+        delaySeconds,
+        tag: "math3-push-" + Date.now()
+      })
+    });
+    return await res.json();
+  } catch (e) {
+    console.warn("sendServerPush error:", e);
+    return null;
+  }
+}
 
-// إرسال تنبيه محلي وبث فوري لكافة الأجهزة عند رفع مادة أو محاضرة أو تكليف
+// إرسال تنبيه وبث فوري لكافة الأجهزة عند رفع مادة أو محاضرة أو تكليف
 export function broadcastNewItem(title, courseId) {
   try {
-    triggerLocalNotification("محتوى / محاضرة جديدة 📁", title || "تم إضافة عنصر جديد للمنصة");
-    try {
-      sb.functions.invoke("send-push", {
-        body: { title: "محتوى / محاضرة جديدة 📁", body: title || "تم إضافة عنصر جديد للمنصة", url: "./" }
-      }).catch(() => {});
-    } catch(e) {}
+    const notifTitle = "محتوى / محاضرة جديدة 📁";
+    const notifBody = title || "تم إضافة عنصر جديد للمنصة";
+    triggerLocalNotification(notifTitle, notifBody);
+    sendServerPush(notifTitle, notifBody, "./");
+
     const ch = sb.channel("public-changes");
     ch.send({
       type: "broadcast",
@@ -32,15 +84,14 @@ export function broadcastNewItem(title, courseId) {
   }
 }
 
-// إرسال تنبيه محلي وبث فوري لكافة الأجهزة عند نشر بوست جديد
+// إرسال تنبيه وبث فوري لكافة الأجهزة عند نشر بوست جديد
 export function broadcastNewPost(content) {
   try {
-    triggerLocalNotification("منشور جديد 📬", content ? content.slice(0, 80) : "يوجد منشور جديد في المنصة");
-    try {
-      sb.functions.invoke("send-push", {
-        body: { title: "منشور جديد 📬", body: content ? content.slice(0, 80) : "يوجد منشور جديد في المنصة", url: "./" }
-      }).catch(() => {});
-    } catch(e) {}
+    const notifTitle = "منشور جديد 📬";
+    const notifBody = content ? content.slice(0, 80) : "يوجد منشور جديد في المنصة";
+    triggerLocalNotification(notifTitle, notifBody);
+    sendServerPush(notifTitle, notifBody, "./");
+
     const ch = sb.channel("public-changes");
     ch.send({
       type: "broadcast",
@@ -51,8 +102,6 @@ export function broadcastNewPost(content) {
     console.warn("broadcast error:", e);
   }
 }
-
-import { sb, say, el, $ } from "./core.js";
 
 const STORAGE_KEY = "math3_web_push";
 let _realtimeChannel = null;
@@ -77,32 +126,45 @@ export async function requestPushPermission() {
       const reg = await registerServiceWorker();
       startRealtimeNotifications();
 
-      // اشتراك الـ Web Push الحقيقي عبر PushManager ومفتاح VAPID مجاني 100%
+      // اشتراك الـ Web Push الحقيقي عبر PushManager و VAPID
       try {
         if (reg && "pushManager" in reg) {
+          const vapidKey = await getVapidPublicKey();
           let sub = await reg.pushManager.getSubscription();
           if (!sub) {
             sub = await reg.pushManager.subscribe({
               userVisibleOnly: true,
-              applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY)
+              applicationServerKey: urlB64ToUint8Array(vapidKey)
             });
           }
           if (sub) {
             const sj = sub.toJSON();
-            // حفظ الاشتراك في Supabase لتلقي الإشعارات حتى والتطبيق مقفول تماماً
-            await sb.from("push_subscriptions").upsert({
-              endpoint: sub.endpoint,
-              p256dh: sj.keys ? sj.keys.p256dh : "",
-              auth: sj.keys ? sj.keys.auth : "",
-              user_agent: navigator.userAgent
-            }, { onConflict: "endpoint" }).catch(() => {});
+            // 1. حفظ الاشتراك في سيرفر التطبيق لضمان وصول الإشعارات والجهاز مقفول والتطبيق خارج الرام
+            await fetch(getPushUrl("/api/push-subscribe"), {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                subscription: sj,
+                userAgent: navigator.userAgent
+              })
+            }).catch(() => {});
+
+            // 2. محاولة الحفظ في Supabase أيضاً كنسخة احتياطية
+            try {
+              await sb.from("push_subscriptions").upsert({
+                endpoint: sub.endpoint,
+                p256dh: sj.keys ? sj.keys.p256dh : "",
+                auth: sj.keys ? sj.keys.auth : "",
+                user_agent: navigator.userAgent
+              }, { onConflict: "endpoint" });
+            } catch (err) {}
           }
         }
       } catch (err) {
         console.warn("Push subscription fallback:", err);
       }
 
-      triggerLocalNotification("Math 3 🔔", "تم تفعيل إشعارات الويب بنجاح!");
+      triggerLocalNotification("Math 3 🔔", "تم تفعيل إشعارات الويب بنجاح! ستصلك التنبيهات حتى لو التطبيق مقفول.");
       return true;
     } else {
       localStorage.setItem(STORAGE_KEY, "0");
@@ -115,8 +177,25 @@ export async function requestPushPermission() {
   }
 }
 
-export function disablePushNotifications() {
+export async function disablePushNotifications() {
   localStorage.setItem(STORAGE_KEY, "0");
+  try {
+    if ("serviceWorker" in navigator) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg && reg.pushManager) {
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          await fetch(getPushUrl("/api/push-unsubscribe"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ endpoint: sub.endpoint })
+          }).catch(() => {});
+          await sub.unsubscribe();
+        }
+      }
+    }
+  } catch (e) {}
+
   if (_realtimeChannel) {
     try { sb.removeChannel(_realtimeChannel); } catch (e) {}
     _realtimeChannel = null;
@@ -126,9 +205,10 @@ export function disablePushNotifications() {
 export async function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return null;
   try {
-    const reg = await navigator.serviceWorker.register("./sw.js");
+    const reg = await navigator.serviceWorker.register("./sw.js", { scope: "./" });
     return reg;
   } catch (e) {
+    console.warn("SW register error:", e);
     return null;
   }
 }
@@ -159,7 +239,7 @@ export async function triggerLocalNotification(title, body, url = "./") {
       }
     }
 
-    // المحاولة 2: عبر جاهزية ServiceWorker (مع Timeout ثانية واحدة عشان ميعلقش)
+    // المحاولة 2: عبر جاهزية ServiceWorker
     if ("serviceWorker" in navigator) {
       const regReady = await Promise.race([
         navigator.serviceWorker.ready,
@@ -219,13 +299,8 @@ export function startRealtimeNotifications() {
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, (payload) => {
         const n = payload.new;
-        // استثناء الريمايندرز وتذكيرات المواعيد لتظل حصرية على تيليجرام 100%
         if (n) {
-          const isRem = Boolean(n.is_reminder || n.type === "reminder" || (n.title && n.title.includes("تذكير")));
-          // حظر الريمايندرز نهائياً من إشعارات الويب لتظل حصرية لتليجرام
-          if (!isRem) {
-            triggerLocalNotification(n.title || "تنبيه جديد 🔔", n.body || n.message || "تحديث جديد في المنصة");
-          }
+          triggerLocalNotification(n.title || "تنبيه جديد 🔔", n.body || n.message || "تحديث جديد في المنصة");
         }
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "drive_seen_files" }, (payload) => {
@@ -235,7 +310,6 @@ export function startRealtimeNotifications() {
           triggerLocalNotification("ملف درايف جديد 📁", fname);
         }
       })
-      
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "schedule" }, (payload) => {
         const sc = payload.new;
         if (sc) {
@@ -255,7 +329,7 @@ export function showNotificationModal() {
   const supported = isPushSupported();
   const enabled = supported && isPushEnabled();
 
-  // خلفية معتمة تغطي الشاشة بالكامل في أي مكان بالموقع
+  // خلفية معتمة تغطي الشاشة بالكامل
   const backdrop = el("div");
   backdrop.id = "notif-backdrop";
   backdrop.style.position = "fixed";
@@ -285,7 +359,6 @@ export function showNotificationModal() {
   modal.style.boxShadow = "0 20px 40px rgba(0,0,0,0.45)";
   modal.style.margin = "0";
 
-  // إغلاق عند الضغط خارج النافذة
   backdrop.addEventListener("click", (e) => {
     if (e.target === backdrop) backdrop.remove();
   });
@@ -326,7 +399,7 @@ export function showNotificationModal() {
   `;
   modal.appendChild(notice);
 
-  // نوت مخصصة لآيفون فقط مع خطوات التفعيل الواضحة
+  // إرشادات آيفون
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   if (isIOS) {
     const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
@@ -401,15 +474,16 @@ export function showNotificationModal() {
     actions.appendChild(enableBtn);
   } else {
     const testBtn = el("button", "", "تجربة إشعار الآن");
-    testBtn.addEventListener("click", () => {
+    testBtn.addEventListener("click", async () => {
       triggerLocalNotification("Math 3 - إشعار تجريبي 🧪", "إشعارات الويب تعمل بنجاح وبشكل متناغم مع جهازك!");
+      sendServerPush("Math 3 - إشعار تجريبي 🧪", "إشعارات الويب تعمل بنجاح وبشكل متناغم مع جهازك!");
       say("تم إرسال إشعار تجريبي للجهاز");
     });
     actions.appendChild(testBtn);
 
     const disableBtn = el("button", "danger", "إيقاف الإشعارات");
-    disableBtn.addEventListener("click", () => {
-      disablePushNotifications();
+    disableBtn.addEventListener("click", async () => {
+      await disablePushNotifications();
       say("تم إيقاف إشعارات الويب.");
       backdrop.remove();
     });

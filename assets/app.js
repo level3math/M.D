@@ -802,20 +802,55 @@ function buildForm(sec, it) {
     url.value = it && it.url ? it.url : "";
     c.appendChild(field("الرابط", url));
   }
+  let dateInput = null, timeInput = null;
   if (sec.kind === "tasks") {
     hasTime = it ? it.deadline_has_time !== false : true;
-    dl = el("input");
-    dl.type = hasTime ? "datetime-local" : "date";
+    const dlWrap = el("div");
+    dlWrap.style.display = "flex";
+    dlWrap.style.flexDirection = "column";
+    dlWrap.style.gap = "8px";
+
+    const dlRow = el("div", "row");
+    dlRow.style.gap = "8px";
+    dlRow.style.alignItems = "center";
+
+    dateInput = el("input");
+    dateInput.type = "date";
+    dateInput.style.flex = "1";
+
+    timeInput = el("input");
+    timeInput.type = "time";
+    timeInput.style.width = "130px";
+    timeInput.style.display = hasTime ? "block" : "none";
+
     if (it && it.deadline) {
-      dl.value = hasTime ? toLocalInput(it.deadline) : toLocalInput(it.deadline).slice(0, 10);
+      const loc = toLocalInput(it.deadline);
+      if (loc) {
+        dateInput.value = loc.slice(0, 10);
+        timeInput.value = loc.slice(11, 16) || "23:59";
+      }
     }
-    c.appendChild(field("معاد التسليم (اختياري - اتركه فارغاً إذا لم يحدد موعد)", dl));
-    c.appendChild(check("تحديد ساعة معاد التسليم", hasTime, (v) => {
+
+    const clearDlBtn = el("button", "small", "مسح الموعد");
+    clearDlBtn.type = "button";
+    clearDlBtn.addEventListener("click", () => {
+      dateInput.value = "";
+      timeInput.value = "";
+    });
+
+    dlRow.appendChild(dateInput);
+    dlRow.appendChild(timeInput);
+    dlRow.appendChild(clearDlBtn);
+    dlWrap.appendChild(dlRow);
+
+    const timeCheck = check("تحديد ساعة معينة لمعاد التسليم", hasTime, (v) => {
       hasTime = v;
-      const cur = dl.value;
-      dl.type = hasTime ? "datetime-local" : "date";
-      dl.value = cur ? (hasTime ? (cur.length === 10 ? cur + "T23:59" : cur) : cur.slice(0, 10)) : "";
-    }));
+      timeInput.style.display = hasTime ? "block" : "none";
+      if (hasTime && !timeInput.value) timeInput.value = "23:59";
+    });
+    dlWrap.appendChild(timeCheck);
+
+    c.appendChild(field("معاد التسليم (اختياري - اتركه فارغاً إذا لم يحدد موعد)", dlWrap));
   }
   let attFile = null, removeAtt = false;
   if (sec.kind !== "links") {
@@ -849,11 +884,16 @@ function buildForm(sec, it) {
     if (!data.title) { say("العنوان مطلوب"); return; }
     if (sec.kind !== "news" && sec.kind !== "newsletter" && sec.kind !== "custom" && !csel.value) { say("المادة مطلوبة"); return; }
     if (csel) data.course_id = csel.value ? Number(csel.value) : null;
-    if (dl) {
-      data.deadline = dl.value
-        ? localToISO(hasTime ? dl.value : dl.value + "T23:59")
-        : null;
-      data.deadline_has_time = hasTime;
+    if (sec.kind === "tasks" && dateInput) {
+      if (dateInput.value && dateInput.value.trim()) {
+        const dVal = dateInput.value.trim();
+        const tVal = (hasTime && timeInput && timeInput.value.trim()) ? timeInput.value.trim() : "23:59";
+        data.deadline = localToISO(`${dVal}T${tVal}`);
+        data.deadline_has_time = Boolean(hasTime && timeInput && timeInput.value.trim());
+      } else {
+        data.deadline = null;
+        data.deadline_has_time = null;
+      }
     }
     if (url) {
       const u = safeUrl(url.value.trim());
@@ -1756,11 +1796,10 @@ function renderDashboard() {
     let subtitleHtml = "";
     if (streakInfo.isAlive) {
       subtitleHtml = `<div style="font-size:12.5px; opacity:0.8; margin-top:2px;">نسبة إنجازك: <strong style="color:var(--accent);">${avgScore}%</strong> · الاستريك: <strong style="color:#f59e0b;">${streakInfo.count} ${streakInfo.count === 1 ? "يوم" : "أيام"} 🔥</strong></div>`;
+    } else if (streakInfo.consecutiveDays === 1) {
+      subtitleHtml = `<div style="font-size:12.5px; opacity:0.8; margin-top:2px;">نسبة إنجازك: <strong style="color:var(--accent);">${avgScore}%</strong> · الاستريك: <span style="color:var(--accent); font-weight:bold;">يوم 1 من 2 ⚡ (ذاكر غداً لإشعال الستريك)</span></div>`;
     } else {
-      subtitleHtml = `<div style="font-size:12.5px; opacity:0.8; margin-top:2px;">نسبة إنجازك: <strong style="color:var(--accent);">${avgScore}%</strong> · الاستريك: <span style="opacity:0.65;">مطفأ 💤 (ابدأ جلسة اليوم)</span></div>`;
-    }
-    if (avgScore === 0 && !streakInfo.isAlive) {
-      subtitleHtml = `<div style="font-size:12.5px; opacity:0.8; margin-top:2px;">ابدأ رحلتك: اضغط بومودورو وسجّل أول إنجاز اليوم لإشعال الاستريك 🚀</div>`;
+      subtitleHtml = `<div style="font-size:12.5px; opacity:0.8; margin-top:2px;">نسبة إنجازك: <strong style="color:var(--accent);">${avgScore}%</strong> · الاستريك: <span style="opacity:0.65;">مطفأ 💤 (يتطلب يومين متتاليين لإشعاله)</span></div>`;
     }
     bLeft.innerHTML = `<div style="font-size:16px; font-weight:bold; color:var(--ink);">تراك المذاكرة والإنجاز 📚</div>` + subtitleHtml;
     banner.appendChild(bLeft);

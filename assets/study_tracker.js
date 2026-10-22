@@ -89,60 +89,102 @@ export function calculateCourseReadiness(courseData) {
   return { overall, studyPct, revisePct, solvePct, closedMistakesPct, weakestTitle, minScore, count: total };
 }
 
-// حساب الاستريك الحقيقي بدقة (الأيام المتتالية الفعلية)
+// دالة استخراج التاريخ بتوقيت القاهرة
+export function getCairoDayStr(d = new Date()) {
+  try {
+    const p = {};
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "Africa/Cairo",
+      year: "numeric", month: "2-digit", day: "2-digit"
+    }).formatToParts(d).forEach(x => { p[x.type] = x.value; });
+    return `${p.year}-${p.month}-${p.day}`;
+  } catch (e) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+}
+
+// حساب الاستريك الحقيقي بدقة:
+// لا يبدأ الاستريك من يوم واحد؛ يجب أن يكتمل يومين متتاليين ليشتعل الستريك
+// في اليوم الثالث وما بعده يزيد، وإذا لم يذاكر ينطفئ تماماً (0)، ثم يحتاج يومين متتاليين من بعد الانطفاء ليشتعل مجدداً
 export function calculateRealStreak(data) {
   const sessions = (data && data.sessions) || [];
   const uniqueDays = new Set();
   sessions.forEach((s) => {
-    if (s.date && s.minutes > 0) {
+    if (s.date && Number(s.minutes) > 0) {
       const d = String(s.date).split("T")[0];
       uniqueDays.add(d);
     }
   });
 
   if (!uniqueDays.size) {
-    return { count: 0, isActiveToday: false, isAlive: false };
+    return { count: 0, consecutiveDays: 0, isAlive: false, isActiveToday: false, statusText: "الستريك مطفأ 💤 · ذاكر يومين متتاليين لإشعاله" };
   }
 
-  const getDayStr = (d) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  };
-
-  const today = new Date();
-  const todayStr = getDayStr(today);
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = getDayStr(yesterday);
+  const now = new Date();
+  const todayStr = getCairoDayStr(now);
+  const yesterday = new Date(now.getTime() - 86400000);
+  const yesterdayStr = getCairoDayStr(yesterday);
 
   const studiedToday = uniqueDays.has(todayStr);
   const studiedYesterday = uniqueDays.has(yesterdayStr);
 
   // إذا لم يذاكر اليوم ولا أمس، ينطفئ الاستريك فوراً (0) واللاين يختفي
   if (!studiedToday && !studiedYesterday) {
-    return { count: 0, isActiveToday: false, isAlive: false };
+    return {
+      count: 0,
+      consecutiveDays: 0,
+      isAlive: false,
+      isActiveToday: false,
+      statusText: "الستريك مطفأ 💤 · ذاكر يومين متتاليين لإشعاله"
+    };
   }
 
   // عد الأيام المتتالية إلى الوراء
-  let count = 0;
-  let check = new Date(studiedToday ? today : yesterday);
+  let consecutiveDays = 0;
+  let check = new Date(studiedToday ? now : yesterday);
 
   while (true) {
-    const s = getDayStr(check);
+    const s = getCairoDayStr(check);
     if (uniqueDays.has(s)) {
-      count++;
-      check.setDate(check.getDate() - 1);
+      consecutiveDays++;
+      check = new Date(check.getTime() - 86400000);
     } else {
       break;
     }
   }
 
+  // الستريك لا يبدأ من يوم واحد:
+  // - يوم 1: مرحلة تجهيز (1 من 2)
+  // - يوم 2: يشتعل الستريك رسميّاً (2 أيام)
+  // - يوم 3: يزيد إلى 3 وهكذا
+  // - إذا لم يذاكر ينطفئ (طفى)، ويحتاج يومين من بعد الانطفاء ليبدأ مجدداً
+  const isAlive = consecutiveDays >= 2;
+  const count = isAlive ? consecutiveDays : 0;
+
+  let statusText = "";
+  if (!isAlive) {
+    if (consecutiveDays === 1) {
+      statusText = studiedToday
+        ? "أنجزت اليوم الأول ⚡ ذاكر غداً أيضاً لإشعال الستريك! (1 من 2)"
+        : "أنجزت أمس · ذاكر اليوم لتصل لليوم الثاني ويشتعل الستريك 🔥";
+    } else {
+      statusText = "الستريك مطفأ 💤 · ذاكر يومين متتاليين لإشعاله";
+    }
+  } else {
+    statusText = studiedToday
+      ? `الستريك مشتعل (${count} أيام متتالية) 🔥 ذاكرت اليوم ✅`
+      : `الستريك حيّ (${count} أيام) 🔥 ذاكر اليوم للحفاظ عليه وزيادته!`;
+  }
+
   return {
     count,
+    consecutiveDays,
+    isAlive,
     isActiveToday: studiedToday,
-    isAlive: count > 0
+    statusText
   };
 }
 
@@ -377,24 +419,31 @@ export function renderStudyTracker(container, onBack, initialTab = "readiness") 
       streakCountHtml = `<div style="font-size:30px; font-weight:bold; color:#f59e0b; display:flex; align-items:center; justify-content:center; gap:6px;">
         <span>${streakInfo.count}</span> <span style="font-size:24px;">🔥</span>
       </div>`;
-      // اللاين المضيء يظهر فقط عندما يكون الاستريك شغالاً
+      // اللاين المضيء يظهر فقط عندما يكون الاستريك شغالاً (من يومين فما فوق)
       streakLineHtml = `<div style="width:100%; height:4px; background:linear-gradient(90deg, #f59e0b, #ea580c); border-radius:4px; margin:8px 0 6px 0; box-shadow:0 0 10px rgba(245,158,11,0.5);"></div>`;
       streakDesc = streakInfo.isActiveToday 
-        ? "ستريك مشتعل! ذاكرت اليوم ✅" 
-        : "الستريك حيّ · ذاكر اليوم للحفاظ عليه ⏳";
+        ? `ستريك مشتعل (${streakInfo.count} أيام متتالية) 🔥 ذاكرت اليوم ✅` 
+        : `الستريك حيّ (${streakInfo.count} أيام) · ذاكر اليوم للحفاظ عليه ⏳`;
+    } else if (streakInfo.consecutiveDays === 1) {
+      streakCountHtml = `<div style="font-size:26px; font-weight:bold; color:var(--accent); display:flex; align-items:center; justify-content:center; gap:6px;">
+        <span>1 / 2</span> <span style="font-size:20px;">⚡</span>
+      </div>`;
+      streakLineHtml = `<div style="width:50%; height:3px; background:var(--accent); border-radius:3px; margin:8px auto 6px auto; opacity:0.8;"></div>`;
+      streakDesc = streakInfo.isActiveToday
+        ? "أنجزت اليوم الأول! ذاكر غداً أيضاً لإشعال الستريك 🔥 (1 من 2)"
+        : "أنجزت أمس · ذاكر اليوم لتكمل اليوم الثاني ويشتعل الستريك!";
     } else {
       streakCountHtml = `<div style="font-size:30px; font-weight:bold; color:var(--ink); opacity:0.35; display:flex; align-items:center; justify-content:center; gap:6px;">
         <span>0</span> <span style="font-size:20px;">💤</span>
       </div>`;
-      // اللاين ميبقاش موجود تماماً
       streakLineHtml = "";
-      streakDesc = "الستريك مطفأ · ابدأ جلسة لإشعاله ⚡";
+      streakDesc = "الستريك مطفأ · يتطلب يومين متتاليين لإشعاله ⚡";
     }
 
     cardStreak.innerHTML = `
       ${streakCountHtml}
       ${streakLineHtml}
-      <div style="font-size:12px; font-weight:bold; color:var(--ink); margin-top:${streakInfo.isAlive ? '0' : '8px'};">ستريك المذاكرة</div>
+      <div style="font-size:12px; font-weight:bold; color:var(--ink); margin-top:${streakInfo.isAlive || streakInfo.consecutiveDays === 1 ? '0' : '8px'};">ستريك المذاكرة</div>
       <div style="font-size:10.5px; opacity:0.75; margin-top:2px;">${streakDesc}</div>
     `;
     statsGrid.appendChild(cardStreak);
@@ -690,11 +739,24 @@ export function renderStudyTracker(container, onBack, initialTab = "readiness") 
         delBtn.style.padding = "4px 8px";
         delBtn.title = "حذف هذا العنصر";
         delBtn.addEventListener("click", () => {
-          openConfirmModal("حذف العنصر", `هل تريد حذف "${it.title}"؟`, () => {
+          openConfirmModal("حذف العنصر", `هل تريد حذف "${it.title}"؟ سيتم حذفها وإلغاء أي جلسات مسجلة لها من خريطة الإنجاز والاستريك.`, () => {
             const d = getTrackerData();
             if (d.courses[courseName] && d.courses[courseName].items) {
+              const targetItem = d.courses[courseName].items[index];
               d.courses[courseName].items.splice(index, 1);
+
+              // إزالة كافة الجلسات المرتبطة بهذه المحاضرة من الخريطة والاستريك
+              if (targetItem) {
+                d.sessions = (d.sessions || []).filter(s => {
+                  if (s.itemId && targetItem.id && s.itemId === targetItem.id) return false;
+                  if (s.courseName === courseName && s.lectureTitle === targetItem.title) return false;
+                  return true;
+                });
+              }
+
+              d.streak = calculateRealStreak(d).count;
               saveTrackerData(d);
+              say("تم حذف المحاضرة وتحديث خريطة الإنجاز والاستريك.");
               renderActiveTab();
             }
           });
@@ -859,7 +921,7 @@ export function renderStudyTracker(container, onBack, initialTab = "readiness") 
       for (let d = 0; d < 7; d++) {
         const targetDate = new Date();
         targetDate.setDate(targetDate.getDate() - (w * 7 + (6 - d)));
-        const iso = targetDate.toISOString().split("T")[0];
+        const iso = getCairoDayStr(targetDate);
         const mins = dayMap[iso] || 0;
 
         let bg = "rgba(128, 128, 128, 0.15)";
@@ -900,7 +962,7 @@ export function renderStudyTracker(container, onBack, initialTab = "readiness") 
     heatmapCard.appendChild(gridContainer);
     box.appendChild(heatmapCard);
 
-    // سجل الجلسات المنجزة
+    // سجل الجلسات المنجزة مع إمكانية حذف أي جلسة لإلغائها من الخريطة والاستريك
     const recentsCard = el("div", "card");
     recentsCard.style.margin = "0 0 16px 0";
     recentsCard.style.padding = "16px";
@@ -912,7 +974,7 @@ export function renderStudyTracker(container, onBack, initialTab = "readiness") 
     if (!sessions.length) {
       recentsCard.appendChild(el("p", "meta", "لا توجد جلسات بعد. ابدأ جلستك الأولى الآن!"));
     } else {
-      const recentList = [...sessions].reverse().slice(0, 5);
+      const recentList = [...sessions].reverse().slice(0, 10);
       recentList.forEach((s) => {
         const item = el("div");
         item.style.display = "flex";
@@ -921,8 +983,40 @@ export function renderStudyTracker(container, onBack, initialTab = "readiness") 
         item.style.padding = "8px 0";
         item.style.borderBottom = "1px solid var(--line)";
         item.style.fontSize = "13px";
-        item.innerHTML = `<div><strong>${s.courseName}</strong> ˙ ${s.lectureTitle || `محاضرة 1`}</div>
-          <div style="opacity:0.8; font-weight:bold; color:var(--accent);">${s.minutes} دقيقة</div>`;
+
+        const info = el("div");
+        info.innerHTML = `<div><strong>${s.courseName}</strong> · ${s.lectureTitle || "محاضرة"}</div>
+          <div style="font-size:11px; opacity:0.65; margin-top:2px;">${s.date} · ${s.minutes} دقيقة</div>`;
+        item.appendChild(info);
+
+        const actions = el("div");
+        actions.style.display = "flex";
+        actions.style.alignItems = "center";
+        actions.style.gap = "8px";
+
+        const durBadge = el("span", "", `${s.minutes} د`);
+        durBadge.style.fontWeight = "bold";
+        durBadge.style.color = "var(--accent)";
+        actions.appendChild(durBadge);
+
+        const delSessBtn = el("button", "small", "🗑️");
+        delSessBtn.title = "حذف هذه الجلسة وإلغاء تسجيلها من الخريطة والاستريك";
+        delSessBtn.style.color = "#f87171";
+        delSessBtn.style.padding = "2px 8px";
+        delSessBtn.style.fontSize = "12px";
+        delSessBtn.addEventListener("click", () => {
+          openConfirmModal("حذف الجلسة", `هل تريد حذف جلسة "${s.lectureTitle || s.courseName}" بتاريخ ${s.date}؟ سيتم خصمها من الخريطة وتحديث الاستريك فوراً.`, () => {
+            const d = getTrackerData();
+            d.sessions = (d.sessions || []).filter(x => x.id !== s.id);
+            d.streak = calculateRealStreak(d).count;
+            saveTrackerData(d);
+            say("تم حذف الجلسة وتحديث خريطة الإنجاز والاستريك.");
+            renderActiveTab();
+          });
+        });
+        actions.appendChild(delSessBtn);
+
+        item.appendChild(actions);
         recentsCard.appendChild(item);
       });
     }
@@ -1311,24 +1405,13 @@ export function renderStudyTracker(container, onBack, initialTab = "readiness") 
       if (isNaturalEnd) playPomodoroChime();
 
       const tData = getTrackerData();
-      const todayIso = new Date().toISOString().split("T")[0];
-
-      tData.sessions.push({
-        id: "sess-" + Date.now(),
-        date: todayIso,
-        courseName: pomodoroState.selectedCourse,
-        lectureTitle: pomodoroState.selectedItemTitle || "محاضرة 1",
-        minutes: elapsedMins,
-        study: pomodoroState.checkedStudy,
-        revise: pomodoroState.checkedRevise,
-        solve: pomodoroState.checkedSolve,
-        notes: pomodoroState.notes
-      });
+      const todayIso = getCairoDayStr(new Date());
 
       const crs = tData.courses[pomodoroState.selectedCourse];
+      let targetItem = null;
       if (crs) {
         if (!crs.items) crs.items = [];
-        let targetItem = crs.items.find((l) => l.title === pomodoroState.selectedItemTitle);
+        targetItem = crs.items.find((l) => l.title === pomodoroState.selectedItemTitle);
         if (!targetItem) {
           targetItem = {
             id: "it-" + Date.now(),
@@ -1347,6 +1430,19 @@ export function renderStudyTracker(container, onBack, initialTab = "readiness") 
           if (pomodoroState.notes) targetItem.notes = pomodoroState.notes;
         }
       }
+
+      tData.sessions.push({
+        id: "sess-" + Date.now(),
+        itemId: targetItem ? targetItem.id : ("it-" + Date.now()),
+        date: todayIso,
+        courseName: pomodoroState.selectedCourse,
+        lectureTitle: pomodoroState.selectedItemTitle || "محاضرة 1",
+        minutes: elapsedMins,
+        study: pomodoroState.checkedStudy,
+        revise: pomodoroState.checkedRevise,
+        solve: pomodoroState.checkedSolve,
+        notes: pomodoroState.notes
+      });
 
       tData.lastActiveDate = todayIso;
       tData.streak = calculateRealStreak(tData).count;
@@ -1449,18 +1545,59 @@ export function renderStudyTracker(container, onBack, initialTab = "readiness") 
     const saveBtn = el("button", "btn-primary", "حفظ الإنجاز");
     saveBtn.style.flex = "1";
     saveBtn.addEventListener("click", () => {
-      // تعديل الحفظ ليحدث مباشرة على كائن التخزين الفعلي دون فقدان
       const d = getTrackerData();
+      const todayIso = getCairoDayStr(new Date());
+
       if (d.courses[courseName] && d.courses[courseName].items) {
         const target = d.courses[courseName].items.find(x => x.id === item.id || x.title === item.title);
         if (target) {
-          target.study = vals.study;
-          target.revise = vals.revise;
-          target.solve = vals.solve;
-          target.closedMistakes = vals.closedMistakes;
+          target.study = Boolean(vals.study);
+          target.revise = Boolean(vals.revise);
+          target.solve = Boolean(vals.solve);
+          target.closedMistakes = Boolean(vals.closedMistakes);
           target.notes = noteInp.value;
         }
       }
+
+      if (!d.sessions) d.sessions = [];
+      const hasAnyDone = Boolean(vals.study || vals.revise || vals.solve || vals.closedMistakes);
+
+      if (!hasAnyDone) {
+        // تم إلغاء الإنجاز بالكامل: حذف أي جلسة تخص هذا العنصر في اليوم الحالي حتى يلغى الاستريك إذا لم يبق شيء لليوم
+        d.sessions = d.sessions.filter(s => {
+          if (s.itemId && item.id && s.itemId === item.id && s.date === todayIso) return false;
+          if (s.courseName === courseName && s.lectureTitle === item.title && s.date === todayIso) return false;
+          return true;
+        });
+      } else {
+        // تأكيد وجود جلسة لليوم في خريطة الإنجاز
+        let existingSess = d.sessions.find(s => 
+          (s.itemId && item.id && s.itemId === item.id && s.date === todayIso) ||
+          (s.courseName === courseName && s.lectureTitle === item.title && s.date === todayIso)
+        );
+        if (!existingSess) {
+          d.sessions.push({
+            id: "sess-" + Date.now(),
+            itemId: item.id,
+            date: todayIso,
+            courseName,
+            lectureTitle: item.title,
+            minutes: 30,
+            study: vals.study,
+            revise: vals.revise,
+            solve: vals.solve,
+            closedMistakes: vals.closedMistakes,
+            notes: noteInp.value || ""
+          });
+        } else {
+          existingSess.study = vals.study;
+          existingSess.revise = vals.revise;
+          existingSess.solve = vals.solve;
+          existingSess.closedMistakes = vals.closedMistakes;
+        }
+      }
+
+      d.streak = calculateRealStreak(d).count;
       saveTrackerData(d);
       backdrop.remove();
       if (onSave) onSave();

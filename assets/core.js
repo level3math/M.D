@@ -45,17 +45,54 @@ function tzOffset(ms) {
     - Math.floor(ms / 1000) * 1000;
 }
 function localToISO(v) {
-  const [d, t] = v.split("T");
-  const [y, m, da] = d.split("-").map(Number);
-  const [h, mi] = t.split(":").map(Number);
+  if (!v) return null;
+  v = String(v).trim();
+  if (!v) return null;
+
+  let d = "", t = "23:59";
+  if (v.includes("T")) {
+    const parts = v.split("T");
+    d = parts[0];
+    t = parts[1] || "23:59";
+  } else if (v.includes(" ")) {
+    const parts = v.split(" ");
+    d = parts[0];
+    t = parts[1] || "23:59";
+  } else {
+    d = v;
+    t = "23:59";
+  }
+
+  const dateParts = d.split("-").map(Number);
+  if (dateParts.length < 3 || dateParts.some(isNaN)) {
+    try {
+      const parsed = new Date(v);
+      return isNaN(parsed.getTime()) ? null : parsed.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  const [y, m, da] = dateParts;
+  const timeParts = t.split(":").map(Number);
+  const h = isNaN(timeParts[0]) ? 23 : timeParts[0];
+  const mi = isNaN(timeParts[1]) ? 59 : timeParts[1];
+
   const base = Date.UTC(y, m - 1, da, h, mi);
   let ms = base - tzOffset(base);
   ms = base - tzOffset(ms);
   return new Date(ms).toISOString();
 }
 function toLocalInput(iso) {
-  const ms = new Date(iso).getTime();
-  return new Date(ms + tzOffset(ms)).toISOString().slice(0, 16);
+  if (!iso) return "";
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    const ms = d.getTime();
+    return new Date(ms + tzOffset(ms)).toISOString().slice(0, 16);
+  } catch (e) {
+    return "";
+  }
 }
 function safeUrl(u) {
   try {
