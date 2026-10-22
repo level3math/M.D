@@ -216,15 +216,19 @@ async function startServer() {
 
   // 6. Direct zip download endpoint
   const downloadHandler = (req: Request, res: Response) => {
-    const zipPath = path.join(__dirname, 'public', 'math3_updated_deploy.zip');
+    let zipPath = path.join(__dirname, 'public', 'deploy.zip');
+    if (!fs.existsSync(zipPath)) {
+      zipPath = path.join(__dirname, 'public', 'math3_updated_deploy.zip');
+    }
     if (fs.existsSync(zipPath)) {
-      res.download(zipPath, 'math3_updated_deploy.zip');
+      res.download(zipPath, 'deploy.zip');
     } else {
       res.status(404).send('Deploy file not found');
     }
   };
   app.get('/download', downloadHandler);
   app.get('/download-zip', downloadHandler);
+  app.get('/deploy.zip', downloadHandler);
   app.get('/math3_updated_deploy.zip', downloadHandler);
 
   // Setup Vite in middleware mode for hot development

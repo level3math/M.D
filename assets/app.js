@@ -737,7 +737,11 @@ function buildPersonalForm(p) {
       ? await sb.from("personal_items").update({ ...data, updated_at: new Date().toISOString() }).eq("id", p.id)
       : await sb.from("personal_items").insert({ ...data, user_id: state.userId });
     ok.disabled = false;
-    if (error) { say("تعذّر الحفظ"); return; }
+    if (error) {
+      console.error("Save personal item error:", error);
+      say("تعذّر الحفظ: " + (error.message || ""));
+      return;
+    }
     state.pform = null;
     say("تم الحفظ");
     await loadData();
@@ -802,55 +806,20 @@ function buildForm(sec, it) {
     url.value = it && it.url ? it.url : "";
     c.appendChild(field("الرابط", url));
   }
-  let dateInput = null, timeInput = null;
   if (sec.kind === "tasks") {
     hasTime = it ? it.deadline_has_time !== false : true;
-    const dlWrap = el("div");
-    dlWrap.style.display = "flex";
-    dlWrap.style.flexDirection = "column";
-    dlWrap.style.gap = "8px";
-
-    const dlRow = el("div", "row");
-    dlRow.style.gap = "8px";
-    dlRow.style.alignItems = "center";
-
-    dateInput = el("input");
-    dateInput.type = "date";
-    dateInput.style.flex = "1";
-
-    timeInput = el("input");
-    timeInput.type = "time";
-    timeInput.style.width = "130px";
-    timeInput.style.display = hasTime ? "block" : "none";
-
+    dl = el("input");
+    dl.type = hasTime ? "datetime-local" : "date";
     if (it && it.deadline) {
-      const loc = toLocalInput(it.deadline);
-      if (loc) {
-        dateInput.value = loc.slice(0, 10);
-        timeInput.value = loc.slice(11, 16) || "23:59";
-      }
+      dl.value = hasTime ? toLocalInput(it.deadline) : toLocalInput(it.deadline).slice(0, 10);
     }
-
-    const clearDlBtn = el("button", "small", "مسح الموعد");
-    clearDlBtn.type = "button";
-    clearDlBtn.addEventListener("click", () => {
-      dateInput.value = "";
-      timeInput.value = "";
-    });
-
-    dlRow.appendChild(dateInput);
-    dlRow.appendChild(timeInput);
-    dlRow.appendChild(clearDlBtn);
-    dlWrap.appendChild(dlRow);
-
-    const timeCheck = check("تحديد ساعة معينة لمعاد التسليم", hasTime, (v) => {
+    c.appendChild(field("معاد التسليم (اختياري - اتركه فارغاً إذا لم يحدد موعد)", dl));
+    c.appendChild(check("تحديد ساعة معاد التسليم", hasTime, (v) => {
       hasTime = v;
-      timeInput.style.display = hasTime ? "block" : "none";
-      if (hasTime && !timeInput.value) timeInput.value = "23:59";
-    });
-    dlWrap.appendChild(timeCheck);
-
-    c.appendChild(field("معاد التسليم (اختياري - اتركه فارغاً إذا لم يحدد موعد)", dlWrap));
+      const cur = dl.value;
+      dl.type = hasTime ? "datetime-local" : "date";
+      dl.value = cur ? (hasTime ? (cur.length === 10 ? cur + "T23:59" : cur) : cur.slice(0, 10)) : "";
+    }));
   }
   let attFile = null, removeAtt = false;
   if (sec.kind !== "links") {
@@ -884,15 +853,14 @@ function buildForm(sec, it) {
     if (!data.title) { say("العنوان مطلوب"); return; }
     if (sec.kind !== "news" && sec.kind !== "newsletter" && sec.kind !== "custom" && !csel.value) { say("المادة مطلوبة"); return; }
     if (csel) data.course_id = csel.value ? Number(csel.value) : null;
-    if (sec.kind === "tasks" && dateInput) {
-      if (dateInput.value && dateInput.value.trim()) {
-        const dVal = dateInput.value.trim();
-        const tVal = (hasTime && timeInput && timeInput.value.trim()) ? timeInput.value.trim() : "23:59";
-        data.deadline = localToISO(`${dVal}T${tVal}`);
-        data.deadline_has_time = Boolean(hasTime && timeInput && timeInput.value.trim());
+    if (sec.kind === "tasks" && dl) {
+      const dlVal = dl.value ? dl.value.trim() : "";
+      if (dlVal) {
+        data.deadline = localToISO(hasTime ? (dlVal.length === 10 ? dlVal + "T23:59" : dlVal) : dlVal + "T23:59");
+        data.deadline_has_time = Boolean(hasTime);
       } else {
         data.deadline = null;
-        data.deadline_has_time = null;
+        data.deadline_has_time = Boolean(hasTime);
       }
     }
     if (url) {
@@ -930,7 +898,14 @@ function buildForm(sec, it) {
       ? await sb.from("items").update(data).eq("id", it.id)
       : await sb.from("items").insert({ ...data, section_id: sec.id });
     ok.disabled = false;
-    if (error) { say("تعذّر الحفظ"); return; }
+    if (error) {
+      console.error("Save item error:", error);
+      say("تعذّر الحفظ: " + (error.message || ""));
+      return;
+    }
+    if (!it) {
+      try { broadcastNewItem(data.title, data.course_id); } catch (e) { console.warn("broadcast error:", e); }
+    }
     if (oldPath && (attFile || linkVal || removeAtt)) await removeAttachmentFiles([oldPath]);
     state.form = null;
     say("تم الحفظ");
@@ -1766,6 +1741,67 @@ function renderDashboard() {
   const box = $("dashboard");
   if (!box) return;
   box.replaceChildren();
+
+  // بطاقة تحميل ملف الـ ZIP مباشرة بنقرة واحدة داخل المعاينة بدون مشاكل الروابط الخارجية
+  try {
+    const isPreviewEnv = (function() {
+      const h = window.location.hostname;
+      return h.includes("run.app") || h === "localhost" || h === "127.0.0.1";
+    })();
+
+    if (isPreviewEnv) {
+      const dlCard = el("div", "card");
+      dlCard.style.margin = "0 0 16px 0";
+      dlCard.style.padding = "16px";
+      dlCard.style.background = "linear-gradient(135deg, rgba(15,118,110,0.12), rgba(245,158,11,0.12))";
+      dlCard.style.border = "2px solid var(--accent)";
+      dlCard.style.borderRadius = "16px";
+      dlCard.style.display = "flex";
+      dlCard.style.alignItems = "center";
+      dlCard.style.justifyContent = "space-between";
+      dlCard.style.flexWrap = "wrap";
+      dlCard.style.gap = "10px";
+
+      const dlText = el("div");
+      dlText.innerHTML = `
+        <div style="font-weight:bold; font-size:15px; color:var(--ink); display:flex; align-items:center; gap:6px;">
+          <span>📦</span> <span>تحميل ملف التحديث (math3_updated_deploy.zip)</span>
+        </div>
+        <div style="font-size:12px; opacity:0.8; margin-top:2px;">
+          الملف المحدث جاهز بالكامل (الويب بوش، وحذف المحاضرات، والاستريك بعد يومين، وحفظ التكاليف).
+        </div>
+      `;
+      dlCard.appendChild(dlText);
+
+      const dlBtn = el("button", "btn btn-primary", "⬇️ اضغط هنا للتحميل المباشر");
+      dlBtn.style.padding = "10px 18px";
+      dlBtn.style.fontWeight = "bold";
+      dlBtn.style.fontSize = "13.5px";
+      dlBtn.addEventListener("click", async () => {
+        dlBtn.disabled = true;
+        dlBtn.textContent = "جارٍ التحميل...";
+        try {
+          const res = await fetch("/download");
+          const blob = await res.blob();
+          const a = document.createElement("a");
+          a.href = window.URL.createObjectURL(blob);
+          a.download = "math3_updated_deploy.zip";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          say("تم بدء التحميل بنجاح! 🚀");
+        } catch(e) {
+          window.location.href = "/download";
+        }
+        setTimeout(() => {
+          dlBtn.disabled = false;
+          dlBtn.textContent = "⬇️ اضغط هنا للتحميل المباشر";
+        }, 2000);
+      });
+      dlCard.appendChild(dlBtn);
+      box.appendChild(dlCard);
+    }
+  } catch(e) {}
 
   // بطاقة متابع المذاكرة والجاهزية والبومودورو في الصفحة الرئيسية
   try {

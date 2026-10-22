@@ -1,0 +1,6 @@
+{
+  "name": "Math 3 - منصة الدفعة وتتبع المذاكرة",
+  "description": "منصة دفعة Math 3 الشاملة: جدول المحاضرات، التكاليف، تتبع إنجاز المواد، ستريك المذاكرة، مؤقت بومودورو، وخريطة الإنجاز الأسبوعية مع إشعارات الويب الحقيقية.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
