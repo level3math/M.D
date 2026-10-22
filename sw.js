@@ -3,19 +3,33 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
+const CACHE_NAME = 'math3-v4-new-icon';
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.map((key) => {
+          if (key !== CACHE_NAME) return caches.delete(key);
+        })
+      );
+    }).then(() => self.clients.claim())
+  );
 });
 
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    const d = event.data;
+    // حظر الريمايندرز وتذكيرات المواعيد نهائياً من إشعارات الويب
+    if (d.is_reminder || d.type === 'reminder' || (d.title && d.title.includes('تذكير'))) {
+      return;
+    }
     const appIcon = new URL('assets/icon.png', self.registration.scope).href;
     const badgeIcon = new URL('assets/badge-96.png', self.registration.scope).href;
-    self.registration.showNotification(event.data.title || 'Math 3 🔔', {
-      body: event.data.body || '',
+    self.registration.showNotification(d.title || 'Math 3 🔔', {
+      body: d.body || '',
       icon: appIcon,
       badge: badgeIcon,
-      data: { url: event.data.url || './' },
+      data: { url: d.url || './' },
       dir: 'rtl',
       lang: 'ar',
       vibrate: [200, 100, 200],
@@ -33,6 +47,11 @@ self.addEventListener('push', (event) => {
     }
   } catch (e) {
     if (event.data) data.body = event.data.text();
+  }
+
+  // حظر الريمايندرز وتذكيرات المواعيد نهائياً من إشعارات الويب لتظل حصرية لتيليجرام فقط 100%
+  if (data.is_reminder || data.type === 'reminder' || (data.title && data.title.includes('تذكير'))) {
+    return;
   }
 
   const appIcon = new URL('assets/icon.png', self.registration.scope).href;

@@ -2,28 +2,28 @@
   "id": "./",
   "name": "Math 3 Batch Board",
   "short_name": "Math 3",
-  "description": "منصة الدفعة - الرياضيات والحاسب 3",
+  "description": "منصة الدفعة - قسم الرياضيات والحاسب 3",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#0b1f1d",
-  "theme_color": "#0f766e",
+  "background_color": "#2D1C52",
+  "theme_color": "#2D1C52",
   "icons": [
     {
-      "src": "assets/icon-192.png",
+      "src": "assets/icon-192.png?v=5",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "assets/icon-512.png",
+      "src": "assets/icon-512.png?v=5",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "pwa-maskable-512x512.png",
+      "src": "pwa-maskable-512x512.png?v=5",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

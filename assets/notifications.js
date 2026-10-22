@@ -1,8 +1,26 @@
+const VAPID_PUBLIC_KEY = "BMNfM_QGnTIokAHFYR76cXduilrsVHe_90uzFbnkqEQkf0nVXoEekyhdsZSgssd2K__882GKh4-2XeLQ9tSdrfI";
+
+function urlB64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/\-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 
 // إرسال تنبيه محلي وبث فوري لكافة الأجهزة عند رفع مادة أو محاضرة أو تكليف
 export function broadcastNewItem(title, courseId) {
   try {
     triggerLocalNotification("محتوى / محاضرة جديدة 📁", title || "تم إضافة عنصر جديد للمنصة");
+    try {
+      sb.functions.invoke("send-push", {
+        body: { title: "محتوى / محاضرة جديدة 📁", body: title || "تم إضافة عنصر جديد للمنصة", url: "./" }
+      }).catch(() => {});
+    } catch(e) {}
     const ch = sb.channel("public-changes");
     ch.send({
       type: "broadcast",
@@ -18,6 +36,11 @@ export function broadcastNewItem(title, courseId) {
 export function broadcastNewPost(content) {
   try {
     triggerLocalNotification("منشور جديد 📬", content ? content.slice(0, 80) : "يوجد منشور جديد في المنصة");
+    try {
+      sb.functions.invoke("send-push", {
+        body: { title: "منشور جديد 📬", body: content ? content.slice(0, 80) : "يوجد منشور جديد في المنصة", url: "./" }
+      }).catch(() => {});
+    } catch(e) {}
     const ch = sb.channel("public-changes");
     ch.send({
       type: "broadcast",
@@ -51,8 +74,34 @@ export async function requestPushPermission() {
     const permission = await Notification.requestPermission();
     if (permission === "granted") {
       localStorage.setItem(STORAGE_KEY, "1");
-      await registerServiceWorker();
+      const reg = await registerServiceWorker();
       startRealtimeNotifications();
+
+      // اشتراك الـ Web Push الحقيقي عبر PushManager ومفتاح VAPID مجاني 100%
+      try {
+        if (reg && "pushManager" in reg) {
+          let sub = await reg.pushManager.getSubscription();
+          if (!sub) {
+            sub = await reg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY)
+            });
+          }
+          if (sub) {
+            const sj = sub.toJSON();
+            // حفظ الاشتراك في Supabase لتلقي الإشعارات حتى والتطبيق مقفول تماماً
+            await sb.from("push_subscriptions").upsert({
+              endpoint: sub.endpoint,
+              p256dh: sj.keys ? sj.keys.p256dh : "",
+              auth: sj.keys ? sj.keys.auth : "",
+              user_agent: navigator.userAgent
+            }, { onConflict: "endpoint" }).catch(() => {});
+          }
+        }
+      } catch (err) {
+        console.warn("Push subscription fallback:", err);
+      }
+
       triggerLocalNotification("Math 3 🔔", "تم تفعيل إشعارات الويب بنجاح!");
       return true;
     } else {
@@ -171,8 +220,12 @@ export function startRealtimeNotifications() {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, (payload) => {
         const n = payload.new;
         // استثناء الريمايندرز وتذكيرات المواعيد لتظل حصرية على تيليجرام 100%
-        if (n && !n.is_reminder) {
-          triggerLocalNotification(n.title || "تنبيه جديد 🔔", n.body || n.message || "تحديث جديد في المنصة");
+        if (n) {
+          const isRem = Boolean(n.is_reminder || n.type === "reminder" || (n.title && n.title.includes("تذكير")));
+          // حظر الريمايندرز نهائياً من إشعارات الويب لتظل حصرية لتليجرام
+          if (!isRem) {
+            triggerLocalNotification(n.title || "تنبيه جديد 🔔", n.body || n.message || "تحديث جديد في المنصة");
+          }
         }
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "drive_seen_files" }, (payload) => {

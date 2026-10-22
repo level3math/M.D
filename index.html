@@ -37,8 +37,8 @@
 })();
 </script>
     <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" href="assets/icon.png">
-  <link rel="apple-touch-icon" href="assets/icon.png">
+  <link rel="icon" type="image/png" href="assets/icon.png?v=5">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=5">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Math 3">
@@ -87,7 +87,6 @@
       <span class="side-drawer-icon">❓</span>
       <span>الأسئلة والأجوبة</span>
     </button>
-
   </div>
 </nav>
 <button id="links-fab" class="links-fab" hidden>🔗</button>
@@ -98,16 +97,66 @@
       <p class="label">BATCH BOARD</p>
       <h1>math 3</h1>
     </div>
-    <div class="row">
-      <button id="courses-btn" class="small" hidden>موادّي</button>
-      <button id="manage-btn" class="small" hidden>إدارة المواد</button>
-      <button id="sections-btn" class="small" hidden>الأقسام</button>
-      <button id="theme-btn" class="small" hidden>المظهر</button>
-      <button id="people-btn" class="small" hidden>users</button>
-      <button id="log-btn" class="small" hidden>السجل</button>
-      <button id="backup-btn" class="small" hidden>نسخة احتياطية</button>
-      <button id="notif-btn" class="small" title="إشعارات الويب" hidden>🔔</button>
-      <button id="logout" class="small" hidden>خروج</button>
+    <div class="header-actions">
+      <button id="notif-btn" class="header-icon-btn" title="إشعارات الويب" hidden>🔔</button>
+      <button id="tracker-btn" class="header-tracker-btn" hidden>📚 تراك المذاكرة والإنجاز</button>
+
+      <div id="header-menu-wrap" class="header-menu-wrap" hidden>
+        <button id="header-menu-btn" class="header-menu-btn" type="button" aria-haspopup="true" aria-expanded="false">
+          <span id="header-menu-label">⚙️ خيارات</span>
+          <span class="menu-arrow">▾</span>
+        </button>
+
+        <div id="header-dropdown" class="header-dropdown" hidden>
+          <div class="dropdown-user-banner" id="dropdown-user-banner">
+            <div id="dropdown-user-name" class="dropdown-user-name">مرحباً بك</div>
+            <div id="dropdown-user-role" class="dropdown-user-role">طالب</div>
+          </div>
+
+          <div class="dropdown-section">
+            <div class="dropdown-section-title">خيارات الطالب</div>
+            <button id="courses-btn" class="dropdown-action-btn" hidden>
+              <span class="item-icon">📖</span>
+              <span>موادّي المسجلة</span>
+            </button>
+          </div>
+
+          <div class="dropdown-section admin-section" id="dropdown-admin-section">
+            <div class="dropdown-section-title">أدوات الإدارة والتحكم</div>
+            <button id="manage-btn" class="dropdown-action-btn" hidden>
+              <span class="item-icon">🗂️</span>
+              <span>إدارة المواد</span>
+            </button>
+            <button id="sections-btn" class="dropdown-action-btn" hidden>
+              <span class="item-icon">📑</span>
+              <span>تخصيص الأقسام</span>
+            </button>
+            <button id="theme-btn" class="dropdown-action-btn" hidden>
+              <span class="item-icon">🎨</span>
+              <span>المظهر والثيم</span>
+            </button>
+            <button id="people-btn" class="dropdown-action-btn" hidden>
+              <span class="item-icon">👥</span>
+              <span>المستخدمين والصلاحيات</span>
+            </button>
+            <button id="log-btn" class="dropdown-action-btn" hidden>
+              <span class="item-icon">📜</span>
+              <span>سجل النشاطات</span>
+            </button>
+            <button id="backup-btn" class="dropdown-action-btn" hidden>
+              <span class="item-icon">💾</span>
+              <span>نسخة احتياطية</span>
+            </button>
+          </div>
+
+          <div class="dropdown-footer">
+            <button id="logout" class="dropdown-action-btn logout-btn" hidden>
+              <span class="item-icon">🚪</span>
+              <span>تسجيل الخروج</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </header>
   <div id="loading" class="card center">
@@ -143,6 +192,7 @@
   <div id="people-box" hidden></div>
   <div id="log-box" hidden></div>
   <div id="theme-box" hidden></div>
+  <div id="tracker-box" hidden></div>
   <div id="app" hidden>
     <div id="anon-banner" class="card" hidden style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding:10px 14px; margin-bottom:12px; border:1px solid var(--line); background:var(--card);">
       <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:bold;">
@@ -175,5 +225,14 @@ if (!Element.prototype.replaceChildren) {
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script type="module" src="assets/main.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      for (let reg of regs) {
+        reg.update();
+      }
+    });
+  }
+</script>
 </body>
 </html>

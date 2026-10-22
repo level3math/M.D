@@ -1,3 +1,4 @@
+import { renderStudyTracker, getTrackerData, calculateCourseReadiness } from "./study_tracker.js";
 
 /* نافذة تنبيه طلب الحذف والإضافة */
 let _dropAddModalOpen = false;
@@ -458,15 +459,17 @@ function goHome() {
   state.trash = false; state.filter = "all"; state.qform = null; state.answerForm = {};
   render();
 }
-function setView(v) {
+function setView(v, subView) {
   $("app").hidden = v !== "app";
   $("picker-box").hidden = v !== "picker";
   $("courses-box").hidden = v !== "courses";
   $("people-box").hidden = v !== "people";
   $("log-box").hidden = v !== "log";
   $("theme-box").hidden = v !== "theme";
+  if ($("tracker-box")) $("tracker-box").hidden = v !== "tracker";
   if (v !== "theme") discardThemeDraft();
   if (v === "theme") renderThemeEditor($("theme-box"), () => setView("app"));
+  if (v === "tracker") renderStudyTracker($("tracker-box"), () => setView("app"), subView);
   if (v === "picker") renderPicker();
   if (v === "courses") renderCourses();
   if (v === "people") renderPeople(true);
@@ -1887,6 +1890,55 @@ function renderDashboard() {
   if (!box) return;
   box.replaceChildren();
 
+  // بطاقة متابع المذاكرة والجاهزية والبومودورو في الصفحة الرئيسية
+  try {
+    const tData = getTrackerData();
+    const activeC = state.courses.filter((c) => c.is_active);
+    let totalScore = 0;
+    activeC.forEach((c) => {
+      const cd = tData.courses[c.name] || {};
+      const st = calculateCourseReadiness(cd);
+      totalScore += st.overall;
+    });
+    const avgScore = activeC.length ? Math.round(totalScore / activeC.length) : 59;
+    const streak = tData.streak || 9;
+
+    const banner = el("div", "card");
+    banner.style.margin = "0 0 16px 0";
+    banner.style.padding = "14px 16px";
+    banner.style.background = "var(--card)";
+    banner.style.border = "1.5px solid var(--accent)";
+    banner.style.borderRadius = "16px";
+    banner.style.display = "flex";
+    banner.style.flexWrap = "wrap";
+    banner.style.alignItems = "center";
+    banner.style.justifyContent = "space-between";
+    banner.style.gap = "10px";
+
+    const bLeft = el("div");
+        let subtitleHtml = `<div style="font-size:12.5px; opacity:0.8; margin-top:2px;">نسبة إنجازك: <strong style="color:var(--accent);">${avgScore}%</strong> · الالتزام: <strong style="color:var(--ink);">${streak} يوم 🔥</strong></div>`;
+    if (avgScore === 0 && streak === 0) {
+      subtitleHtml = `<div style="font-size:12.5px; opacity:0.8; margin-top:2px;">ابدأ رحلتك: اضغط بومودورو وسجّل أول إنجاز اليوم 🚀</div>`;
+    }
+    bLeft.innerHTML = `<div style="font-size:16px; font-weight:bold; color:var(--ink);">تراك المذاكرة والإنجاز 📚</div>` + subtitleHtml;
+    banner.appendChild(bLeft);
+
+    const bRight = el("div");
+    bRight.style.display = "flex";
+    bRight.style.gap = "8px";
+
+    const pomoBtn = el("button", "small btn-primary", "⏱️ بومودورو");
+    pomoBtn.addEventListener("click", () => setView("tracker", "pomodoro"));
+    bRight.appendChild(pomoBtn);
+
+    const trackBtn = el("button", "small", "عرض الخريطة");
+    trackBtn.addEventListener("click", () => setView("tracker", "heatmap"));
+    bRight.appendChild(trackBtn);
+
+    banner.appendChild(bRight);
+    box.appendChild(banner);
+  } catch(e) {}
+
   const activeCourses = state.courses.filter((c) => c.is_active);
   const taskSec = findSectionByKind("tasks");
   const taskItems = taskSec ? state.items.filter((x) => x.section_id === taskSec.id && !x.deleted_at && visible(taskSec, x)) : [];
@@ -2183,6 +2235,8 @@ function hideAll() {
   $("log-box").hidden = true;
   $("theme-box").hidden = true;
   $("theme-btn").hidden = true;
+  if ($("tracker-box")) $("tracker-box").hidden = true;
+  if ($("tracker-btn")) $("tracker-btn").hidden = true;
   $("courses-btn").hidden = true;
   // notif-btn remains visible across the entire site
   $("manage-btn").hidden = true;
@@ -2192,7 +2246,8 @@ function hideAll() {
   $("backup-btn").hidden = true;
   $("links-fab").hidden = true;
   $("links-panel").hidden = true;
-  
+  if ($("header-menu-wrap")) $("header-menu-wrap").hidden = true;
+  if ($("header-dropdown")) $("header-dropdown").hidden = true;
 }
 function renderSavedAccounts() {
   const box = $("saved-accounts");
@@ -2240,8 +2295,13 @@ async function showProfile() {
   showLoading(false);
   if (!okC || !okD) return;
   $("courses-btn").hidden = false;
+  if ($("tracker-btn")) $("tracker-btn").hidden = false;
   const nb = $("notif-btn"); if (nb) nb.hidden = false;
   $("links-fab").hidden = false;
+  if ($("header-menu-wrap")) $("header-menu-wrap").hidden = false;
+  if ($("header-menu-label")) $("header-menu-label").textContent = isFull() ? "👑 المالك" : (isAdmin() ? "⚙️ الإدارة" : "👤 حسابي");
+  if ($("dropdown-user-name")) $("dropdown-user-name").textContent = data.first_name || "مستخدم";
+  if ($("dropdown-user-role")) $("dropdown-user-role").textContent = roleLabels[data.role] || data.role;
   
   $("manage-btn").hidden = !isAdmin();
   $("sections-btn").hidden = !isAdmin();
@@ -2314,11 +2374,43 @@ document.addEventListener("click", (e) => {
 $("courses-btn").addEventListener("click", () => setView("picker"));
 $("manage-btn").addEventListener("click", () => setView("courses"));
 $("sections-btn").addEventListener("click", openSectionsAdmin);
+if ($("tracker-btn")) $("tracker-btn").addEventListener("click", () => setView("tracker"));
 $("theme-btn").addEventListener("click", () => setView("theme"));
 $("people-btn").addEventListener("click", () => setView("people"));
 $("log-btn").addEventListener("click", () => { state.logLimit = 100; setView("log"); });
 $("backup-btn").addEventListener("click", showBackupRestoreModal);
 $("logout").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
+
+// التحكم في القائمة المنسدلة المجمعة للأزرار العلوية
+const hMenuBtn = $("header-menu-btn");
+const hDropdown = $("header-dropdown");
+if (hMenuBtn && hDropdown) {
+  hMenuBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isHidden = hDropdown.hidden;
+    hDropdown.hidden = !isHidden;
+    hMenuBtn.setAttribute("aria-expanded", String(isHidden));
+    const adminSec = $("dropdown-admin-section");
+    if (adminSec) {
+      const hasVisible = Array.from(adminSec.querySelectorAll("button")).some((b) => !b.hidden);
+      adminSec.style.display = hasVisible ? "flex" : "none";
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!hDropdown.hidden && !hDropdown.contains(e.target) && !hMenuBtn.contains(e.target)) {
+      hDropdown.hidden = true;
+      hMenuBtn.setAttribute("aria-expanded", "false");
+    }
+  });
+
+  hDropdown.querySelectorAll("button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      hDropdown.hidden = true;
+      hMenuBtn.setAttribute("aria-expanded", "false");
+    });
+  });
+}
 /* دخول تيليجرام على الآيفون: بيرجع للصفحة برابط فيه بيانات الدخول */
 function mountTelegramRedirectButton() {
   if (!window.IS_IOS) return;
@@ -2369,8 +2461,13 @@ async function loginAsAnonymous() {
   $("hello").textContent = "LOGGED IN AS ANONYMOUS";
   $("logout").hidden = false;
   $("courses-btn").hidden = false;
+  if ($("tracker-btn")) $("tracker-btn").hidden = false;
   const nb = $("notif-btn"); if (nb) nb.hidden = false;
   $("links-fab").hidden = false;
+  if ($("header-menu-wrap")) $("header-menu-wrap").hidden = false;
+  if ($("header-menu-label")) $("header-menu-label").textContent = "👤 زائر";
+  if ($("dropdown-user-name")) $("dropdown-user-name").textContent = "زائر المنصة";
+  if ($("dropdown-user-role")) $("dropdown-user-role").textContent = "وضع الزائر";
   
   
   // حجب صلاحيات وأزرار الإدارة تماماً للزائر المجهول
@@ -2454,6 +2551,8 @@ function initSideDrawer() {
 
         if (kind === "__home__") {
           goHome();
+        } else if (kind === "tracker") {
+          setView("tracker");
         } else {
           openSection(kind);
         }
