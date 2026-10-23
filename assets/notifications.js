@@ -47,6 +47,8 @@ function urlB64ToUint8Array(base64String) {
 // إرسال تنبيه Web Push حقيقي لجميع الأجهزة المسجلة عبر السيرفر
 export async function sendServerPush(title, body, url = "./", delaySeconds = 0) {
   try {
+    const cleanTitle = (title || "").trim();
+    const cleanTag = "math3-push-" + cleanTitle.replace(/[^\w\u0600-\u06FF]/g, "-");
     const res = await fetch(getPushUrl("/api/send-push"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -55,7 +57,7 @@ export async function sendServerPush(title, body, url = "./", delaySeconds = 0) 
         body,
         url,
         delaySeconds,
-        tag: "math3-push-" + Date.now()
+        tag: cleanTag
       })
     });
     return await res.json();
@@ -213,20 +215,51 @@ export async function registerServiceWorker() {
   }
 }
 
-export async function triggerLocalNotification(title, body, url = "./") {
+const _recentNotifs = new Map();
+
+export async function triggerLocalNotification(title, body, url = "./", customTag = null) {
   if (!isPushEnabled()) return;
+  const cleanTitle = (title || "").trim();
+  const cleanBody = (body || "").trim();
+
+  // منع الإشعارات العامة المكررة (مثل "تحديث جديد في المنصة" أو "يوجد تحديث..." أو "تحديث حصل في البيدج")
+  if (!cleanBody ||
+      cleanBody === "تحديث جديد في المنصة" || 
+      cleanBody === "يوجد تحديث أو إشعار جديد في المنصة" || 
+      cleanBody.includes("تحديث حصل في البيدج") ||
+      cleanBody.includes("تحديث حصل") ||
+      cleanBody.includes("تحديث في المنصة") ||
+      (cleanTitle.includes("تنبيه") && cleanBody.includes("تحديث"))) {
+    return;
+  }
+
+  const notifKey = `${cleanTitle}::${cleanBody}`;
+  const now = Date.now();
+
+  // فحص سجل آخر 8 ثوانٍ لمنع إرسال نفس الإشعار مرتين
+  if (_recentNotifs.has(notifKey) && (now - _recentNotifs.get(notifKey) < 8000)) {
+    return;
+  }
+  _recentNotifs.set(notifKey, now);
+
+  // تنظيف السجل القديم
+  for (const [k, time] of _recentNotifs.entries()) {
+    if (now - time > 15000) _recentNotifs.delete(k);
+  }
+
   try {
     const iconUrl = new URL("assets/icon.png", location.href).href;
     const badgeUrl = new URL("assets/badge-96.png", location.href).href;
+    const tag = customTag || ("math3-" + cleanTitle.replace(/[^\w\u0600-\u06FF]/g, "-"));
     const notifOptions = {
-      body,
+      body: cleanBody,
       icon: iconUrl,
       badge: badgeUrl,
       data: { url: url || "./" },
       dir: "rtl",
       lang: "ar",
       vibrate: [200, 100, 200],
-      tag: "math3-" + Date.now(),
+      tag,
       renotify: true
     };
 
@@ -234,7 +267,7 @@ export async function triggerLocalNotification(title, body, url = "./") {
     if ("serviceWorker" in navigator) {
       const reg = await navigator.serviceWorker.getRegistration();
       if (reg && reg.showNotification) {
-        await reg.showNotification(title, notifOptions);
+        await reg.showNotification(cleanTitle, notifOptions);
         return;
       }
     }
@@ -246,23 +279,23 @@ export async function triggerLocalNotification(title, body, url = "./") {
         new Promise((resolve) => setTimeout(() => resolve(null), 1000))
       ]);
       if (regReady && regReady.showNotification) {
-        await regReady.showNotification(title, notifOptions);
+        await regReady.showNotification(cleanTitle, notifOptions);
         return;
       }
       if (regReady && regReady.active) {
-        regReady.active.postMessage({ type: "SHOW_NOTIFICATION", title, body, url });
+        regReady.active.postMessage({ type: "SHOW_NOTIFICATION", title: cleanTitle, body: cleanBody, url });
         return;
       }
     }
 
     // المحاولة 3 (Fallback فوري لنظام أندرويد والمتصفح):
     if ("Notification" in window && Notification.permission === "granted") {
-      new Notification(title, notifOptions);
+      new Notification(cleanTitle, notifOptions);
     }
   } catch (e) {
     console.error("Local notification error:", e);
     try {
-      new Notification(title, { body });
+      new Notification(cleanTitle, { body: cleanBody });
     } catch (err) {}
   }
 }
@@ -299,9 +332,25 @@ export function startRealtimeNotifications() {
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, (payload) => {
         const n = payload.new;
-        if (n) {
-          triggerLocalNotification(n.title || "تنبيه جديد 🔔", n.body || n.message || "تحديث جديد في المنصة");
+        if (!n) return;
+        const isRem = Boolean(n.is_reminder || n.type === "reminder" || (n.title && (n.title.includes("تذكير") || n.title.includes("ريمندر"))));
+        if (isRem) return;
+
+        const bodyText = (n.body || n.message || "").trim();
+        const titleText = (n.title || "").trim();
+
+        // حظر الإشعارات العامة التلقائية التي تصدر بالتزامن مع البوستات والمحاضرات لمنع وصول إشعار إضافي مكرر
+        if (!bodyText ||
+            bodyText === "تحديث جديد في المنصة" || 
+            bodyText === "يوجد تحديث أو إشعار جديد في المنصة" || 
+            bodyText.includes("تحديث حصل في البيدج") ||
+            bodyText.includes("تحديث حصل") ||
+            bodyText.includes("تحديث في المنصة") ||
+            (titleText.includes("تنبيه") && bodyText.includes("تحديث"))) {
+          return;
         }
+
+        triggerLocalNotification(titleText || "تنبيه جديد 🔔", bodyText);
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "drive_seen_files" }, (payload) => {
         const f = payload.new;

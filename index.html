@@ -88,18 +88,10 @@
       <span class="side-drawer-icon">❓</span>
       <span>الأسئلة والأجوبة</span>
     </button>
-    <a id="preview-download-link" href="/deploy.zip" class="side-drawer-item" style="color:var(--accent); text-decoration:none; font-weight:bold; display:none;" download="deploy.zip">
-      <span class="side-drawer-icon">📦</span>
-      <span>تحميل ملف التحديث (deploy.zip)</span>
-    </a>
-  </div>
+    </div>
 </nav>
 <script>
-  // يظهر زر التحميل فقط في بيئة المعاينة والتطوير للمطور
-  if (window.location.hostname.includes('run.app') || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    var pDl = document.getElementById('preview-download-link');
-    if (pDl) pDl.style.display = 'flex';
-  }
+  
 </script>
 <button id="links-fab" class="links-fab" hidden>🔗</button>
 <div id="links-panel" class="links-panel" hidden></div>

@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>math 3</title>
+<script>
+  try {
+    var t = localStorage.getItem("theme");
+    if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/math3.css">
+<script>
+(function() {
+  try {
+    var raw = localStorage.getItem("math3_theme_v1");
+    if (raw) {
+      var t = JSON.parse(raw);
+      var r = document.documentElement;
+      var dark = !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+      if (t.accent) r.style.setProperty("--accent", dark ? (t.darkAccent || t.accent) : t.accent);
+      if (t.paper) r.style.setProperty("--paper", dark ? (t.darkPaper || t.paper) : t.paper);
+      if (t.card) r.style.setProperty("--card", dark ? (t.darkCard || t.card) : t.card);
+      if (t.ink) r.style.setProperty("--ink", dark ? (t.darkInk || t.ink) : t.ink);
+      if (t.line) r.style.setProperty("--line", dark ? (t.darkLine || t.line) : t.line);
+      if (t.radius) r.style.setProperty("--radius", t.radius + "px");
+      if (t.bgImage) {
+        r.style.setProperty("--site-bg-image", 'url("' + t.bgImage.replace(/["\\()\s]/g, encodeURIComponent) + '")');
+        r.style.setProperty("--site-bg-size", "cover");
+        r.style.setProperty("--site-bg-position", "center");
+      }
+    }
+  } catch(e) {}
+})();
+</script>
+    <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="assets/icon.png?v=5">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Math 3">
+  
+  <!-- OpenGraph & Social Preview Cover -->
+  <meta property="og:title" content="Math 3 - Batch Board">
+  <meta property="og:description" content="منصة الدفعة - جدول المحاضرات، التكاليف، روابط درايف، والمنشورات">
+  <meta property="og:image" content="assets/cover.jpg">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="assets/cover.jpg">
+</head>
+<body>
+<script src="assets/ios-compat.js"></script>
+
+
+<div id="drawer-backdrop" class="side-drawer-backdrop"></div>
+
+<nav id="side-drawer" class="side-drawer">
+  <div class="side-drawer-head">
+    <h3 class="side-drawer-title">أقسام المنصة</h3>
+    <button id="drawer-close" class="side-drawer-close" type="button" aria-label="إغلاق">✕</button>
+  </div>
+  <div class="side-drawer-list">
+    <button class="side-drawer-item active" data-kind="__home__">
+      <span class="side-drawer-icon">🏠</span>
+      <span>الرئيسية</span>
+    </button>
+    <button class="side-drawer-item" data-kind="tasks">
+      <span class="side-drawer-icon">📝</span>
+      <span>التكاليف</span>
+    </button>
+    <button class="side-drawer-item" data-kind="links">
+      <span class="side-drawer-icon">📁</span>
+      <span>مكتبة المواد</span>
+    </button>
+    <button class="side-drawer-item" data-kind="newsletter">
+      <span class="side-drawer-icon">📰</span>
+      <span>النشرة الأسبوعية</span>
+    </button>
+    <button class="side-drawer-item" data-kind="posts">
+      <span class="side-drawer-icon">📬</span>
+      <span>المنشورات</span>
+    </button>
+    <button class="side-drawer-item" data-kind="qa">
+      <span class="side-drawer-icon">❓</span>
+      <span>الأسئلة والأجوبة</span>
+    </button>
+    <a id="preview-deploy-btn" href="deploy.zip" download="deploy.zip" class="side-drawer-item" style="margin-top:14px; border:1.5px dashed var(--accent); background:rgba(147,51,234,0.12); border-radius:10px; text-decoration:none; display:flex; align-items:center; gap:8px;">
+      <span class="side-drawer-icon">📦</span>
+      <span style="font-weight:bold; color:var(--accent);">تحميل ملف deploy.zip (معاينة)</span>
+    </a>
+  </div>
+</nav>
+<button id="links-fab" class="links-fab" hidden>🔗</button>
+<div id="links-panel" class="links-panel" hidden></div>
+<div class="wrap">
+  <header>
+    <div>
+      <p class="label">BATCH BOARD</p>
+      <h1>math 3</h1>
+    </div>
+    <div class="header-actions">
+      <button id="notif-btn" class="header-icon-btn" title="إشعارات الويب" hidden>🔔</button>
+      <button id="tracker-btn" class="header-tracker-btn" hidden>📚 تراك المذاكرة والإنجاز</button>
+
+      <div id="header-menu-wrap" class="header-menu-wrap" hidden>
+        <button id="header-menu-btn" class="header-menu-btn" type="button" aria-haspopup="true" aria-expanded="false">
+          <span id="header-menu-label">⚙️ خيارات</span>
+          <span class="menu-arrow">▾</span>
+        </button>
+
+        <div id="header-dropdown" class="header-dropdown" hidden>
+          <div class="dropdown-user-banner" id="dropdown-user-banner">
+            <div id="dropdown-user-name" class="dropdown-user-name">مرحباً بك</div>
+            <div id="dropdown-user-role" class="dropdown-user-role">طالب</div>
+          </div>
+
+          <div class="dropdown-section">
+            <div class="dropdown-section-title">خيارات الطالب</div>
+            <button id="courses-btn" class="dropdown-action-btn" hidden>
+              <span class="item-icon">📖</span>
+              <span>موادّي المسجلة</span>
+            </button>
+          </div>
+
+          <div class="dropdown-section admin-section" id="dropdown-admin-section">
+            <div class="dropdown-section-title">أدوات الإدارة والتحكم</div>
+            <button id="manage-btn" class="dropdown-action-btn" hidden>
+              <span class="item-icon">🗂️</span>
+              <span>إدارة المواد</span>
+            </button>
+            <button id="sections-btn" class="dropdown-action-btn" hidden>
+              <span class="item-icon">📑</span>
+              <span>تخصيص الأقسام</span>
+            </button>
+            <button id="theme-btn" class="dropdown-action-btn" hidden>
+              <span class="item-icon">🎨</span>
+              <span>المظهر والثيم</span>
+            </button>
+            <button id="people-btn" class="dropdown-action-btn" hidden>
+              <span class="item-icon">👥</span>
+              <span>المستخدمين والصلاحيات</span>
+            </button>
+            <button id="log-btn" class="dropdown-action-btn" hidden>
+              <span class="item-icon">📜</span>
+              <span>سجل النشاطات</span>
+            </button>
+            <button id="backup-btn" class="dropdown-action-btn" hidden>
+              <span class="item-icon">💾</span>
+              <span>نسخة احتياطية</span>
+            </button>
+          </div>
+
+          <div class="dropdown-footer">
+            <button id="logout" class="dropdown-action-btn logout-btn" hidden>
+              <span class="item-icon">🚪</span>
+              <span>تسجيل الخروج</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+  <div id="loading" class="card center">
+    <p>جاري التحميل...</p>
+  </div>
+  <div id="login-box" class="card center" hidden>
+    <div id="saved-accounts"></div>
+    <div id="tg-widget-wrap">
+      <p id="login-label" hidden></p>
+      <div id="tg-slot"></div>
+      <script>
+        if (!window.IS_IOS) {
+          document.write('<script async src="https://telegram.org/js/telegram-widget.js?22" data-telegram-login="MATHDEPARTMENT_BOT" data-size="large" data-onauth="onTelegramAuth(user)" data-request-access="write"><\/script>');
+        }
+      </script>
+    </div>
+    <div class="login-divider" style="margin: 16px 0 12px; display: flex; align-items: center; justify-content: center; gap: 10px; opacity: 0.6; font-size: 13px; font-weight: 600; text-transform: uppercase;">
+      <span style="flex: 1; height: 1px; background: var(--line);"></span>
+      <span>or</span>
+      <span style="flex: 1; height: 1px; background: var(--line);"></span>
+    </div>
+    <button id="anon-login-btn" type="button" class="btn" style="width: 100%; padding: 10px 16px; border-radius: 8px; border: 2px solid var(--line); background: var(--card); color: var(--ink); font-weight: bold; font-size: 14px; cursor: pointer;">
+      Log in as anonymous
+    </button>
+  </div>
+  <div id="pending-box" class="card center" hidden>
+    <p id="welcome"></p>
+    <p class="label" style="text-align:center">STATUS: SUSPENDED</p>
+    <p>الحساب غير مفعّل حاليًا. للاستفسار، برجاء التواصل مع المسؤولين.</p>
+  </div>
+  <div id="picker-box" class="card" hidden></div>
+  <div id="courses-box" hidden></div>
+  <div id="people-box" hidden></div>
+  <div id="log-box" hidden></div>
+  <div id="theme-box" hidden></div>
+  <div id="tracker-box" hidden></div>
+  <div id="app" hidden>
+    <div id="anon-banner" class="card" hidden style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding:10px 14px; margin-bottom:12px; border:1px solid var(--line); background:var(--card);">
+      <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:bold;">
+        <span>👤</span>
+        <span>Logged in as anonymous</span>
+      </div>
+      <button id="switch-to-telegram-btn" class="small btn-primary" type="button" style="padding:6px 14px !important;">
+        📱 تسجيل الدخول بتيليجرام (Login with Telegram)
+      </button>
+    </div>
+    <p id="hello" class="label"></p>
+    <div id="bot-banner" class="card" hidden></div>
+    <div id="dashboard" hidden></div>
+    <div id="tabs" class="tabs"></div>
+    <div id="chips" class="chips"></div>
+    <div id="list"></div>
+  </div>
+  <p id="msg" class="center"></p>
+</div>
+<script>
+if (!Element.prototype.replaceChildren) {
+  Element.prototype.replaceChildren = function () {
+    while (this.firstChild) this.removeChild(this.firstChild);
+    for (var i = 0; i < arguments.length; i++) {
+      var a = arguments[i];
+      this.appendChild(typeof a === "string" ? document.createTextNode(a) : a);
+    }
+  };
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script type="module" src="assets/main.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      for (let reg of regs) {
+        reg.update();
+      }
+    });
+  }
+  // إخفاء زر تحميل الحزمة فوراً إن لم تكن بيئة معاينة الذكاء الاصطناعي
+  if (!location.hostname.includes("run.app") && !location.hostname.includes("localhost") && !location.hostname.includes("127.0.0.1")) {
+    var pBtn = document.getElementById("preview-deploy-btn");
+    if (pBtn) pBtn.remove();
+  }
+</script>
+</body>
+</html>

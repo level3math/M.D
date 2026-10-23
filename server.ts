@@ -133,11 +133,32 @@ async function startServer() {
       return;
     }
 
+    const cleanTitle = (title || 'Math 3 🔔').trim();
+    const cleanBody = (body || '').trim();
+
+    // منع الإشعارات العامة المكررة (تحديث في المنصة أو البيدج)
+    if (
+      !cleanBody ||
+      cleanBody === 'تحديث جديد في المنصة' ||
+      cleanBody === 'يوجد تحديث أو إشعار جديد في المنصة' ||
+      cleanBody.includes('تحديث حصل في البيدج') ||
+      cleanBody.includes('تحديث حصل') ||
+      cleanBody.includes('تحديث في المنصة') ||
+      (cleanTitle.includes('تنبيه') && cleanBody.includes('تحديث'))
+    ) {
+      console.log(`[WebPush] Generic update notification suppressed: "${cleanTitle}" - "${cleanBody}"`);
+      res.json({ success: true, skipped: true, reason: 'Generic update notification suppressed' });
+      return;
+    }
+
+    // Tag ثابت ونظيف يمنع تكرار الإشعار في شريط الإشعارات
+    const cleanTag = tag || ('math3-' + cleanTitle.replace(/[^\w\u0600-\u06FF]/g, '-'));
+
     const payload = JSON.stringify({
-      title: title || 'Math 3 🔔',
-      body: body || 'تنبيه جديد من منصة Math 3',
+      title: cleanTitle,
+      body: cleanBody,
       url: url || './',
-      tag: tag || ('math3-' + Date.now()),
+      tag: cleanTag,
       icon: 'assets/icon.png',
       badge: 'assets/badge-96.png',
       timestamp: Date.now()
