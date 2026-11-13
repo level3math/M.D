@@ -46,11 +46,49 @@ function getGeminiKey() {
   return String(window.MATH3_GEMINI_KEY || "");
 }
 
+// مفاتيح Vertex AI express mode تبدأ بـ "AQ." وليها عنوان وموديلات مختلفة عن مفاتيح AI Studio ("AIza...")
+function isVertexKey(key) {
+  return /^AQ\./.test(String(key || ""));
+}
+
 function getGeminiModels() {
   const custom = window.MATH3_GEMINI_MODELS;
   if (Array.isArray(custom) && custom.length) return custom;
   // الأذكى أولاً ثم الأخف؛ الحد المجاني محسوب لكل موديل لوحده فالحدود بتتجمّع
   return ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
+}
+
+// طرق الاتصال: مفاتيح AI Studio الجديدة (AQ.) تعمل على العنوان الأصلي؛ ونجرّب بدائل لو رُفضت المصادقة
+let _gemPlan = null;
+function geminiPlans(key) {
+  const ais = getGeminiModels();
+  const plans = [
+    { kind: "header", models: ais },
+    { kind: "query", models: ais },
+  ];
+  if (isVertexKey(key)) {
+    plans.push({ kind: "vertex", models: ["gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash"] });
+  }
+  if (_gemPlan) {
+    const i = plans.findIndex((x) => x.kind === _gemPlan);
+    if (i > 0) plans.unshift(plans.splice(i, 1)[0]);
+  }
+  return plans;
+}
+
+function geminiRequest(plan, model, key, body, signal) {
+  const enc = encodeURIComponent(key);
+  const headers = { "Content-Type": "application/json" };
+  let url;
+  if (plan.kind === "vertex") {
+    url = "https://aiplatform.googleapis.com/v1/publishers/google/models/" + model + ":generateContent?key=" + enc;
+  } else if (plan.kind === "query") {
+    url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + enc;
+  } else {
+    url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent";
+    headers["x-goog-api-key"] = key;
+  }
+  return fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal });
 }
 
 function b64ToText(b64) {
@@ -96,54 +134,50 @@ async function askGeminiDirect(text, history, attachments, signal) {
   parts.push({ text: text || "اقرأ المرفقات وحلّ كل الأسئلة الموجودة فيها بالتفصيل." });
   contents.push({ role: "user", parts });
 
-  for (const model of getGeminiModels()) {
-    const variants = /lite/i.test(model) ? [false] : [true, false]; // محاولة بالتفكير العميق ثم بدونه
-    for (const withThinking of variants) {
-      const body = {
-        contents,
-        systemInstruction: { parts: [{ text: GEMINI_SYSTEM }] },
-        tools: [{ googleSearch: {} }],
-      };
-      if (withThinking) body.generationConfig = { thinkingConfig: { thinkingLevel: "high" } };
-      try {
-        const res = await fetch(
-          "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-            body: JSON.stringify(body),
-            signal,
+  planLoop: for (const plan of geminiPlans(key)) {
+    for (const model of plan.models) {
+      const variants = /lite/i.test(model) ? [false] : [true, false]; // محاولة بالتفكير العميق ثم بدونه
+      for (const withThinking of variants) {
+        const body = {
+          contents,
+          systemInstruction: { parts: [{ text: GEMINI_SYSTEM }] },
+          tools: [{ googleSearch: {} }],
+        };
+        if (withThinking) body.generationConfig = { thinkingConfig: { thinkingLevel: "high" } };
+        try {
+          const res = await geminiRequest(plan, model, key, body, signal);
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            errors.push(plan.kind + " " + model + ": " + res.status + " " + ((data.error && data.error.message) || ""));
+            if (res.status === 400 && withThinking) continue; // جرّب بدون thinkingConfig
+            if (res.status === 401) continue planLoop; // مشكلة مصادقة: جرّب طريقة الاتصال التالية
+            break; // انتقل للموديل التالي
           }
-        );
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          errors.push(model + ": " + res.status + " " + ((data.error && data.error.message) || ""));
-          if (res.status === 400 && withThinking) continue; // جرّب بدون thinkingConfig
-          break; // انتقل للموديل التالي
-        }
-        const cand = data.candidates && data.candidates[0];
-        const reply = ((cand && cand.content && cand.content.parts) || [])
-          .filter((p) => p.text && !p.thought)
-          .map((p) => p.text)
-          .join("")
-          .trim();
-        if (!reply) {
-          errors.push(model + ": empty");
-          break;
-        }
-        const sources = [];
-        const chunks = (cand.groundingMetadata && cand.groundingMetadata.groundingChunks) || [];
-        for (const c of chunks) {
-          const w = c && c.web;
-          if (w && /^https?:\/\//i.test(w.uri || "") && !sources.some((s) => s.uri === w.uri)) {
-            sources.push({ title: w.title || w.uri, uri: w.uri });
+          const cand = data.candidates && data.candidates[0];
+          const reply = ((cand && cand.content && cand.content.parts) || [])
+            .filter((p) => p.text && !p.thought)
+            .map((p) => p.text)
+            .join("")
+            .trim();
+          if (!reply) {
+            errors.push(plan.kind + " " + model + ": empty");
+            break;
           }
+          const sources = [];
+          const chunks = (cand.groundingMetadata && cand.groundingMetadata.groundingChunks) || [];
+          for (const c of chunks) {
+            const w = c && c.web;
+            if (w && /^https?:\/\//i.test(w.uri || "") && !sources.some((x) => x.uri === w.uri)) {
+              sources.push({ title: w.title || w.uri, uri: w.uri });
+            }
+          }
+          _gemPlan = plan.kind;
+          return { reply, sources };
+        } catch (e) {
+          if (e && e.name === "AbortError") throw e;
+          errors.push(plan.kind + " " + model + ": " + (e && e.message));
+          continue planLoop; // خطأ شبكة/CORS: جرّب طريقة اتصال أخرى
         }
-        return { reply, sources };
-      } catch (e) {
-        if (e && e.name === "AbortError") throw e;
-        errors.push(model + ": " + (e && e.message));
-        break;
       }
     }
   }
@@ -153,6 +187,9 @@ async function askGeminiDirect(text, history, attachments, signal) {
       ? "وصلنا للحد المجاني لـ Gemini (في الدقيقة أو اليوم). جرّب بعد دقيقة، ولو اليوم خلص بيتصفّر نص الليل بتوقيت UTC."
       : "تعذّر الحصول على رد من Gemini. تأكد من المفتاح ومن الاتصال بالإنترنت."
   );
+  if (!quota && errors.length) {
+    err.message += "\n\nتفاصيل فنية: " + errors.slice(0, 3).join(" | ").slice(0, 450);
+  }
   err.details = errors;
   throw err;
 }
