@@ -114,7 +114,7 @@
     .dash-stat { padding:10px 4px; }
   }
 
-  /* ===== محرر المظهر (للمالك) ===== */
+  /* ===== محرر المظهر (للأونر) ===== */
   #theme-box { color:var(--ink); }
   #theme-box h2 { margin:0; font-size:22px; }
   .theme-note { line-height:1.6; }

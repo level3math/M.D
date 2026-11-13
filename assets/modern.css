@@ -1,0 +1,3428 @@
+/* =========================================================================
+   Math 3 - Ultra-Premium Modern Design System
+   - حل مشكلة المساحة الفارغة في الأعلى (تصفير المسافات العلوية تماماً)
+   - 10 ثيمات بريميوم راقية مع تأثيرات إضاءة زجاجية وتدرجات فاخرة
+   - ضبط تسمية "فايل الشيتات"
+   - ضبط زر اللينكات العائم وتناسق النصوص
+   ========================================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800;900&family=Cairo:wght@600;700;800;900&family=Amiri:ital,wght@0,400;0,700;1,400&family=Readex+Pro:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg-deep: #081211;
+  --bg-surface: #0c1a17;
+  --card-dark: #102320;
+  --card-dark-hover: #142b27;
+  --card-border: rgba(78, 227, 193, 0.14);
+  --card-border-active: rgba(61, 227, 186, 0.38);
+  
+  --mint-primary: #3de3ba;
+  --mint-glow: rgba(61, 227, 186, 0.22);
+  --mint-text: #081211;
+  
+  --accent-purple: #b59aff;
+  --accent-pink: #ff8fa3;
+  --accent-orange: #ffb067;
+  --accent-cyan: #52b6ff;
+  --accent-lime: #bde85b;
+  
+  --text-white: #f3f7f6;
+  --text-muted: #8ca5a0;
+  --text-faint: #52716b;
+  
+  --font-serif: 'Amiri', serif;
+  --font-sans: 'Alexandria', 'Cairo', 'Readex Pro', sans-serif;
+  --font-display: 'Alexandria', 'Cairo', sans-serif;
+}
+
+/* =========================================================================
+   10 ثيمات بريميوم فاخرة (Ultra-Premium Themes Palette)
+   ========================================================================= */
+
+/* =========================================================================
+   مجموعة الـ 12 ثيم المتنوعة كلياً (كل ثيم يتضمن نسخة Dark ونسخة Light تلقائياً حسب الجهاز)
+   ========================================================================= */
+
+/* 1. واحة الزمرد الملكية (Emerald Oasis) */
+:root[data-modern-theme="default"], html[data-modern-theme="default"], body[data-modern-theme="default"],
+:root:not([data-modern-theme]), html:not([data-modern-theme]), body:not([data-modern-theme]) {
+  --bg-deep: #041c14;
+  --card-dark: #0a2d21;
+  --card-dark-hover: #10382b;
+  --card-border: rgba(16, 185, 129, 0.22);
+  --mint-primary: #10b981;
+  --mint-glow: rgba(16, 185, 129, 0.3);
+  --mint-text: #021a12;
+  --text-white: #ecfdf5;
+  --text-muted: #a7f3d0;
+  --text-faint: #6ee7b7;
+  --paper: var(--bg-deep);
+  --card: var(--card-dark);
+  --ink: var(--text-white);
+  --line: var(--card-border);
+  --accent: var(--mint-primary);
+}
+@media (prefers-color-scheme: light) {
+  :root[data-modern-theme="default"], html[data-modern-theme="default"], body[data-modern-theme="default"],
+  :root:not([data-modern-theme]), html:not([data-modern-theme]), body:not([data-modern-theme]) {
+    --bg-deep: #f2fbf6;
+    --card-dark: #ffffff;
+    --card-dark-hover: #e6f7ef;
+    --card-border: rgba(5, 150, 105, 0.2);
+    --mint-primary: #059669;
+    --mint-glow: rgba(5, 150, 105, 0.18);
+    --mint-text: #ffffff;
+    --text-white: #064e3b;
+    --text-muted: #047857;
+    --text-faint: #6b7280;
+    --paper: var(--bg-deep);
+    --card: var(--card-dark);
+    --ink: var(--text-white);
+    --line: var(--card-border);
+    --accent: var(--mint-primary);
+  }
+}
+
+/* 2. سديم نيون المستقبلي (Cyberpunk Neon) */
+:root[data-modern-theme="cyberpunk"], html[data-modern-theme="cyberpunk"], body[data-modern-theme="cyberpunk"],
+:root[data-modern-theme="cyber"], html[data-modern-theme="cyber"], body[data-modern-theme="cyber"] {
+  --bg-deep: #040712;
+  --card-dark: #0b1226;
+  --card-dark-hover: #121c3b;
+  --card-border: rgba(0, 240, 255, 0.28);
+  --mint-primary: #00f0ff;
+  --mint-glow: rgba(255, 0, 127, 0.35);
+  --mint-text: #020713;
+  --text-white: #f0f9ff;
+  --text-muted: #93c5fd;
+  --text-faint: #60a5fa;
+  --paper: var(--bg-deep);
+  --card: var(--card-dark);
+  --ink: var(--text-white);
+  --line: var(--card-border);
+  --accent: var(--mint-primary);
+}
+@media (prefers-color-scheme: light) {
+  :root[data-modern-theme="cyberpunk"], html[data-modern-theme="cyberpunk"], body[data-modern-theme="cyberpunk"],
+  :root[data-modern-theme="cyber"], html[data-modern-theme="cyber"], body[data-modern-theme="cyber"] {
+    --bg-deep: #f0f9ff;
+    --card-dark: #ffffff;
+    --card-dark-hover: #e0f2fe;
+    --card-border: rgba(2, 132, 199, 0.25);
+    --mint-primary: #0284c7;
+    --mint-glow: rgba(192, 38, 211, 0.2);
+    --mint-text: #ffffff;
+    --text-white: #082f49;
+    --text-muted: #0369a1;
+    --text-faint: #64748b;
+    --paper: var(--bg-deep);
+    --card: var(--card-dark);
+    --ink: var(--text-white);
+    --line: var(--card-border);
+    --accent: var(--mint-primary);
+  }
+}
+
+/* 3. عمق المحيط الهادر (Deep Oceanic / Sapphire) */
+:root[data-modern-theme="sapphire"], html[data-modern-theme="sapphire"], body[data-modern-theme="sapphire"] {
+  --bg-deep: #020b14;
+  --card-dark: #081d33;
+  --card-dark-hover: #0d2a4a;
+  --card-border: rgba(56, 189, 248, 0.22);
+  --mint-primary: #38bdf8;
+  --mint-glow: rgba(45, 212, 191, 0.28);
+  --mint-text: #020b14;
+  --text-white: #f0f9ff;
+  --text-muted: #bae6fd;
+  --text-faint: #7dd3fc;
+  --paper: var(--bg-deep);
+  --card: var(--card-dark);
+  --ink: var(--text-white);
+  --line: var(--card-border);
+  --accent: var(--mint-primary);
+}
+@media (prefers-color-scheme: light) {
+  :root[data-modern-theme="sapphire"], html[data-modern-theme="sapphire"], body[data-modern-theme="sapphire"] {
+    --bg-deep: #f0f8ff;
+    --card-dark: #ffffff;
+    --card-dark-hover: #e0f2fe;
+    --card-border: rgba(2, 132, 199, 0.2);
+    --mint-primary: #0284c7;
+    --mint-glow: rgba(13, 148, 136, 0.2);
+    --mint-text: #ffffff;
+    --text-white: #0c4a6e;
+    --text-muted: #0284c7;
+    --text-faint: #64748b;
+    --paper: var(--bg-deep);
+    --card: var(--card-dark);
+    --ink: var(--text-white);
+    --line: var(--card-border);
+    --accent: var(--mint-primary);
+  }
+}
+
+/* 4. الجمشت المخملي الملكي (Velvet Amethyst) */
+:root[data-modern-theme="amethyst"], html[data-modern-theme="amethyst"], body[data-modern-theme="amethyst"] {
+  --bg-deep: #0d0517;
+  --card-dark: #1c0e33;
+  --card-dark-hover: #29154a;
+  --card-border: rgba(192, 132, 252, 0.24);
+  --mint-primary: #c084fc;
+  --mint-glow: rgba(232, 121, 249, 0.3);
+  --mint-text: #0d0517;
+  --text-white: #faf5ff;
+  --text-muted: #e9d5ff;
+  --text-faint: #c084fc;
+  --paper: var(--bg-deep);
+  --card: var(--card-dark);
+  --ink: var(--text-white);
+  --line: var(--card-border);
+  --accent: var(--mint-primary);
+}
+@media (prefers-color-scheme: light) {
+  :root[data-modern-theme="amethyst"], html[data-modern-theme="amethyst"], body[data-modern-theme="amethyst"] {
+    --bg-deep: #faf5ff;
+    --card-dark: #ffffff;
+    --card-dark-hover: #f3e8ff;
+    --card-border: rgba(126, 34, 206, 0.2);
+    --mint-primary: #7e22ce;
+    --mint-glow: rgba(192, 38, 211, 0.2);
+    --mint-text: #ffffff;
+    --text-white: #3b0764;
+    --text-muted: #6b21a8;
+    --text-faint: #7e7888;
+    --paper: var(--bg-deep);
+    --card: var(--card-dark);
+    --ink: var(--text-white);
+    --line: var(--card-border);
+    --accent: var(--mint-primary);
+  }
+}
+
+/* 5. شفق الصحراء والتراكوتا (Sahara Dusk / Mocha) */
+:root[data-modern-theme="sahara"], html[data-modern-theme="sahara"], body[data-modern-theme="sahara"],
+:root[data-modern-theme="mocha"], html[data-modern-theme="mocha"], body[data-modern-theme="mocha"] {
+  --bg-deep: #160f09;
+  --card-dark: #291c13;
+  --card-dark-hover: #38261a;
+  --card-border: rgba(249, 115, 22, 0.25);
+  --mint-primary: #f97316;
+  --mint-glow: rgba(251, 191, 36, 0.3);
+  --mint-text: #1a0f07;
+  --text-white: #fff7ed;
+  --text-muted: #fdba74;
+  --text-faint: #a8a29e;
+  --paper: var(--bg-deep);
+  --card: var(--card-dark);
+  --ink: var(--text-white);
+  --line: var(--card-border);
+  --accent: var(--mint-primary);
+}
+@media (prefers-color-scheme: light) {
+  :root[data-modern-theme="sahara"], html[data-modern-theme="sahara"], body[data-modern-theme="sahara"],
+  :root[data-modern-theme="mocha"], html[data-modern-theme="mocha"], body[data-modern-theme="mocha"] {
+    --bg-deep: #fefaf5;
+    --card-dark: #ffffff;
+    --card-dark-hover: #ffedd5;
+    --card-border: rgba(234, 88, 12, 0.22);
+    --mint-primary: #ea580c;
+    --mint-glow: rgba(217, 119, 6, 0.2);
+    --mint-text: #ffffff;
+    --text-white: #431407;
+    --text-muted: #9a3412;
+    --text-faint: #78716c;
+    --paper: var(--bg-deep);
+    --card: var(--card-dark);
+    --ink: var(--text-white);
+    --line: var(--card-border);
+    --accent: var(--mint-primary);
+  }
+}
+
+/* 6. حبر الأكاديميا العريق (Classic Academia) */
+:root[data-modern-theme="academia"], html[data-modern-theme="academia"], body[data-modern-theme="academia"] {
+  --bg-deep: #0b0f1b;
+  --card-dark: #161d33;
+  --card-dark-hover: #202a49;
+  --card-border: rgba(96, 165, 250, 0.24);
+  --mint-primary: #60a5fa;
+  --mint-glow: rgba(244, 114, 182, 0.25);
+  --mint-text: #0b0f1b;
+  --text-white: #f8fafc;
+  --text-muted: #cbd5e1;
+  --text-faint: #94a3b8;
+  --paper: var(--bg-deep);
+  --card: var(--card-dark);
+  --ink: var(--text-white);
+  --line: var(--card-border);
+  --accent: var(--mint-primary);
+}
+@media (prefers-color-scheme: light) {
+  :root[data-modern-theme="academia"], html[data-modern-theme="academia"], body[data-modern-theme="academia"] {
+    --bg-deep: #fbf9f4;
+    --card-dark: #ffffff;
+    --card-dark-hover: #f0ece3;
+    --card-border: rgba(30, 58, 138, 0.2);
+    --mint-primary: #1e3a8a;
+    --mint-glow: rgba(131, 24, 67, 0.2);
+    --mint-text: #ffffff;
+    --text-white: #0f172a;
+    --text-muted: #334155;
+    --text-faint: #64748b;
+    --paper: var(--bg-deep);
+    --card: var(--card-dark);
+    --ink: var(--text-white);
+    --line: var(--card-border);
+    --accent: var(--mint-primary);
+  }
+}
+
+/* 7. كاندي باستيل الاسكندنافي (Nordic Pastel / Rose) */
+:root[data-modern-theme="rose"], html[data-modern-theme="rose"], body[data-modern-theme="rose"] {
+  --bg-deep: #130f1c;
+  --card-dark: #241f32;
+  --card-dark-hover: #322b45;
+  --card-border: rgba(244, 114, 182, 0.24);
+  --mint-primary: #f472b6;
+  --mint-glow: rgba(34, 211, 238, 0.28);
+  --mint-text: #130f1c;
+  --text-white: #fdf2f8;
+  --text-muted: #fbcfe8;
+  --text-faint: #f472b6;
+  --paper: var(--bg-deep);
+  --card: var(--card-dark);
+  --ink: var(--text-white);
+  --line: var(--card-border);
+  --accent: var(--mint-primary);
+}
+@media (prefers-color-scheme: light) {
+  :root[data-modern-theme="rose"], html[data-modern-theme="rose"], body[data-modern-theme="rose"] {
+    --bg-deep: #fff5f8;
+    --card-dark: #ffffff;
+    --card-dark-hover: #fce7f3;
+    --card-border: rgba(219, 39, 119, 0.22);
+    --mint-primary: #db2777;
+    --mint-glow: rgba(6, 182, 212, 0.2);
+    --mint-text: #ffffff;
+    --text-white: #4a1532;
+    --text-muted: #9d174d;
+    --text-faint: #831843;
+    --paper: var(--bg-deep);
+    --card: var(--card-dark);
+    --ink: var(--text-white);
+    --line: var(--card-border);
+    --accent: var(--mint-primary);
+  }
+}
+
+/* 8. حجر المونوكروم البريوتالي (Minimal Monolith / OLED) */
+:root[data-modern-theme="oled"], html[data-modern-theme="oled"], body[data-modern-theme="oled"] {
+  --bg-deep: #050505;
+  --card-dark: #121214;
+  --card-dark-hover: #1c1c20;
+  --card-border: rgba(255, 255, 255, 0.16);
+  --mint-primary: #fafafa;
+  --mint-glow: rgba(255, 255, 255, 0.2);
+  --mint-text: #050505;
+  --text-white: #f4f4f5;
+  --text-muted: #d4d4d8;
+  --text-faint: #a1a1aa;
+  --paper: var(--bg-deep);
+  --card: var(--card-dark);
+  --ink: var(--text-white);
+  --line: var(--card-border);
+  --accent: var(--mint-primary);
+}
+@media (prefers-color-scheme: light) {
+  :root[data-modern-theme="oled"], html[data-modern-theme="oled"], body[data-modern-theme="oled"] {
+    --bg-deep: #f8f9fa;
+    --card-dark: #ffffff;
+    --card-dark-hover: #e4e4e7;
+    --card-border: rgba(24, 24, 27, 0.2);
+    --mint-primary: #09090b;
+    --mint-glow: rgba(0, 0, 0, 0.15);
+    --mint-text: #ffffff;
+    --text-white: #09090b;
+    --text-muted: #27272a;
+    --text-faint: #71717a;
+    --paper: var(--bg-deep);
+    --card: var(--card-dark);
+    --ink: var(--text-white);
+    --line: var(--card-border);
+    --accent: var(--mint-primary);
+  }
+}
+
+/* 9. نار الشفق البركاني (Crimson Sunset / Ruby) */
+:root[data-modern-theme="ruby"], html[data-modern-theme="ruby"], body[data-modern-theme="ruby"] {
+  --bg-deep: #120505;
+  --card-dark: #270e0e;
+  --card-dark-hover: #381515;
+  --card-border: rgba(248, 113, 113, 0.25);
+  --mint-primary: #f87171;
+  --mint-glow: rgba(251, 146, 60, 0.3);
+  --mint-text: #120505;
+  --text-white: #fef2f2;
+  --text-muted: #fecaca;
+  --text-faint: #f87171;
+  --paper: var(--bg-deep);
+  --card: var(--card-dark);
+  --ink: var(--text-white);
+  --line: var(--card-border);
+  --accent: var(--mint-primary);
+}
+@media (prefers-color-scheme: light) {
+  :root[data-modern-theme="ruby"], html[data-modern-theme="ruby"], body[data-modern-theme="ruby"] {
+    --bg-deep: #fff6f6;
+    --card-dark: #ffffff;
+    --card-dark-hover: #fee2e2;
+    --card-border: rgba(220, 38, 38, 0.22);
+    --mint-primary: #dc2626;
+    --mint-glow: rgba(234, 88, 12, 0.2);
+    --mint-text: #ffffff;
+    --text-white: #450a0a;
+    --text-muted: #991b1b;
+    --text-faint: #78716c;
+    --paper: var(--bg-deep);
+    --card: var(--card-dark);
+    --ink: var(--text-white);
+    --line: var(--card-border);
+    --accent: var(--mint-primary);
+  }
+}
+
+/* 10. غابة الصنوبر والهدوء (Nordic Pine & Moss / Forest) */
+:root[data-modern-theme="forest"], html[data-modern-theme="forest"], body[data-modern-theme="forest"] {
+  --bg-deep: #061009;
+  --card-dark: #102115;
+  --card-dark-hover: #193120;
+  --card-border: rgba(74, 222, 128, 0.24);
+  --mint-primary: #4ade80;
+  --mint-glow: rgba(163, 230, 53, 0.28);
+  --mint-text: #061009;
+  --text-white: #f0fdf4;
+  --text-muted: #bbf7d0;
+  --text-faint: #86efac;
+  --paper: var(--bg-deep);
+  --card: var(--card-dark);
+  --ink: var(--text-white);
+  --line: var(--card-border);
+  --accent: var(--mint-primary);
+}
+@media (prefers-color-scheme: light) {
+  :root[data-modern-theme="forest"], html[data-modern-theme="forest"], body[data-modern-theme="forest"] {
+    --bg-deep: #f5f7f4;
+    --card-dark: #ffffff;
+    --card-dark-hover: #e7ece6;
+    --card-border: rgba(22, 101, 52, 0.22);
+    --mint-primary: #166534;
+    --mint-glow: rgba(77, 124, 15, 0.2);
+    --mint-text: #ffffff;
+    --text-white: #052e16;
+    --text-muted: #14532d;
+    --text-faint: #526e59;
+    --paper: var(--bg-deep);
+    --card: var(--card-dark);
+    --ink: var(--text-white);
+    --line: var(--card-border);
+    --accent: var(--mint-primary);
+  }
+}
+
+/* 11. شمس الكهرمان الذهبية (Solar Amber / Gold) */
+:root[data-modern-theme="gold"], html[data-modern-theme="gold"], body[data-modern-theme="gold"] {
+  --bg-deep: #120d03;
+  --card-dark: #271d07;
+  --card-dark-hover: #38290c;
+  --card-border: rgba(251, 191, 36, 0.26);
+  --mint-primary: #fbbf24;
+  --mint-glow: rgba(253, 224, 71, 0.3);
+  --mint-text: #120d03;
+  --text-white: #fffbeb;
+  --text-muted: #fde68a;
+  --text-faint: #fbbf24;
+  --paper: var(--bg-deep);
+  --card: var(--card-dark);
+  --ink: var(--text-white);
+  --line: var(--card-border);
+  --accent: var(--mint-primary);
+}
+@media (prefers-color-scheme: light) {
+  :root[data-modern-theme="gold"], html[data-modern-theme="gold"], body[data-modern-theme="gold"] {
+    --bg-deep: #fffdf5;
+    --card-dark: #ffffff;
+    --card-dark-hover: #fef3c7;
+    --card-border: rgba(217, 119, 6, 0.22);
+    --mint-primary: #d97706;
+    --mint-glow: rgba(202, 138, 4, 0.2);
+    --mint-text: #ffffff;
+    --text-white: #451a03;
+    --text-muted: #92400e;
+    --text-faint: #78716c;
+    --paper: var(--bg-deep);
+    --card: var(--card-dark);
+    --ink: var(--text-white);
+    --line: var(--card-border);
+    --accent: var(--mint-primary);
+  }
+}
+
+/* 12. أورورا الشفق القطبي (Boreal Aurora / Titanium) */
+:root[data-modern-theme="aurora"], html[data-modern-theme="aurora"], body[data-modern-theme="aurora"],
+:root[data-modern-theme="titanium"], html[data-modern-theme="titanium"], body[data-modern-theme="titanium"],
+:root[data-modern-theme="ivory"], html[data-modern-theme="ivory"], body[data-modern-theme="ivory"] {
+  --bg-deep: #030c12;
+  --card-dark: #0a1f2b;
+  --card-dark-hover: #102e40;
+  --card-border: rgba(45, 212, 191, 0.26);
+  --mint-primary: #2dd4bf;
+  --mint-glow: rgba(129, 140, 248, 0.32);
+  --mint-text: #030c12;
+  --text-white: #f0fdfa;
+  --text-muted: #99f6e4;
+  --text-faint: #5eead4;
+  --paper: var(--bg-deep);
+  --card: var(--card-dark);
+  --ink: var(--text-white);
+  --line: var(--card-border);
+  --accent: var(--mint-primary);
+}
+@media (prefers-color-scheme: light) {
+  :root[data-modern-theme="aurora"], html[data-modern-theme="aurora"], body[data-modern-theme="aurora"],
+  :root[data-modern-theme="titanium"], html[data-modern-theme="titanium"], body[data-modern-theme="titanium"],
+  :root[data-modern-theme="ivory"], html[data-modern-theme="ivory"], body[data-modern-theme="ivory"] {
+    --bg-deep: #f0fdfa;
+    --card-dark: #ffffff;
+    --card-dark-hover: #ccfbf1;
+    --card-border: rgba(15, 118, 110, 0.22);
+    --mint-primary: #0f766e;
+    --mint-glow: rgba(99, 102, 241, 0.2);
+    --mint-text: #ffffff;
+    --text-white: #134e4a;
+    --text-muted: #0f766e;
+    --text-faint: #5eead4;
+    --paper: var(--bg-deep);
+    --card: var(--card-dark);
+    --ink: var(--text-white);
+    --line: var(--card-border);
+    --accent: var(--mint-primary);
+  }
+}
+
+/* =========================================================================
+   12 DEEPLY DIFFERENTIATED THEME STYLES (NOT JUST BORDER COLORS)
+   ========================================================================= */
+
+/* 1. سديم نيون المستقبلي (Cyberpunk Neon) */
+html[data-modern-theme="cyberpunk"] body,
+html[data-modern-theme="cyber"] body {
+  background-image: 
+    linear-gradient(rgba(0, 240, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.07) 1px, transparent 1px) !important;
+  background-size: 26px 26px !important;
+  font-family: 'JetBrains Mono', 'Alexandria', monospace !important;
+}
+html[data-modern-theme="cyberpunk"] .course-card,
+html[data-modern-theme="cyberpunk"] .hero-next-card,
+html[data-modern-theme="cyberpunk"] .today-sched-card,
+html[data-modern-theme="cyberpunk"] .resume-card,
+html[data-modern-theme="cyberpunk"] .card {
+  border-radius: 4px !important;
+  box-shadow: 0 0 20px -2px rgba(0, 240, 255, 0.35) !important;
+  border: 1.5px solid rgba(0, 240, 255, 0.5) !important;
+}
+html[data-modern-theme="cyberpunk"] button:not(.nav-tab-btn) {
+  border-radius: 4px !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase !important;
+}
+
+/* 2. حبر الأكاديميا العريق (Vintage Academia) */
+html[data-modern-theme="academia"] body {
+  background-image: radial-gradient(rgba(180, 150, 110, 0.15) 1px, transparent 1px) !important;
+  background-size: 20px 20px !important;
+  font-family: 'Amiri', 'Playfair Display', serif !important;
+  line-height: 1.7 !important;
+}
+html[data-modern-theme="academia"] h1,
+html[data-modern-theme="academia"] h2,
+html[data-modern-theme="academia"] h3,
+html[data-modern-theme="academia"] h4,
+html[data-modern-theme="academia"] .course-card-title,
+html[data-modern-theme="academia"] .amiri-title {
+  font-family: 'Amiri', 'Playfair Display', serif !important;
+  line-height: 1.55 !important;
+  letter-spacing: normal !important;
+  margin-bottom: 6px !important;
+}
+html[data-modern-theme="academia"] .course-card,
+html[data-modern-theme="academia"] .hero-next-card,
+html[data-modern-theme="academia"] .today-sched-card,
+html[data-modern-theme="academia"] .card {
+  border-radius: 8px !important;
+  border: 2px solid rgba(184, 155, 114, 0.35) !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* 3. حجر المونوكروم الأنيق (Refined Minimal Monolith / Slate Stone) */
+html[data-modern-theme="oled"] body {
+  background-color: #09090b !important;
+  background-image: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.05) 0%, transparent 60%) !important;
+}
+html[data-modern-theme="oled"] .course-card,
+html[data-modern-theme="oled"] .hero-next-card,
+html[data-modern-theme="oled"] .today-sched-card,
+html[data-modern-theme="oled"] .resume-card,
+html[data-modern-theme="oled"] .more-group-card,
+html[data-modern-theme="oled"] .card {
+  border-radius: 14px !important;
+  border-width: 1px !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5) !important;
+  background: #121215 !important;
+}
+html[data-modern-theme="oled"] .more-menu-item {
+  border: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+html[data-modern-theme="oled"] .more-menu-item:last-child {
+  border-bottom: none !important;
+}
+html[data-modern-theme="oled"] .nav-tab-btn,
+html[data-modern-theme="oled"] .header-icon-btn,
+html[data-modern-theme="oled"] .dropdown-action-btn {
+  border: none !important;
+  box-shadow: none !important;
+}
+html[data-modern-theme="oled"] .btn-primary,
+html[data-modern-theme="oled"] button.btn-primary {
+  border: none !important;
+  border-radius: 12px !important;
+  background: #fafafa !important;
+  color: #09090b !important;
+  box-shadow: 0 2px 10px rgba(255, 255, 255, 0.15) !important;
+}
+
+/* 4. كاندي باستيل الاسكندنافي (Nordic Rose Pastel) */
+html[data-modern-theme="rose"] body {
+  background-image: 
+    radial-gradient(circle at 10% 15%, rgba(244, 114, 182, 0.12) 0%, transparent 45%),
+    radial-gradient(circle at 90% 85%, rgba(192, 132, 252, 0.12) 0%, transparent 45%) !important;
+}
+html[data-modern-theme="rose"] .course-card,
+html[data-modern-theme="rose"] .hero-next-card,
+html[data-modern-theme="rose"] .today-sched-card,
+html[data-modern-theme="rose"] .resume-card,
+html[data-modern-theme="rose"] .card {
+  border-radius: 28px !important;
+  box-shadow: 0 12px 30px -5px rgba(236, 72, 153, 0.22) !important;
+  border: 1.5px solid rgba(244, 114, 182, 0.3) !important;
+}
+html[data-modern-theme="rose"] button:not(.nav-tab-btn) {
+  border-radius: 20px !important;
+}
+
+/* 5. الجمشت المخملي الكوني (Cosmic Amethyst) */
+html[data-modern-theme="amethyst"] body {
+  background-image: 
+    radial-gradient(ellipse at 50% 5%, rgba(192, 132, 252, 0.25) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 90%, rgba(139, 92, 246, 0.18) 0%, transparent 50%) !important;
+}
+html[data-modern-theme="amethyst"] .course-card,
+html[data-modern-theme="amethyst"] .hero-next-card,
+html[data-modern-theme="amethyst"] .today-sched-card,
+html[data-modern-theme="amethyst"] .card {
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 10px 32px 0 rgba(147, 51, 234, 0.28) !important;
+  border: 1.5px solid rgba(192, 132, 252, 0.35) !important;
+}
+
+/* 6. شفق الصحراء والتراكوتا (Sahara Terracotta) */
+html[data-modern-theme="sahara"] body,
+html[data-modern-theme="mocha"] body {
+  background-image: 
+    linear-gradient(135deg, rgba(234, 88, 12, 0.06) 25%, transparent 25%),
+    linear-gradient(225deg, rgba(234, 88, 12, 0.06) 25%, transparent 25%) !important;
+  background-size: 32px 32px !important;
+}
+html[data-modern-theme="sahara"] .course-card,
+html[data-modern-theme="sahara"] .hero-next-card,
+html[data-modern-theme="sahara"] .today-sched-card,
+html[data-modern-theme="sahara"] .card {
+  border-radius: 14px !important;
+  box-shadow: 0 8px 24px rgba(234, 88, 12, 0.18) !important;
+  border: 1.5px solid rgba(249, 115, 22, 0.35) !important;
+}
+
+/* 7. نار الشفق البركاني (Volcanic Ruby) */
+html[data-modern-theme="ruby"] body {
+  background-image: radial-gradient(circle at 50% 0%, rgba(244, 63, 94, 0.18) 0%, transparent 60%) !important;
+}
+html[data-modern-theme="ruby"] .course-card,
+html[data-modern-theme="ruby"] .hero-next-card,
+html[data-modern-theme="ruby"] .today-sched-card,
+html[data-modern-theme="ruby"] .card {
+  border-radius: 16px !important;
+  box-shadow: 0 0 25px -2px rgba(244, 63, 94, 0.35) !important;
+  border: 1.5px solid rgba(244, 63, 94, 0.45) !important;
+}
+
+/* 8. شمس الكهرمان الذهبية (Solar Gold) */
+html[data-modern-theme="gold"] body {
+  background-image: radial-gradient(circle at 50% 0%, rgba(251, 191, 36, 0.14) 0%, transparent 55%) !important;
+}
+html[data-modern-theme="gold"] .course-card,
+html[data-modern-theme="gold"] .hero-next-card,
+html[data-modern-theme="gold"] .today-sched-card,
+html[data-modern-theme="gold"] .card {
+  border-radius: 16px !important;
+  box-shadow: 0 8px 26px -3px rgba(251, 191, 36, 0.28) !important;
+  border: 1.5px solid rgba(251, 191, 36, 0.4) !important;
+}
+
+/* 9. أورورا الشفق القطبي (Boreal Aurora) */
+html[data-modern-theme="aurora"] body {
+  background-image: 
+    linear-gradient(135deg, rgba(45, 212, 191, 0.12) 0%, rgba(99, 102, 241, 0.12) 50%, transparent 100%) !important;
+}
+html[data-modern-theme="aurora"] .course-card,
+html[data-modern-theme="aurora"] .hero-next-card,
+html[data-modern-theme="aurora"] .today-sched-card,
+html[data-modern-theme="aurora"] .card {
+  border-radius: 20px !important;
+  box-shadow: 0 8px 28px -3px rgba(45, 212, 191, 0.25) !important;
+  border: 1.5px solid rgba(45, 212, 191, 0.35) !important;
+}
+
+/* 10. عمق المحيط الهادر (Deep Sapphire) */
+html[data-modern-theme="sapphire"] body {
+  background-image: 
+    radial-gradient(circle at 20% 10%, rgba(56, 189, 248, 0.16) 0%, transparent 50%),
+    radial-gradient(circle at 80% 90%, rgba(14, 165, 233, 0.14) 0%, transparent 50%) !important;
+}
+html[data-modern-theme="sapphire"] .course-card,
+html[data-modern-theme="sapphire"] .hero-next-card,
+html[data-modern-theme="sapphire"] .today-sched-card,
+html[data-modern-theme="sapphire"] .card {
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 8px 26px rgba(14, 165, 233, 0.25) !important;
+  border: 1.5px solid rgba(56, 189, 248, 0.35) !important;
+}
+
+/* 11. غابة الصنوبر والهدوء (Nordic Pine & Forest) */
+html[data-modern-theme="forest"] body {
+  background-image: 
+    radial-gradient(ellipse at 50% 0%, rgba(74, 222, 128, 0.12) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% 100%, rgba(34, 197, 94, 0.08) 0%, transparent 50%) !important;
+}
+html[data-modern-theme="forest"] .course-card,
+html[data-modern-theme="forest"] .hero-next-card,
+html[data-modern-theme="forest"] .today-sched-card,
+html[data-modern-theme="forest"] .card {
+  border-radius: 16px !important;
+  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.2) !important;
+  border: 1.5px solid rgba(74, 222, 128, 0.32) !important;
+}
+
+/* 12. واحة الزمرد الملكية (Default Emerald) */
+html[data-modern-theme="default"] body,
+html:not([data-modern-theme]) body {
+  background-image: radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.1) 0%, transparent 50%) !important;
+}
+html[data-modern-theme="default"] .course-card,
+html:not([data-modern-theme]) .course-card {
+  border-radius: 18px !important;
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.18) !important;
+  border: 1px solid rgba(16, 185, 129, 0.25) !important;
+}
+
+/* =========================================================================
+   إصلاح المساحة الفارغة في الأعلى وتصفير المسافات والسماح بالتمرير الحر
+   ========================================================================= */
+html {
+  background-color: var(--bg-deep) !important;
+  scroll-behavior: smooth;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100vw !important;
+  height: auto !important;
+}
+
+body {
+  background-color: var(--bg-deep) !important;
+  color: var(--text-white) !important;
+  font-family: var(--font-sans) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: 100vh;
+  height: auto !important;
+  direction: rtl;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y !important;
+  max-width: 100vw !important;
+}
+
+/* هيدر ما قبل تسجيل الدخول */
+.wrap > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0 10px 0;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.wrap > header .label {
+  color: var(--mint-primary) !important;
+  font-size: 11.5px !important;
+  letter-spacing: 2px !important;
+  font-weight: 700 !important;
+  margin: 0 0 3px 0 !important;
+}
+
+.wrap > header h1 {
+  color: var(--text-white) !important;
+  font-family: var(--font-serif) !important;
+  font-size: 30px !important;
+  font-weight: 700 !important;
+  margin: 0 !important;
+  text-shadow: 0 0 18px var(--mint-glow);
+}
+
+body::before {
+  display: none !important;
+}
+
+/* إخفاء الهيدر القديم وأي عناصر تحميل لمنع أي فراغ أعلى الشاشة */
+body.modern-mode .wrap > header,
+body.modern-mode #hello,
+body.modern-mode #anon-banner,
+body.modern-mode #dashboard,
+body.modern-mode #tabs,
+body.modern-mode #loading,
+body.modern-mode .side-drawer,
+body.modern-mode .side-drawer-backdrop {
+  display: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 0 !important;
+}
+
+body.modern-mode .wrap {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+  max-width: 520px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+/* منع أي فراغ أو مساحة بيضاء أعلى الشاشة في كل الأقسام المفتوحة وسكشن المزيد */
+#chips:empty,
+#tabs:empty,
+#list:empty,
+#dashboard:empty,
+#hello,
+#hello:empty,
+#msg:empty,
+body.modern-mode #bot-banner[hidden],
+body.modern-mode #loading[hidden],
+#modern-app-shell[style*="display: none"],
+#modern-app-shell[style*="display:none"],
+#modern-app-shell:empty {
+  display: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 0 !important;
+}
+
+#app {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: calc(140px + env(safe-area-inset-bottom, 24px)) !important;
+  box-sizing: border-box !important;
+}
+
+#list {
+  padding-bottom: calc(140px + env(safe-area-inset-bottom, 24px)) !important;
+  box-sizing: border-box !important;
+}
+
+.section-nav-top {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+#courses-box, #theme-box, #people-box, #log-box, #tracker-box, #picker-box {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: calc(140px + env(safe-area-inset-bottom, 24px)) !important;
+  box-sizing: border-box !important;
+  color: var(--text-white) !important;
+}
+
+#courses-box > .row:first-child,
+#people-box > .row:first-child,
+#log-box > .row:first-child,
+#picker-box > h3:first-child,
+#theme-box > h2:first-child {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+#courses-box .card, #theme-box .card, #people-box .card, #log-box .card, #tracker-box .card, #picker-box.card {
+  background: var(--card-dark) !important;
+  border-color: var(--card-border) !important;
+  color: var(--text-white) !important;
+}
+
+@media (min-width: 900px) {
+  body.modern-mode .wrap {
+    max-width: 760px !important;
+  }
+}
+
+.modern-app-shell {
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 0 calc(130px + env(safe-area-inset-bottom, 24px)) 0 !important;
+  min-height: auto;
+  box-sizing: border-box;
+  position: relative;
+}
+
+#modern-content-root {
+  padding-bottom: calc(130px + env(safe-area-inset-bottom, 24px)) !important;
+  box-sizing: border-box !important;
+}
+
+#list > *:last-child,
+.item-card:last-child,
+.task-card:last-child,
+.more-group-card:last-child,
+.subject-card:last-child,
+.card:last-child {
+  margin-bottom: calc(120px + env(safe-area-inset-bottom, 24px)) !important;
+}
+
+.modern-app-shell:has(.ai-view-container) {
+  padding-bottom: 0 !important;
+}
+
+/* نظام الخطوط الأكاديمية المتطورة لدُفعة Math 3 */
+html[data-font="alexandria"], body[data-font="alexandria"] {
+  --user-chosen-font: 'Alexandria', 'Cairo', sans-serif;
+  --font-sans: 'Alexandria', 'Cairo', sans-serif;
+}
+html[data-font="cairo"], body[data-font="cairo"] {
+  --user-chosen-font: 'Cairo', 'Alexandria', sans-serif;
+  --font-sans: 'Cairo', 'Alexandria', sans-serif;
+}
+html[data-font="readex"], body[data-font="readex"] {
+  --user-chosen-font: 'Readex Pro', 'Alexandria', sans-serif;
+  --font-sans: 'Readex Pro', 'Alexandria', sans-serif;
+}
+html[data-font="tajawal"], body[data-font="tajawal"] {
+  --user-chosen-font: 'Tajawal', 'Cairo', sans-serif;
+  --font-sans: 'Tajawal', 'Cairo', sans-serif;
+}
+html[data-font="amiri"], body[data-font="amiri"] {
+  --user-chosen-font: 'Amiri', serif;
+  --font-sans: 'Amiri', serif;
+}
+html[data-font="mono"], body[data-font="mono"] {
+  --user-chosen-font: 'JetBrains Mono', 'Alexandria', monospace;
+  --font-sans: 'JetBrains Mono', 'Alexandria', monospace;
+}
+
+html, body, button, input, textarea, select, .wrap, .modern-app-shell, .nav-tab-btn, .sched-day-btn, .stat-card, .sec-card, .subject-card, .ai-bubble, .ai-main-title, .login-brand, .item-card, .task-card, .more-menu-item {
+  font-family: var(--user-chosen-font, var(--font-sans)) !important;
+}
+
+/* نصوص وعناوين بمسافات رأسية وارتفاعات أسطر متناغمة ووزن خط واضح ومميز */
+h1, h2, h3, h4, h5, h6, label {
+  font-family: var(--user-chosen-font, var(--font-sans)) !important;
+  font-weight: 800 !important;
+  margin-top: 0 !important;
+  margin-bottom: 6px !important;
+  line-height: 1.45 !important;
+  letter-spacing: -0.2px !important;
+}
+
+p {
+  line-height: 1.65 !important;
+  margin-bottom: 8px !important;
+}
+
+.amiri-title {
+  font-family: var(--user-chosen-font, var(--font-serif)) !important;
+  font-weight: 800;
+  margin-top: 0 !important;
+  margin-bottom: 6px !important;
+  line-height: 1.55 !important;
+  letter-spacing: normal !important;
+}
+
+/* إخفاء الزر العائم القديم (#links-fab) لعدم حجب محتوى الشاشة أو التداخل مع التنقل السفلي */
+#links-fab,
+#links-fab[hidden],
+body.modern-mode #links-fab,
+body.modern-mode #links-panel {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+#links-panel {
+  position: fixed !important;
+  bottom: 140px !important;
+  left: 18px !important;
+  z-index: 120 !important;
+  background: var(--card-dark) !important;
+  border: 1px solid var(--card-border) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
+  max-width: 290px !important;
+  overflow: hidden !important;
+}
+
+/* =========================================================================
+   صفحة تسجيل الدخول (#login-box) متناسقة بنسبة 100% مع الثيم النشط
+   ========================================================================= */
+#login-box {
+  background: var(--card-dark) !important;
+  border: 1.5px solid var(--card-border) !important;
+  border-radius: 24px !important;
+  padding: 34px 22px 28px !important;
+  max-width: 440px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  margin: 18px auto 30px !important;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.4), 0 0 35px var(--mint-glow) !important;
+  text-align: center !important;
+  position: relative !important;
+  overflow: hidden !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  transition: all 0.3s ease !important;
+}
+
+.login-brand {
+  margin-bottom: 20px;
+}
+
+.login-brand-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  background: var(--card-dark-hover);
+  border: 1.5px solid var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  margin: 0 auto 12px auto;
+  box-shadow: 0 0 20px var(--mint-glow);
+}
+
+.login-brand-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--mint-primary);
+  background: rgba(61, 227, 186, 0.12);
+  padding: 3px 10px;
+  border-radius: 20px;
+  margin-bottom: 8px;
+}
+
+#login-box h2, .login-brand h2 {
+  font-family: var(--font-serif) !important;
+  font-size: 28px !important;
+  font-weight: 700 !important;
+  color: var(--text-white) !important;
+  margin: 0 0 6px 0 !important;
+  line-height: 1.25 !important;
+}
+
+.login-brand-sub {
+  font-size: 13px !important;
+  color: var(--text-muted) !important;
+  margin: 0 !important;
+  line-height: 1.5 !important;
+}
+
+#tg-widget-wrap {
+  margin: 16px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-divider {
+  margin: 18px 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.login-divider span:first-child,
+.login-divider span:last-child {
+  flex: 1;
+  height: 1px;
+  background: var(--card-border);
+}
+
+#anon-login-btn, .anon-login-btn {
+  background: var(--mint-primary) !important;
+  color: var(--mint-text) !important;
+  border: none !important;
+  border-radius: 14px !important;
+  padding: 13px 20px !important;
+  font-family: var(--font-sans) !important;
+  font-weight: 700 !important;
+  font-size: 15px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  box-shadow: 0 4px 18px var(--mint-glow) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+#anon-login-btn:hover, .anon-login-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 25px var(--mint-glow) !important;
+  filter: brightness(1.08) !important;
+}
+
+#anon-login-btn:active, .anon-login-btn:active {
+  transform: translateY(0) !important;
+}
+
+/* الحسابات المحفوظة إن وجدت */
+#saved-accounts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+#saved-accounts .row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+#saved-accounts button {
+  background: var(--card-dark-hover) !important;
+  color: var(--text-white) !important;
+  border: 1px solid var(--card-border) !important;
+  border-radius: 12px !important;
+  padding: 8px 16px !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+#saved-accounts button:hover {
+  border-color: var(--mint-primary) !important;
+  color: var(--mint-primary) !important;
+}
+
+/* شريط تبديل الثيمات السريع في أسفل كارت تسجيل الدخول: دوائر فقط بدون نصوص */
+.login-quick-themes {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--card-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.login-quick-themes-label {
+  display: none !important;
+}
+
+.login-themes-dots-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.login-theme-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.login-theme-dot:hover {
+  transform: scale(1.22);
+}
+
+.login-theme-dot.active {
+  border-color: var(--text-white);
+  transform: scale(1.2);
+  box-shadow: 0 0 10px currentColor;
+}
+
+/* شريط التنقل السفلي الفاخر (5 تابات) */
+.modern-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: rgba(8, 18, 17, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--card-border);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px)) 12px;
+}
+
+.nav-tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 6px 8px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  border-radius: 10px;
+  flex: 1;
+  max-width: 95px;
+}
+
+.nav-tab-btn svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  stroke-width: 2;
+  transition: stroke 0.18s ease, transform 0.18s ease;
+}
+
+.nav-tab-btn.active {
+  color: var(--mint-primary);
+  font-weight: 700;
+}
+
+.nav-tab-btn.active svg {
+  stroke: var(--mint-primary);
+  transform: translateY(-1px);
+}
+
+/* ترويسة الرجوع في الأقسام المفتوحة */
+.section-nav-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.section-back-btn {
+  background: var(--card-dark);
+  border: 1px solid var(--card-border);
+  color: var(--text-white);
+  border-radius: 12px;
+  padding: 8px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.section-back-btn:hover {
+  background: var(--card-dark-hover);
+  border-color: var(--mint-primary);
+}
+
+/* الهيدر العلوي للرئيسية */
+.modern-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 22px;
+  padding-top: 6px;
+}
+
+.modern-header-user {
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* مساحة كافية تماماً بين التاريخ واسم المستخدم */
+  text-align: right;
+}
+
+.modern-header-date {
+  font-size: 13px !important;
+  color: var(--text-muted) !important;
+  font-weight: 500 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.35 !important;
+  letter-spacing: 0.2px;
+}
+
+.modern-header-greeting {
+  font-family: var(--font-serif) !important;
+  font-size: 31px !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important; /* حماية زوائد وهمزات خط أميري من التداخل */
+  color: var(--text-white) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* ترويسات الصفحات (المواد، المتتبع، الجدول) */
+.courses-page-header,
+.tracker-header {
+  margin-bottom: 18px;
+  padding-top: 2px;
+}
+
+/* ترويسة صفحة المزيد - تصفير المسافة العلوية تماماً لمنع الفراغ */
+.more-page-header {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  margin-bottom: 12px !important;
+}
+
+.courses-title,
+.tracker-title {
+  font-family: var(--font-serif) !important;
+  font-size: 32px !important;
+  font-weight: 700 !important;
+  line-height: 1.45 !important;
+  color: var(--text-white) !important;
+  margin: 0 0 4px 0 !important;
+  padding: 0 !important;
+}
+
+.more-title {
+  font-family: var(--font-serif) !important;
+  font-size: 28px !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  color: var(--text-white) !important;
+  margin: 0 0 2px 0 !important;
+  padding: 0 !important;
+}
+
+.courses-subtitle,
+.tracker-subtitle,
+.more-subtitle {
+  font-size: 13px !important;
+  color: var(--text-muted) !important;
+  font-weight: 400 !important;
+  line-height: 1.5 !important;
+  margin: 0 !important;
+}
+
+/* ترويسة الرجوع داخل الأقسام المنبثقة من المزيد */
+.section-nav-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  margin-bottom: 12px !important;
+  padding-bottom: 8px !important;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.section-nav-title {
+  font-family: var(--font-serif) !important;
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  color: var(--text-white) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.modern-avatar-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--card-dark);
+  border: 1.5px solid var(--mint-primary);
+  color: var(--mint-primary);
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  transition: transform 0.18s ease;
+  margin-top: 2px;
+}
+
+.modern-avatar-btn:hover {
+  transform: scale(1.06);
+}
+
+/* كارت "التالي عليك" */
+.hero-next-card {
+  background: var(--card-dark);
+  border: 1px solid var(--card-border);
+  border-radius: 18px;
+  padding: 18px 20px;
+  margin-bottom: 18px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.hero-next-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--mint-primary), transparent);
+}
+
+.hero-next-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.hero-next-title {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-white);
+  margin: 0 0 4px 0;
+}
+
+.hero-next-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+.hero-next-btn {
+  background: var(--mint-primary);
+  color: var(--mint-text);
+  border: none;
+  border-radius: 12px;
+  padding: 10px 22px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px var(--mint-glow);
+}
+
+/* كارت النشرة الأسبوعية في الرئيسية */
+.newsletter-hero-card {
+  background: linear-gradient(135deg, rgba(20,38,34,0.9) 0%, rgba(35,26,10,0.85) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: 18px;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+  position: relative;
+}
+
+.newsletter-hero-tag {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #fbbf24;
+  margin-bottom: 4px;
+}
+
+.newsletter-hero-title {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-white);
+  margin: 0 0 4px 0;
+}
+
+.newsletter-hero-body {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 0 0 12px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* سكشن النهاردة */
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.section-header-title {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-white);
+  margin: 0;
+}
+
+.section-header-link {
+  font-size: 12.5px;
+  color: var(--mint-primary);
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.today-sched-card {
+  background: var(--card-dark);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 2px 16px;
+  margin-bottom: 18px;
+}
+
+.today-sched-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.today-sched-item:last-child {
+  border-bottom: none;
+}
+
+.today-sched-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-white);
+}
+
+.today-sched-time {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  font-weight: 500;
+  direction: ltr;
+}
+
+/* سكشن كمّل من وقفت */
+.resume-card {
+  background: var(--card-dark);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 15px 16px;
+  margin-bottom: 18px;
+}
+
+.resume-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.resume-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.resume-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-white);
+  margin: 0 0 6px 0;
+}
+
+.resume-progress-track {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.resume-progress-fill {
+  height: 100%;
+  background: var(--mint-primary);
+  border-radius: 999px;
+}
+
+.resume-circle-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--card-dark);
+  border: 1px solid var(--mint-primary);
+  color: var(--text-white);
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* شبكة المواد */
+.courses-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.course-card {
+  background: var(--card-dark);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 16px 14px 12px 14px;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  min-height: 125px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.18s ease;
+}
+
+.course-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--card-border-active);
+}
+
+.course-watermark {
+  position: absolute;
+  bottom: -15px;
+  left: 6px;
+  font-family: var(--font-serif);
+  font-size: 80px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+  font-weight: 700;
+}
+
+.course-card-title {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.course-progress-track {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.course-progress-bar {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.course-status-text {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin: 0;
+}
+
+/* تفاصيل المادة ونظام إضافة وحذف المحاضرات */
+.course-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.back-circle-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--card-dark);
+  border: 1px solid var(--card-border);
+  color: var(--text-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.readiness-badge {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mint-primary);
+}
+
+.course-detail-title {
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0 0 2px 0;
+}
+
+.course-detail-subtitle {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 0 0 14px 0;
+}
+
+.segmented-pills {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.seg-pill-btn {
+  background: var(--card-dark);
+  border: 1px solid var(--card-border);
+  color: var(--text-white);
+  padding: 7px 15px;
+  border-radius: 12px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.seg-pill-btn.active {
+  background: var(--mint-primary);
+  color: var(--mint-text);
+  border-color: var(--mint-primary);
+}
+
+/* نموذج إضافة محاضرة جديدة بواسطة الطالب */
+.add-lecture-card {
+  background: var(--card-dark);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.add-lecture-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  color: var(--text-white);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  outline: none;
+}
+
+.add-lecture-btn {
+  background: var(--mint-primary);
+  color: var(--mint-text);
+  border: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.lectures-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.lecture-card {
+  background: var(--card-dark);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.lecture-info {
+  flex: 1;
+}
+
+.lecture-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-white);
+  margin: 0;
+}
+
+.mastery-dots {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.mastery-dot-btn, .mastery-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--mint-primary);
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  display: inline-block;
+}
+
+.mastery-dot-btn.filled, .mastery-dot.filled {
+  background: var(--mint-primary);
+  box-shadow: 0 0 8px var(--mint-glow);
+}
+
+.mastery-dot-btn:hover {
+  transform: scale(1.22);
+}
+
+.mastery-dot.empty {
+  background: transparent;
+}
+
+.delete-lecture-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.delete-lecture-btn:hover {
+  color: var(--accent-pink);
+}
+
+.sticky-study-action {
+  position: sticky;
+  bottom: 74px;
+  margin-top: 14px;
+  z-index: 80;
+}
+
+.study-session-btn {
+  width: 100%;
+  background: var(--mint-primary);
+  color: var(--mint-text);
+  border: none;
+  border-radius: 14px;
+  padding: 13px 20px;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 18px var(--mint-glow);
+}
+
+/* المتتبع والعداد الدائري */
+.readiness-ring-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 12px 0 18px 0;
+  position: relative;
+}
+
+.readiness-ring-svg {
+  width: 160px;
+  height: 160px;
+  transform: rotate(-90deg);
+}
+
+.readiness-ring-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 11;
+}
+
+.readiness-ring-fg {
+  fill: none;
+  stroke: var(--mint-primary);
+  stroke-width: 11;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.8s ease;
+}
+
+.readiness-ring-number {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-serif);
+  font-size: 38px;
+  font-weight: 700;
+  color: var(--text-white);
+}
+
+.weakest-point-card {
+  background: var(--card-dark);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.weakest-point-label {
+  font-size: 11.5px;
+  color: var(--accent-orange);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.weakest-point-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-white);
+  margin: 0;
+}
+
+.weakest-study-btn {
+  background: var(--mint-primary);
+  color: var(--mint-text);
+  border: none;
+  border-radius: 10px;
+  padding: 8px 18px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.heatmap-card {
+  background: var(--card-dark);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 18px;
+}
+
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+  direction: ltr;
+}
+
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.heatmap-cell.level-1 { background: rgba(61, 227, 186, 0.25); }
+.heatmap-cell.level-2 { background: rgba(61, 227, 186, 0.5); }
+.heatmap-cell.level-3 { background: rgba(61, 227, 186, 0.75); }
+.heatmap-cell.level-4 { background: var(--mint-primary); }
+
+.heatmap-status-text {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin: 0;
+  text-align: right;
+}
+
+/* الجدول الدراسي */
+.schedule-days-bar {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  margin-bottom: 14px;
+}
+
+.sched-day-pill {
+  background: var(--card-dark);
+  border: 1px solid var(--card-border);
+  color: var(--text-white);
+  padding: 6px 13px;
+  border-radius: 10px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sched-day-pill.active {
+  background: var(--mint-primary);
+  color: var(--mint-text);
+  border-color: var(--mint-primary);
+  font-weight: 700;
+}
+
+.sched-slot-card {
+  background: var(--card-dark);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 13px 15px;
+  margin-bottom: 9px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.sched-slot-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-white);
+  margin: 0 0 3px 0;
+}
+
+.sched-slot-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.sched-slot-time-badge {
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--mint-primary);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 5px 9px;
+  font-size: 11.5px;
+  font-weight: 600;
+  direction: ltr;
+}
+
+/* صفحة المزيد والبحث المتناسق أفقياً */
+.more-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card-dark);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 0 14px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+  width: 100%;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.more-search-wrap:focus-within {
+  border-color: var(--mint-primary);
+  box-shadow: 0 0 0 2px var(--mint-glow);
+}
+
+.more-search-icon {
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.more-search-input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 12px 0;
+  box-sizing: border-box;
+  color: var(--text-white);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  outline: none;
+  margin: 0;
+}
+
+.more-group-card {
+  background: var(--card-dark);
+  border: 1px solid var(--card-border);
+  border-radius: 18px;
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+
+.more-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  background: transparent;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  width: 100%;
+  text-align: right;
+  color: inherit;
+  font-family: var(--font-sans);
+  transition: background 0.15s ease;
+}
+
+.more-menu-item:last-child {
+  border-bottom: none;
+}
+
+.more-menu-item:hover {
+  background: var(--card-dark-hover);
+}
+
+.more-menu-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.more-item-icon-wrap {
+  width: 35px;
+  height: 35px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.more-item-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-white);
+  margin: 0 0 1px 0;
+}
+
+.more-item-desc {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.more-menu-arrow {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* درج الثيمات القابل للفتح والإغلاق */
+.themes-drawer-card {
+  background: var(--card-dark);
+  border: 1.5px solid var(--card-border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  user-select: none;
+}
+
+.themes-drawer-card:hover {
+  border-color: var(--mint-primary);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.themes-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.themes-drawer-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.themes-drawer-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-white);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 !important;
+}
+
+.themes-drawer-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 !important;
+}
+
+.themes-drawer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid var(--mint-primary);
+  color: var(--mint-primary);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.themes-drawer-content {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--card-border);
+  animation: drawerSlide 0.25s ease-out forwards;
+}
+
+@keyframes drawerSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.themes-drawer-close-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.themes-drawer-close-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--card-border);
+  color: var(--text-white);
+  padding: 8px 18px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.themes-drawer-close-btn:hover {
+  background: var(--card-dark-hover);
+  border-color: var(--mint-primary);
+  color: var(--mint-primary);
+}
+
+/* شبكة الثيمات الفاخرة - متوافقة كلياً مع كل الشاشات ولا تكسر الشاشة */
+.themes-grid-picker {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 9px;
+  margin-bottom: 12px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (min-width: 520px) {
+  .themes-grid-picker {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
+.theme-pill-btn {
+  background: var(--card-dark);
+  border: 1.5px solid var(--card-border);
+  border-radius: 14px;
+  padding: 10px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-white);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.theme-pill-btn:hover {
+  border-color: var(--mint-primary);
+  background: var(--card-dark-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.theme-pill-btn.active {
+  border-color: var(--mint-primary);
+  background: var(--card-dark-hover);
+  box-shadow: 0 0 16px var(--mint-glow), 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.theme-pill-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.theme-pill-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.theme-dot-preview {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 0 10px currentColor;
+}
+
+.theme-pill-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.theme-pill-tag {
+  font-size: 10.5px;
+  opacity: 0.65;
+  font-family: monospace;
+}
+
+.theme-active-tag {
+  font-size: 11px;
+  color: var(--mint-primary);
+  font-weight: 700;
+  background: rgba(61, 227, 186, 0.14);
+  padding: 2px 7px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+/* نافذة بومودورو */
+.pomodoro-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.pomodoro-modal-box {
+  background: var(--card-dark);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  padding: 22px;
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.6);
+}
+
+.pomodoro-digits {
+  font-family: var(--font-serif);
+  font-size: 58px;
+  font-weight: 700;
+  color: var(--text-white);
+  margin: 12px 0;
+  direction: ltr;
+}
+
+/* بطاقات وقوائم النظام القديم */
+body.modern-mode .card {
+  background: var(--card-dark) !important;
+  border: 1px solid var(--card-border) !important;
+  border-radius: 16px !important;
+  color: var(--text-white) !important;
+}
+
+body.modern-mode button.btn-primary,
+body.modern-mode button[type="submit"] {
+  background: var(--mint-primary) !important;
+  color: var(--mint-text) !important;
+  font-weight: 700 !important;
+  border-radius: 12px !important;
+  border: none !important;
+}
+
+body.modern-mode input,
+body.modern-mode textarea,
+body.modern-mode select {
+  background: rgba(0, 0, 0, 0.25) !important;
+  border: 1px solid var(--card-border) !important;
+  color: var(--text-white) !important;
+  border-radius: 12px !important;
+  padding: 9px 12px !important;
+}
+
+/* =========================================================================
+   Math 3 - AI Assistant UI (ChatGPT / Claude / Gemini Ultra Style)
+   المعلّم والأكاديمي الذكي في الرياضيات والمجال التربوي
+   ========================================================================= */
+.ai-view-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 58px) !important;
+  max-height: calc(100dvh - 58px) !important;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  position: relative;
+  background: transparent;
+  padding: 4px 10px 0 10px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+@media (max-width: 768px) {
+  .ai-view-container {
+    height: calc(100dvh - 58px) !important;
+    max-height: calc(100dvh - 58px) !important;
+    padding: 2px 6px 0 6px !important;
+  }
+}
+
+.ai-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: var(--card-dark);
+  border: 1px solid var(--card-border);
+  border-radius: 18px;
+  margin-bottom: 10px;
+  gap: 12px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .ai-top-bar {
+    padding: 10px 14px;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+}
+
+.ai-top-title-wrap {
+  text-align: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-brand-badge {
+  display: none !important;
+}
+
+.ai-main-title {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-weight: 800;
+  margin: 0;
+  color: var(--text-white);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 480px) {
+  .ai-main-title {
+    font-size: 15px;
+  }
+}
+
+.ai-clear-btn {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  color: #f87171;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  margin-inline-start: 6px;
+  margin-inline-end: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ai-clear-btn:hover {
+  background: rgba(239, 68, 68, 0.22);
+  border-color: rgba(239, 68, 68, 0.45);
+  transform: translateY(-1px);
+}
+
+.modern-back-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  color: var(--text-white);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.modern-back-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--card-border-active);
+  transform: translateY(-1px);
+}
+
+/* تم إخفاء شريط الأنماط والاقتراحات بناءً على طلب المستخدم لتوفير مساحة متسعة ونظيفة كلياً */
+.ai-modes-bar,
+.ai-suggestions-box {
+  display: none !important;
+}
+
+/* صندوق المحادثة المتسع */
+.ai-chat-messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  scroll-behavior: smooth;
+}
+
+.ai-message-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  max-width: 100%;
+}
+
+.ai-message-row.from-user {
+  justify-content: flex-start;
+  flex-direction: row-reverse;
+}
+
+.ai-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(56, 189, 248, 0.25));
+  border: 1.5px solid var(--mint-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.25);
+}
+
+.ai-bubble {
+  border-radius: 18px;
+  padding: 16px 20px;
+  font-size: 15px;
+  line-height: 1.75;
+  max-width: 88%;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.28);
+  word-break: break-word;
+}
+
+@media (max-width: 640px) {
+  .ai-bubble {
+    max-width: 94%;
+    padding: 14px 16px;
+    font-size: 14px;
+  }
+}
+
+.ai-bubble.user-bubble {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.24), rgba(16, 185, 129, 0.12));
+  border: 1.5px solid rgba(16, 185, 129, 0.45);
+  color: var(--text-white);
+  border-top-left-radius: 4px;
+}
+
+.ai-bubble.model-bubble {
+  background: var(--card-dark);
+  border: 1px solid var(--card-border);
+  color: var(--text-white);
+  border-top-right-radius: 4px;
+  flex: 1;
+}
+
+.ai-bubble-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ai-speaker-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--mint-primary);
+  letter-spacing: 0.5px;
+}
+
+.ai-bubble-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-action-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ai-action-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--text-white);
+  border-color: var(--card-border-active);
+}
+
+.ai-pdf-btn {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.3);
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.ai-pdf-btn:hover {
+  background: rgba(56, 189, 248, 0.2);
+  color: #bae6fd;
+}
+
+.ai-edit-btn {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #6ee7b7;
+}
+
+.ai-edit-btn:hover {
+  background: rgba(16, 185, 129, 0.25);
+  color: #a7f3d0;
+}
+
+/* شريط المرفقات داخل الفقاعة */
+.ai-bubble-attachments-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ai-bubble-att-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-white);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.ai-att-name {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-att-size {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+/* كارت المصادر والمراجع */
+.ai-sources-card {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: rgba(56, 189, 248, 0.06);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  border-radius: 12px;
+}
+
+.ai-sources-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #38bdf8;
+  margin-bottom: 8px;
+}
+
+.ai-sources-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-source-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-white);
+  text-decoration: none;
+  padding: 5px 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.ai-source-link:hover {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  transform: translateX(-2px);
+}
+
+.ai-source-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-source-arrow {
+  color: #38bdf8;
+  font-weight: bold;
+}
+
+/* تنسيق الماركداون والرياضيات داخل الرد */
+.ai-heading-1 {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--mint-primary);
+  margin: 16px 0 10px 0;
+  border-right: 3px solid var(--mint-primary);
+  padding-right: 10px;
+}
+
+.ai-heading-2 {
+  font-size: 17px;
+  font-weight: 700;
+  color: #38bdf8;
+  margin: 14px 0 8px 0;
+}
+
+.ai-heading-3 {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: #fbbf24;
+  margin: 12px 0 6px 0;
+}
+
+.ai-paragraph {
+  margin: 0 0 12px 0;
+  color: var(--text-white);
+  line-height: 1.75;
+}
+
+.ai-quote {
+  margin: 14px 0;
+  padding: 12px 16px;
+  background: rgba(56, 189, 248, 0.08);
+  border-right: 3px solid #38bdf8;
+  border-radius: 10px;
+  font-style: italic;
+  color: #bae6fd;
+}
+
+.ai-bullet-list {
+  margin: 8px 0 14px 0;
+  padding-right: 22px;
+  list-style-type: square;
+}
+
+.ai-list-item {
+  margin-bottom: 7px;
+  line-height: 1.65;
+}
+
+.ai-ordered-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 10px 0;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ai-step-badge {
+  background: var(--mint-primary);
+  color: var(--mint-text);
+  font-size: 12px;
+  font-weight: 800;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ai-step-text {
+  flex: 1;
+  font-size: 14.5px;
+  line-height: 1.65;
+}
+
+/* الرياضيات والأكواد */
+.ai-math-display {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 14px;
+  padding: 14px 18px;
+  margin: 14px 0;
+  text-align: center;
+  direction: ltr;
+  overflow-x: auto;
+  font-family: var(--font-mono, monospace);
+  color: #a7f3d0;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.ai-math-inline {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  padding: 2px 7px;
+  border-radius: 6px;
+  direction: ltr;
+  display: inline-block;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.96em;
+  color: #6ee7b7;
+}
+
+.ai-code-block {
+  background: #090d16;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin: 12px 0;
+  direction: ltr;
+  text-align: left;
+  overflow-x: auto;
+  font-family: var(--font-mono, monospace);
+  font-size: 13.5px;
+  color: #e2e8f0;
+}
+
+/* مؤشر التفكير العميق */
+.ai-thinking-row {
+  margin: 8px 0;
+}
+
+.ai-thinking-bubble {
+  background: rgba(16, 185, 129, 0.06) !important;
+  border-color: rgba(16, 185, 129, 0.25) !important;
+}
+
+.ai-thinking-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--mint-primary);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.ai-pulse-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--mint-primary);
+  animation: aiPulse 1.4s infinite ease-in-out;
+}
+
+@keyframes aiPulse {
+  0% { transform: scale(0.8); opacity: 0.5; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.8); opacity: 0.5; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.ai-thinking-bars {
+  display: flex;
+  gap: 6px;
+}
+
+.ai-bar {
+  height: 4px;
+  background: var(--mint-primary);
+  border-radius: 4px;
+  opacity: 0.4;
+  animation: aiBarPulse 1.4s infinite ease-in-out;
+}
+
+.ai-bar.bar-1 { width: 45%; animation-delay: 0s; }
+.ai-bar.bar-2 { width: 30%; animation-delay: 0.2s; }
+.ai-bar.bar-3 { width: 25%; animation-delay: 0.4s; }
+
+@keyframes aiBarPulse {
+  0%, 100% { opacity: 0.3; transform: scaleX(0.95); }
+  50% { opacity: 0.9; transform: scaleX(1.05); }
+}
+
+/* درج المرفقات المعلقة فوق حقل الإدخال */
+.ai-attachments-tray {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--card-dark);
+  border: 1px dashed var(--mint-primary);
+  border-radius: 16px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  backdrop-filter: blur(12px);
+}
+
+.ai-tray-info {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-white);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-tray-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ai-tray-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--line);
+  padding: 4px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--text-white);
+}
+
+.ai-tray-chip-name {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-tray-chip-size {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.ai-tray-remove-btn {
+  background: rgba(239, 68, 68, 0.2);
+  border: none;
+  color: #f87171;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 2px;
+}
+
+.ai-tray-remove-btn:hover {
+  background: rgba(239, 68, 68, 0.4);
+}
+
+/* حقل الإدخال الموسع */
+.ai-input-container {
+  padding-top: 8px;
+  background: transparent;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.ai-input-form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  gap: 8px;
+  background: var(--card-dark);
+  border: 1.5px solid var(--card-border-active);
+  border-radius: 18px;
+  padding: 10px 14px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+}
+
+.ai-textarea {
+  width: 100% !important;
+  background: transparent !important;
+  border: none !important;
+  color: var(--text-white) !important;
+  font-size: 15.5px !important;
+  resize: none !important;
+  min-height: 66px !important;
+  max-height: 200px;
+  padding: 6px 4px !important;
+  outline: none !important;
+  line-height: 1.6;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.ai-textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.75;
+}
+
+.ai-input-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ai-attach-btn {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--mint-primary) !important;
+  border-radius: 12px !important;
+  padding: 7px 12px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  transition: all 0.2s ease !important;
+  flex-shrink: 0;
+  height: 38px;
+}
+
+.ai-attach-btn:hover {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border-color: var(--mint-primary) !important;
+  transform: translateY(-1px);
+}
+
+.ai-attach-label {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ai-send-btn {
+  background: var(--mint-primary) !important;
+  color: var(--mint-text) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 8px 20px !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  flex-shrink: 0;
+  height: 38px;
+}
+
+.ai-send-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 18px rgba(16, 185, 129, 0.45);
+}
+
+.ai-send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* كارت البانر في الرئيسية للذكاء الاصطناعي */
+.ai-home-hero-card {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(56, 189, 248, 0.12));
+  border: 1.5px solid rgba(16, 185, 129, 0.4);
+  border-radius: 20px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.ai-home-hero-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--mint-primary);
+}
+
+.ai-home-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--mint-primary);
+  background: rgba(16, 185, 129, 0.2);
+  border-radius: 20px;
+  padding: 2px 10px;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.ai-home-hero-title {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0 0 4px 0;
+  color: var(--text-white);
+}
+
+.ai-home-hero-desc {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 0 0 10px 0;
+  line-height: 1.5;
+}
+
+.ai-home-hero-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--mint-primary);
+  color: var(--mint-text);
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 10px;
+  border: none;
+}
+
+/* شريط تنبيه وضع التعديل للرسائل */
+.ai-edit-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: rgba(16, 185, 129, 0.16);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: 12px;
+  padding: 8px 14px;
+  margin-bottom: 8px;
+  font-size: 12.5px;
+  color: #a7f3d0;
+  animation: aiFadeIn 0.25s ease;
+}
+
+.ai-edit-banner-text {
+  font-weight: 600;
+}
+
+.ai-cancel-edit-btn {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.ai-cancel-edit-btn:hover {
+  background: rgba(239, 68, 68, 0.35);
+  color: #ffffff;
+}
+
+/* بطاقة الرسوم البيانية المتجهية والأشكال الهندسية SVG */
+.ai-svg-diagram-card {
+  margin: 16px 0;
+  padding: 14px 16px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.ai-svg-card-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 12px;
+}
+
+.ai-svg-card-title {
+  font-weight: 700;
+  color: var(--mint-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-svg-download-btn {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #a7f3d0;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ai-svg-download-btn:hover {
+  background: var(--mint-primary);
+  color: var(--mint-text);
+}
+
+.ai-svg-diagram-card svg {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+/* بطاقة تصدير وتحميل PDF للملخص والدرس */
+.ai-pdf-download-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(16, 185, 129, 0.08));
+  border: 1.5px solid rgba(56, 189, 248, 0.35);
+  border-radius: 14px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+}
+
+@media (max-width: 600px) {
+  .ai-pdf-download-card {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: right;
+  }
+}
+
+.ai-pdf-card-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ai-pdf-card-icon {
+  font-size: 26px;
+  flex-shrink: 0;
+}
+
+.ai-pdf-card-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #38bdf8;
+  margin-bottom: 2px;
+}
+
+.ai-pdf-card-subtitle {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.ai-pdf-card-btn {
+  background: linear-gradient(135deg, #0284c7, #0ea5e9);
+  color: #ffffff;
+  border: none;
+  font-size: 12.5px;
+  font-weight: 800;
+  padding: 8px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.35);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.ai-pdf-card-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(14, 165, 233, 0.5);
+}
+
+/* صور الماركداون التوضيحية داخل الرد */
+.ai-image-container {
+  margin: 14px 0;
+  text-align: center;
+}
+
+.ai-inline-image {
+  max-width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
+}
+
+.ai-image-caption {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+@keyframes aiFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+

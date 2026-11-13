@@ -26,6 +26,130 @@ function playPomodoroChime() {
   } catch (e) {}
 }
 
+// محرك توليد أصوات التركيز والخلفية (White Noise, Rain, Waves, Forest) بتقنية Web Audio API
+class WhiteNoiseEngine {
+  constructor() {
+    this.ctx = null;
+    this.source = null;
+    this.filter = null;
+    this.gainNode = null;
+    this.lfo = null;
+    this.lfoGain = null;
+    this.currentMode = "off";
+    this.volume = 0.35;
+  }
+
+  init() {
+    if (!this.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) this.ctx = new AC();
+    }
+    if (this.ctx && this.ctx.state === "suspended") {
+      this.ctx.resume();
+    }
+  }
+
+  stop() {
+    if (this.source) {
+      try { this.source.stop(); } catch (e) {}
+      try { this.source.disconnect(); } catch (e) {}
+      this.source = null;
+    }
+    if (this.lfo) {
+      try { this.lfo.stop(); } catch (e) {}
+      try { this.lfo.disconnect(); } catch (e) {}
+      this.lfo = null;
+    }
+    this.currentMode = "off";
+  }
+
+  setVolume(vol) {
+    this.volume = Math.max(0, Math.min(1, vol));
+    if (this.gainNode && this.ctx) {
+      this.gainNode.gain.setValueAtTime(this.volume, this.ctx.currentTime);
+    }
+  }
+
+  play(mode) {
+    this.stop();
+    if (!mode || mode === "off") return;
+    this.init();
+    if (!this.ctx) return;
+
+    this.currentMode = mode;
+    const sampleRate = this.ctx.sampleRate;
+    const duration = 4;
+    const buffer = this.ctx.createBuffer(1, sampleRate * duration, sampleRate);
+    const data = buffer.getChannelData(0);
+
+    let lastOut = 0.0;
+    for (let i = 0; i < sampleRate * duration; i++) {
+      const white = Math.random() * 2 - 1;
+      if (mode === "rain") {
+        lastOut = (lastOut + 0.04 * white) / 1.04;
+        data[i] = lastOut * 3.5;
+      } else if (mode === "waves") {
+        lastOut = (lastOut + 0.02 * white) / 1.02;
+        data[i] = lastOut * 4.0;
+      } else if (mode === "forest") {
+        lastOut = (lastOut + 0.06 * white) / 1.06;
+        data[i] = lastOut * 3.0;
+      } else {
+        data[i] = white * 0.45;
+      }
+    }
+
+    this.source = this.ctx.createBufferSource();
+    this.source.buffer = buffer;
+    this.source.loop = true;
+
+    this.filter = this.ctx.createBiquadFilter();
+    if (mode === "rain") {
+      this.filter.type = "lowpass";
+      this.filter.frequency.setValueAtTime(900, this.ctx.currentTime);
+      this.filter.Q.setValueAtTime(1.2, this.ctx.currentTime);
+    } else if (mode === "waves") {
+      this.filter.type = "lowpass";
+      this.filter.frequency.setValueAtTime(550, this.ctx.currentTime);
+      this.filter.Q.setValueAtTime(0.8, this.ctx.currentTime);
+
+      this.lfo = this.ctx.createOscillator();
+      this.lfo.frequency.setValueAtTime(0.12, this.ctx.currentTime);
+      this.lfoGain = this.ctx.createGain();
+      this.lfoGain.gain.setValueAtTime(0.22, this.ctx.currentTime);
+      this.lfo.connect(this.lfoGain);
+
+      this.gainNode = this.ctx.createGain();
+      this.gainNode.gain.setValueAtTime(this.volume, this.ctx.currentTime);
+
+      this.source.connect(this.filter);
+      this.filter.connect(this.gainNode);
+      this.lfoGain.connect(this.gainNode.gain);
+      this.gainNode.connect(this.ctx.destination);
+      this.lfo.start();
+      this.source.start();
+      return;
+    } else if (mode === "forest") {
+      this.filter.type = "bandpass";
+      this.filter.frequency.setValueAtTime(650, this.ctx.currentTime);
+      this.filter.Q.setValueAtTime(0.7, this.ctx.currentTime);
+    } else {
+      this.filter.type = "lowpass";
+      this.filter.frequency.setValueAtTime(1200, this.ctx.currentTime);
+    }
+
+    this.gainNode = this.ctx.createGain();
+    this.gainNode.gain.setValueAtTime(this.volume, this.ctx.currentTime);
+
+    this.source.connect(this.filter);
+    this.filter.connect(this.gainNode);
+    this.gainNode.connect(this.ctx.destination);
+    this.source.start();
+  }
+}
+
+export const whiteNoiseAudio = new WhiteNoiseEngine();
+
 // استرجاع وحفظ البيانات محلياً مع العزل التام لكل حساب وجهاز
 export function getTrackerData() {
   try {
@@ -195,7 +319,7 @@ function ensureCourseData(courseData) {
 }
 
 // حالة مؤقت البومودورو في الذاكرة
-let pomodoroState = {
+export let pomodoroState = {
   running: false,
   timerId: null,
   focusMinutes: 25,
@@ -206,6 +330,8 @@ let pomodoroState = {
   checkedStudy: true,
   checkedRevise: false,
   checkedSolve: false,
+  ambientMode: "off",
+  ambientVolume: 0.35,
   notes: ""
 };
 
@@ -1280,6 +1406,10 @@ export function renderStudyTracker(container, onBack, initialTab = "readiness") 
       toggleBtn.style.border = "1.5px solid var(--line)";
       toggleBtn.style.color = "var(--ink)";
 
+      if (pomodoroState.ambientMode && pomodoroState.ambientMode !== "off") {
+        whiteNoiseAudio.play(pomodoroState.ambientMode);
+      }
+
       pomodoroState.timerId = setInterval(() => {
         if (pomodoroState.secondsLeft > 0) {
           pomodoroState.secondsLeft--;
@@ -1298,13 +1428,14 @@ export function renderStudyTracker(container, onBack, initialTab = "readiness") 
       toggleBtn.style.background = "var(--accent)";
       toggleBtn.style.border = "none";
       toggleBtn.style.color = "#fff";
+      whiteNoiseAudio.stop();
     }
 
     const ctlRow = el("div");
     ctlRow.style.display = "grid";
     ctlRow.style.gridTemplateColumns = "1fr 1fr";
     ctlRow.style.gap = "10px";
-    ctlRow.style.marginBottom = "20px";
+    ctlRow.style.marginBottom = "14px";
 
     const finishBtn = el("button", "btn-primary", "إنهاء وتسجيل");
     finishBtn.style.padding = "14px";
@@ -1331,6 +1462,104 @@ export function renderStudyTracker(container, onBack, initialTab = "readiness") 
     ctlRow.appendChild(toggleBtn);
 
     box.appendChild(ctlRow);
+
+    // بطاقة أصوات التركيز والضوضاء البيضاء (White Noise Ambient Generator)
+    const ambientCard = el("div", "card");
+    ambientCard.style.margin = "0 0 16px 0";
+    ambientCard.style.padding = "14px 16px";
+    ambientCard.style.background = "var(--card)";
+    ambientCard.style.border = "1.5px solid var(--line)";
+    ambientCard.style.borderRadius = "16px";
+
+    const ambHead = el("div");
+    ambHead.style.display = "flex";
+    ambHead.style.alignItems = "center";
+    ambHead.style.justifyContent = "space-between";
+    ambHead.style.marginBottom = "10px";
+
+    const ambTitle = el("div", "", "🎧 أصوات التركيز والخلفية (White Noise)");
+    ambTitle.style.fontSize = "13.5px";
+    ambTitle.style.fontWeight = "bold";
+    ambHead.appendChild(ambTitle);
+
+    const soundOptions = [
+      { id: "off", label: "🔇 صامت" },
+      { id: "rain", label: "🌧️ مطر هادئ" },
+      { id: "waves", label: "🌊 أمواج البحر" },
+      { id: "white", label: "💨 وايت نويز" },
+      { id: "forest", label: "🍃 نسيم الغابة" }
+    ];
+
+    const soundChipsRow = el("div");
+    soundChipsRow.style.display = "flex";
+    soundChipsRow.style.gap = "6px";
+    soundChipsRow.style.flexWrap = "wrap";
+    soundChipsRow.style.marginBottom = "10px";
+
+    const chipBtns = [];
+
+    function updateAmbientUI() {
+      chipBtns.forEach(({ btn, id }) => {
+        const active = pomodoroState.ambientMode === id;
+        btn.style.background = active ? "var(--accent)" : "rgba(128, 128, 128, 0.12)";
+        btn.style.color = active ? "#fff" : "var(--ink)";
+        btn.style.borderColor = active ? "var(--accent)" : "transparent";
+      });
+    }
+
+    soundOptions.forEach((opt) => {
+      const b = el("button", "", opt.label);
+      b.type = "button";
+      b.style.fontSize = "12px";
+      b.style.fontWeight = "600";
+      b.style.padding = "6px 12px";
+      b.style.borderRadius = "20px";
+      b.style.border = "1px solid transparent";
+      b.style.cursor = "pointer";
+      b.style.transition = "all 0.15s ease";
+      b.addEventListener("click", () => {
+        pomodoroState.ambientMode = opt.id;
+        if (opt.id === "off") {
+          whiteNoiseAudio.stop();
+        } else {
+          whiteNoiseAudio.play(opt.id);
+        }
+        updateAmbientUI();
+      });
+      chipBtns.push({ btn: b, id: opt.id });
+      soundChipsRow.appendChild(b);
+    });
+
+    const volRow = el("div");
+    volRow.style.display = "flex";
+    volRow.style.alignItems = "center";
+    volRow.style.gap = "8px";
+    volRow.style.fontSize = "12px";
+    volRow.style.color = "var(--ink)";
+
+    volRow.appendChild(el("span", "", "🔉 مستوى الصوت:"));
+    const volInput = el("input");
+    volInput.type = "range";
+    volInput.min = "0.05";
+    volInput.max = "1";
+    volInput.step = "0.05";
+    volInput.value = String(pomodoroState.ambientVolume);
+    volInput.style.flex = "1";
+    volInput.style.cursor = "pointer";
+    volInput.addEventListener("input", (e) => {
+      const v = Number(e.target.value);
+      pomodoroState.ambientVolume = v;
+      whiteNoiseAudio.setVolume(v);
+    });
+    volRow.appendChild(volInput);
+    volRow.appendChild(el("span", "", "🔊"));
+
+    ambientCard.appendChild(ambHead);
+    ambientCard.appendChild(soundChipsRow);
+    ambientCard.appendChild(volRow);
+    updateAmbientUI();
+
+    box.appendChild(ambientCard);
 
     const checklistCard = el("div", "card");
     checklistCard.style.margin = "0 0 14px 0";
@@ -1398,6 +1627,7 @@ export function renderStudyTracker(container, onBack, initialTab = "readiness") 
 
     function finishSession(isNaturalEnd) {
       if (pomodoroState.running) pauseTimer();
+      whiteNoiseAudio.stop();
 
       const elapsedSecs = pomodoroState.totalSeconds - pomodoroState.secondsLeft;
       const elapsedMins = Math.max(1, Math.round(elapsedSecs / 60));

@@ -6,3 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
+.vapid.json
+push_subscriptions.json
+public/assets/aistudio/
+deploy.zip
+*.zip

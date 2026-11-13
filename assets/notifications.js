@@ -10,7 +10,7 @@ const PUSH_SERVER_ORIGIN = (function() {
       return "";
     }
   }
-  return "https://ais-pre-dqh3svjw5d2pz7fjndql5z-878821481434.europe-west2.run.app";
+  return "https://ais-pre-xekgfawmhh2625jyiqkinz-92072047046.europe-west2.run.app";
 })();
 
 function getPushUrl(path) {
@@ -44,17 +44,35 @@ function urlB64ToUint8Array(base64String) {
   return outputArray;
 }
 
-// إرسال تنبيه Web Push حقيقي لجميع الأجهزة المسجلة عبر السيرفر
+// إرسال تنبيه Web Push حقيقي لجميع الأجهزة المسجلة عبر السيرفر مع منع التكرار
 export async function sendServerPush(title, body, url = "./", delaySeconds = 0) {
   try {
     const cleanTitle = (title || "").trim();
-    const cleanTag = "math3-push-" + cleanTitle.replace(/[^\w\u0600-\u06FF]/g, "-");
+    const cleanBody = (body || "").trim();
+    const bodySlug = cleanBody.replace(/[^\w\u0600-\u06FF]/g, "-").slice(0, 30);
+    const cleanTag = "math3-alert-" + (bodySlug || cleanTitle.replace(/[^\w\u0600-\u06FF]/g, "-"));
+
+    const notifKey = `${cleanTitle}::${cleanBody}`;
+    const normBody = cleanBody.replace(/\s+/g, " ").toLowerCase();
+    _recentNotifs.set(notifKey, Date.now());
+    _recentBodies.set(normBody, Date.now());
+
+    // تسجيل الإشعار لدى السيرفس ووركر لمنع تكراره محلياً
+    if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: "RECORD_NOTIF",
+        title: cleanTitle,
+        body: cleanBody,
+        tag: cleanTag
+      });
+    }
+
     const res = await fetch(getPushUrl("/api/send-push"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        title,
-        body,
+        title: cleanTitle,
+        body: cleanBody,
         url,
         delaySeconds,
         tag: cleanTag
@@ -67,38 +85,41 @@ export async function sendServerPush(title, body, url = "./", delaySeconds = 0) 
   }
 }
 
-// إرسال تنبيه وبث فوري لكافة الأجهزة عند رفع مادة أو محاضرة أو تكليف
-export function broadcastNewItem(title, courseId) {
+// إرسال تنبيه وبث فوري لكافة الأجهزة عند رفع مادة أو محاضرة أو تكليف (مرة واحدة فقط)
+export function broadcastNewItem(title, courseId, customTitle = null) {
   try {
-    const notifTitle = "محتوى / محاضرة جديدة 📁";
+    const notifTitle = customTitle || "محتوى / محاضرة جديدة 📁";
     const notifBody = title || "تم إضافة عنصر جديد للمنصة";
-    triggerLocalNotification(notifTitle, notifBody);
-    sendServerPush(notifTitle, notifBody, "./");
+    // إرسال عبر خادم الـ Web Push الموحد لضمان وصوله مرة واحدة لكافة الأجهزة
+    sendServerPush(notifTitle, notifBody, "./").catch(() => {
+      triggerLocalNotification(notifTitle, notifBody);
+    });
 
     const ch = sb.channel("public-changes");
     ch.send({
       type: "broadcast",
       event: "new_item",
-      payload: { title, course_id: courseId }
+      payload: { title, course_id: courseId, notif_title: notifTitle, timestamp: Date.now() }
     });
   } catch (e) {
     console.warn("broadcast error:", e);
   }
 }
 
-// إرسال تنبيه وبث فوري لكافة الأجهزة عند نشر بوست جديد
+// إرسال تنبيه وبث فوري لكافة الأجهزة عند نشر بوست جديد (مرة واحدة فقط)
 export function broadcastNewPost(content) {
   try {
     const notifTitle = "منشور جديد 📬";
     const notifBody = content ? content.slice(0, 80) : "يوجد منشور جديد في المنصة";
-    triggerLocalNotification(notifTitle, notifBody);
-    sendServerPush(notifTitle, notifBody, "./");
+    sendServerPush(notifTitle, notifBody, "./").catch(() => {
+      triggerLocalNotification(notifTitle, notifBody);
+    });
 
     const ch = sb.channel("public-changes");
     ch.send({
       type: "broadcast",
       event: "new_post",
-      payload: { content }
+      payload: { content, timestamp: Date.now() }
     });
   } catch (e) {
     console.warn("broadcast error:", e);
@@ -216,6 +237,7 @@ export async function registerServiceWorker() {
 }
 
 const _recentNotifs = new Map();
+const _recentBodies = new Map();
 
 export async function triggerLocalNotification(title, body, url = "./", customTag = null) {
   if (!isPushEnabled()) return;
@@ -234,34 +256,59 @@ export async function triggerLocalNotification(title, body, url = "./", customTa
   }
 
   const notifKey = `${cleanTitle}::${cleanBody}`;
+  const normBody = cleanBody.replace(/\s+/g, " ").toLowerCase();
   const now = Date.now();
 
-  // فحص سجل آخر 8 ثوانٍ لمنع إرسال نفس الإشعار مرتين
-  if (_recentNotifs.has(notifKey) && (now - _recentNotifs.get(notifKey) < 8000)) {
+  // فحص سجل آخر 60 ثانية لمنع إرسال نفس الإشعار مرتين (بالعنوان والمحتوى)
+  if (_recentNotifs.has(notifKey) && (now - _recentNotifs.get(notifKey) < 60000)) {
     return;
   }
-  _recentNotifs.set(notifKey, now);
 
-  // تنظيف السجل القديم
+  // فحص سجل آخر 60 ثانية بالمحتوى الموحد (Normalized): لمنع إرسال إشعارين لنفس العنصر نهائياً
+  // حتى لو اختلف العنوان (مثلاً بين تكليف ومحاضرة أو بين Realtime و Web Push)
+  if (_recentBodies.has(normBody) && (now - _recentBodies.get(normBody) < 60000)) {
+    return;
+  }
+
+  _recentNotifs.set(notifKey, now);
+  _recentBodies.set(normBody, now);
+
+  // تنظيف السجل القديم بعد 90 ثانية
   for (const [k, time] of _recentNotifs.entries()) {
-    if (now - time > 15000) _recentNotifs.delete(k);
+    if (now - time > 90000) _recentNotifs.delete(k);
+  }
+  for (const [b, time] of _recentBodies.entries()) {
+    if (now - time > 90000) _recentBodies.delete(b);
   }
 
   try {
     const iconUrl = new URL("assets/icon.png", location.href).href;
     const badgeUrl = new URL("assets/badge-96.png", location.href).href;
-    const tag = customTag || ("math3-" + cleanTitle.replace(/[^\w\u0600-\u06FF]/g, "-"));
+    const bodySlug = cleanBody.replace(/[^\w\u0600-\u06FF]/g, "-").slice(0, 30);
+    const tag = customTag || ("math3-alert-" + (bodySlug || cleanTitle.replace(/[^\w\u0600-\u06FF]/g, "-")));
     const notifOptions = {
       body: cleanBody,
       icon: iconUrl,
-      badge: badgeUrl,
+      badge: badgeIcon,
       data: { url: url || "./" },
       dir: "rtl",
       lang: "ar",
       vibrate: [200, 100, 200],
       tag,
-      renotify: true
+      renotify: false
     };
+
+    // إرسال للـ Service Worker ليتولى العرض الموحد مع منع التكرار
+    if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: "SHOW_NOTIFICATION",
+        title: cleanTitle,
+        body: cleanBody,
+        tag,
+        url: url || "./"
+      });
+      return;
+    }
 
     // المحاولة 1: عبر ServiceWorker المباشر
     if ("serviceWorker" in navigator) {
@@ -306,7 +353,8 @@ export function startRealtimeNotifications() {
     _realtimeChannel = sb.channel("public-changes", { config: { broadcast: { self: false } } })
       .on("broadcast", { event: "new_item" }, (payload) => {
         const it = (payload && payload.payload) || {};
-        triggerLocalNotification("محتوى / محاضرة جديدة 📁", it.title || "تم إضافة عنصر جديد للمنصة");
+        const notifTitle = it.notif_title || "محتوى / محاضرة جديدة 📁";
+        triggerLocalNotification(notifTitle, it.title || "تم إضافة عنصر جديد للمنصة");
       })
       .on("broadcast", { event: "new_post" }, (payload) => {
         const p = (payload && payload.payload) || {};
@@ -321,7 +369,9 @@ export function startRealtimeNotifications() {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "items" }, (payload) => {
         const it = payload.new;
         if (it && !it.deleted_at) {
-          triggerLocalNotification("تكليف / مادة جديدة 📝", it.title || "تم إضافة عنصر جديد للمواد");
+          const isTask = it.type === "task" || (it.title && (it.title.includes("تكليف") || it.title.includes("شيت") || it.title.includes("واجب")));
+          const notifTitle = isTask ? "تكليف جديد 📝" : "محتوى / محاضرة جديدة 📁";
+          triggerLocalNotification(notifTitle, it.title || "تم إضافة عنصر جديد للمواد");
         }
       })
       .on("broadcast", { event: "drive_file" }, (payload) => {

@@ -3,7 +3,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-const CACHE_NAME = 'math3-v5-push';
+const CACHE_NAME = 'math3-v6-push';
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -15,6 +15,12 @@ self.addEventListener('activate', (event) => {
     }).then(() => self.clients.claim())
   );
 });
+
+// سجل لمنع إرسال نفس الإشعار مرتين نهائياً
+let _swLastPushKey = '';
+let _swLastPushBody = '';
+let _swLastPushTag = '';
+let _swLastPushTime = 0;
 
 // استقبال الرسائل المباشرة من التطبيق عندما يكون مفتوحاً
 self.addEventListener('message', (event) => {
@@ -35,9 +41,25 @@ self.addEventListener('message', (event) => {
       return;
     }
 
+    const now = Date.now();
+    const pushKey = `${cleanTitle}::${cleanBody}`;
+    const normBody = cleanBody.replace(/\s+/g, ' ').toLowerCase();
+    const bodySlug = cleanBody.replace(/[^\w\u0600-\u06FF]/g, '-').slice(0, 30);
+    const tag = d.tag || ('math3-alert-' + (bodySlug || cleanTitle.replace(/[^\w\u0600-\u06FF]/g, '-')));
+
+    // منع التكرار خلال 45 ثانية
+    if ((pushKey === _swLastPushKey || (normBody && normBody === _swLastPushBody) || (tag && tag === _swLastPushTag)) && (now - _swLastPushTime < 45000)) {
+      return;
+    }
+
+    _swLastPushKey = pushKey;
+    _swLastPushBody = normBody;
+    _swLastPushTag = tag;
+    _swLastPushTime = now;
+
     const appIcon = new URL(d.icon || 'assets/icon.png', self.registration.scope).href;
     const badgeIcon = new URL(d.badge || 'assets/badge-96.png', self.registration.scope).href;
-    const tag = d.tag || ('math3-' + cleanTitle.replace(/[^\w\u0600-\u06FF]/g, '-'));
+
     self.registration.showNotification(d.title || 'Math 3 🔔', {
       body: cleanBody,
       icon: appIcon,
@@ -47,13 +69,20 @@ self.addEventListener('message', (event) => {
       lang: 'ar',
       vibrate: [200, 100, 200],
       tag,
-      renotify: true
+      renotify: false
     });
+  } else if (event.data && event.data.type === 'RECORD_NOTIF') {
+    // تسجيل إشعار تم إرساله من الواجهة لمنع تكراره إذا وصل Push متأخراً
+    const d = event.data;
+    const cleanBody = (d.body || '').trim();
+    const cleanTitle = (d.title || '').trim();
+    const bodySlug = cleanBody.replace(/[^\w\u0600-\u06FF]/g, '-').slice(0, 30);
+    _swLastPushKey = `${cleanTitle}::${cleanBody}`;
+    _swLastPushBody = cleanBody.replace(/\s+/g, ' ').toLowerCase();
+    _swLastPushTag = d.tag || ('math3-alert-' + (bodySlug || cleanTitle.replace(/[^\w\u0600-\u06FF]/g, '-')));
+    _swLastPushTime = Date.now();
   }
 });
-
-let _swLastPushKey = '';
-let _swLastPushTime = 0;
 
 // استقبال الـ Web Push الحقيقي من السيرفر - يعمل والجهاز مقفول والتطبيق خارج الرام تماماً
 self.addEventListener('push', (event) => {
@@ -96,19 +125,24 @@ self.addEventListener('push', (event) => {
 
   const now = Date.now();
   const pushKey = `${cleanTitle}::${cleanBody}`;
+  const normBody = cleanBody.replace(/\s+/g, ' ').toLowerCase();
+  const bodySlug = cleanBody.replace(/[^\w\u0600-\u06FF]/g, '-').slice(0, 30);
+  const tag = data.tag || ('math3-alert-' + (bodySlug || (data.title || '').replace(/[^\w\u0600-\u06FF]/g, '-')));
 
-  // منع التكرار خلال 8 ثوانٍ
-  if (pushKey === _swLastPushKey && (now - _swLastPushTime < 8000)) {
+  // منع التكرار خلال 45 ثانية بنفس المفتاح أو المحتوى أو الـ Tag
+  if ((pushKey === _swLastPushKey || (normBody && normBody === _swLastPushBody) || (tag && tag === _swLastPushTag)) && (now - _swLastPushTime < 45000)) {
+    console.log("Dropping duplicate push notification:", pushKey);
     return;
   }
 
   _swLastPushKey = pushKey;
+  _swLastPushBody = normBody;
+  _swLastPushTag = tag;
   _swLastPushTime = now;
 
   const appIcon = new URL(data.icon || 'assets/icon.png', self.registration.scope).href;
   const badgeIcon = new URL(data.badge || 'assets/badge-96.png', self.registration.scope).href;
 
-  const tag = data.tag || ('math3-push-' + (data.title || '').replace(/[^\w\u0600-\u06FF]/g, '-'));
   const options = {
     body: data.body,
     icon: appIcon,
@@ -116,9 +150,9 @@ self.addEventListener('push', (event) => {
     data: { url: data.url || './' },
     dir: 'rtl',
     lang: 'ar',
-    vibrate: [250, 100, 250, 100, 250],
+    vibrate: [250, 100, 250],
     tag,
-    renotify: true,
+    renotify: false,
     requireInteraction: false
   };
 

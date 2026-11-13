@@ -98,14 +98,20 @@ const PATTERNS = {
   triangles: { label: "مثلثات", img: "linear-gradient(135deg,var(--pattern-color) 10%,transparent 10% 50%,var(--pattern-color) 50% 60%,transparent 60%)", size: "48px 48px" }
 };
 
-/* ألوان جاهزة: [اسم، accent، paper، card، ink، darkAccent، darkPaper، darkCard] */
+/* ألوان جاهزة لـ 12 ثيم مميز تماماً: [id, اسم الثيم, accent, paper, card, ink, darkAccent, darkPaper, darkCard] */
 const PRESETS = [
-  ["sunset", "غروب", "#ea580c", "#fff8f5", "#ffffff", "#431407", "#fb923c", "#1c0d06", "#2c150a"],
-  ["mint", "نعناع", "#0f766e", "#f3f9f7", "#ffffff", "#163d39", "#4fd1c5", "#0b1f1d", "#12312e"],
-  ["violet", "بنفسجي", "#6d3fd4", "#f8f6fc", "#ffffff", "#2f2650", "#a78bfa", "#171126", "#261b3b"],
-  ["amber", "كهرماني", "#b45309", "#fbf8f1", "#ffffff", "#49351e", "#fbbf24", "#21180b", "#33230d"],
-  ["rose", "وردي", "#be123c", "#fff7f9", "#ffffff", "#4d2630", "#fb7185", "#241016", "#3a1720"],
-  ["night", "ليلي", "#3f7fb0", "#eef4fa", "#ffffff", "#1c3044", "#6fc5ff", "#0b1118", "#151f2a"]
+  ["emerald", "🌿 واحة الزمرد الملكية", "#059669", "#f2fbf6", "#ffffff", "#064e3b", "#10b981", "#041c14", "#0a2d21"],
+  ["cyberpunk", "⚡ سديم نيون المستقبلي", "#0284c7", "#f0f9ff", "#ffffff", "#082f49", "#00f0ff", "#040712", "#0b1226"],
+  ["oceanic", "🌊 عمق المحيط الهادر", "#0284c7", "#f0f8ff", "#ffffff", "#0c4a6e", "#38bdf8", "#020b14", "#081d33"],
+  ["amethyst", "🔮 الجمشت المخملي الملكي", "#7e22ce", "#faf5ff", "#ffffff", "#3b0764", "#c084fc", "#0d0517", "#1c0e33"],
+  ["sahara", "🏜️ شفق الصحراء والتراكوتا", "#ea580c", "#fefaf5", "#ffffff", "#431407", "#f97316", "#160f09", "#291c13"],
+  ["academia", "📜 حبر الأكاديميا العريق", "#1e3a8a", "#fbf9f4", "#ffffff", "#0f172a", "#60a5fa", "#0b0f1b", "#161d33"],
+  ["pastel", "🍬 كاندي باستيل الاسكندنافي", "#db2777", "#fff5f8", "#ffffff", "#4a1532", "#f472b6", "#130f1c", "#241f32"],
+  ["monolith", "📐 حجر المونوكروم البريوتالي", "#18181b", "#f8f9fa", "#ffffff", "#09090b", "#fafafa", "#050505", "#121214"],
+  ["crimson", "🔥 نار الشفق البركاني", "#dc2626", "#fff6f6", "#ffffff", "#450a0a", "#f87171", "#120505", "#270e0e"],
+  ["forest", "🌲 غابة الصنوبر والهدوء", "#166534", "#f5f7f4", "#ffffff", "#052e16", "#4ade80", "#061009", "#102115"],
+  ["amber", "☀️ شمس الكهرمان الذهبية", "#d97706", "#fffdf5", "#ffffff", "#451a03", "#fbbf24", "#120d03", "#271d07"],
+  ["aurora", "🌌 أورورا الشفق القطبي", "#0f766e", "#f0fdfa", "#ffffff", "#134e4a", "#2dd4bf", "#030c12", "#0a1f2b"]
 ];
 
 /* ---------- ألوان: دوال مساعدة ---------- */
@@ -241,7 +247,7 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 function renderThemeEditor(box, onBack) {
   box.replaceChildren();
-  if (!isFull()) { box.appendChild(el("p", "meta", "المظهر متاح للمالك فقط.")); return; }
+  if (!isFull()) { box.appendChild(el("p", "meta", "تخصيص المظهر متاح للأونر فقط.")); return; }
   lockEditorColors(box);
   if (!draft) draft = { ...saved };
   const dirty = () => !same(draft, saved);

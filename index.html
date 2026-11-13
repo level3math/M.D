@@ -10,10 +10,39 @@
   try {
     var t = localStorage.getItem("theme");
     if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t);
+    var mth = localStorage.getItem("math3_modern_theme");
+    if (mth && mth !== "default") {
+      document.documentElement.setAttribute("data-modern-theme", mth);
+    }
   } catch (e) {}
 </script>
-<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800;900&family=Cairo:wght@600;700;800;900&family=Readex+Pro:wght@400;500;600;700&family=Tajawal:wght@400;500;700;800;900&family=Amiri:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/math3.css">
+<link rel="stylesheet" href="assets/modern.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script>
+(function() {
+  try {
+    var storedFont = localStorage.getItem("math3_font_family") || "alexandria";
+    document.documentElement.setAttribute("data-font", storedFont);
+    var fontMap = {
+      alexandria: "'Alexandria', 'Cairo', sans-serif",
+      cairo: "'Cairo', 'Alexandria', sans-serif",
+      readex: "'Readex Pro', 'Alexandria', sans-serif",
+      tajawal: "'Tajawal', 'Cairo', sans-serif",
+      amiri: "'Amiri', serif",
+      mono: "'JetBrains Mono', 'Alexandria', monospace"
+    };
+    if (fontMap[storedFont]) {
+      document.documentElement.style.setProperty("--user-chosen-font", fontMap[storedFont]);
+    }
+  } catch(e) {}
+})();
+</script>
 <script>
 (function() {
   try {
@@ -51,9 +80,17 @@
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="assets/cover.jpg">
-</head>
-<body>
-<script src="assets/ios-compat.js"></script>
+<body class="modern-mode">
+<script>
+  // عنوان سيرفر الذكاء الاصطناعي (server.ts). على GitHub Pages ضع هنا رابط السيرفر المنشور، مثل "https://your-app.onrender.com"
+  // اتركه فارغاً لو الموقع والسيرفر على نفس النطاق.
+  window.MATH3_API_BASE = "";
+
+  // اتصال مباشر بـ Gemini بدون سيرفر: ضع مفتاح Gemini هنا. (المفتاح هيبقى ظاهر لأي حد يفتح الموقع،
+  // فاعمل مفتاح مخصص للمشروع وقيّده بنطاق موقعك من Google AI Studio / Cloud Console)
+  window.MATH3_GEMINI_KEY = "AQ.Ab8RN6KCanPoGvVUp41MJgHC1qi8WbjG5ned7cuWPCUXqhsoag";
+</script>
+<script type="module" src="assets/ios-compat.js"></script>
 
 
 <div id="drawer-backdrop" class="side-drawer-backdrop"></div>
@@ -72,10 +109,6 @@
       <span class="side-drawer-icon">📝</span>
       <span>التكاليف</span>
     </button>
-    <button class="side-drawer-item" data-kind="links">
-      <span class="side-drawer-icon">📁</span>
-      <span>مكتبة المواد</span>
-    </button>
     <button class="side-drawer-item" data-kind="newsletter">
       <span class="side-drawer-icon">📰</span>
       <span>النشرة الأسبوعية</span>
@@ -88,10 +121,18 @@
       <span class="side-drawer-icon">❓</span>
       <span>الأسئلة والأجوبة</span>
     </button>
-    </div>
+    <a id="preview-download-link" href="/deploy.zip" class="side-drawer-item" style="color:var(--accent); text-decoration:none; font-weight:bold; display:none;" download="deploy.zip">
+      <span class="side-drawer-icon">📦</span>
+      <span>تحميل ملف التحديث (deploy.zip)</span>
+    </a>
+  </div>
 </nav>
 <script>
-  
+  // يظهر زر التحميل فقط في بيئة المعاينة والتطوير للمطور
+  if (window.location.hostname.includes('run.app') || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    var pDl = document.getElementById('preview-download-link');
+    if (pDl) pDl.style.display = 'flex';
+  }
 </script>
 <button id="links-fab" class="links-fab" hidden>🔗</button>
 <div id="links-panel" class="links-panel" hidden></div>
@@ -163,10 +204,16 @@
       </div>
     </div>
   </header>
-  <div id="loading" class="card center">
+  <div id="loading" class="card center" hidden>
     <p>جاري التحميل...</p>
   </div>
   <div id="login-box" class="card center" hidden>
+    <div class="login-brand">
+      <div class="login-brand-icon">📐</div>
+      <span class="login-brand-badge">BATCH 3 PLATFORM</span>
+      <h2>منصة Math 3</h2>
+      <p class="login-brand-sub">جدول المحاضرات، التكاليف، وتتبع إنجاز مواد الدفعة</p>
+    </div>
     <div id="saved-accounts"></div>
     <div id="tg-widget-wrap">
       <p id="login-label" hidden></p>
@@ -177,14 +224,16 @@
         }
       </script>
     </div>
-    <div class="login-divider" style="margin: 16px 0 12px; display: flex; align-items: center; justify-content: center; gap: 10px; opacity: 0.6; font-size: 13px; font-weight: 600; text-transform: uppercase;">
-      <span style="flex: 1; height: 1px; background: var(--line);"></span>
-      <span>or</span>
-      <span style="flex: 1; height: 1px; background: var(--line);"></span>
+    <div class="login-divider">
+      <span></span>
+      <span>أو المتابعة السريعة</span>
+      <span></span>
     </div>
-    <button id="anon-login-btn" type="button" class="btn" style="width: 100%; padding: 10px 16px; border-radius: 8px; border: 2px solid var(--line); background: var(--card); color: var(--ink); font-weight: bold; font-size: 14px; cursor: pointer;">
-      Log in as anonymous
+    <button id="anon-login-btn" type="button" class="anon-login-btn">
+      <span>👤</span>
+      <span>الدخول كزائر (Log in as anonymous)</span>
     </button>
+    <div id="login-quick-themes" class="login-quick-themes"></div>
   </div>
   <div id="pending-box" class="card center" hidden>
     <p id="welcome"></p>

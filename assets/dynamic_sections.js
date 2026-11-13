@@ -469,7 +469,10 @@ export function buildDynamicContentForm(sec, item, onSave, onCancel) {
         say("تعذّر الحفظ: " + error.message);
       } else {
         say(isEdit ? "تم تحديث المحتوى بنجاح!" : "تمت إضافة المحتوى بنجاح!");
-        if (!isEdit) broadcastNewItem(primaryTitle, primaryCourseId);
+        if (!isEdit) {
+          const secTitle = sec && sec.title ? (sec.title + " 📁") : "محتوى جديد 📁";
+          broadcastNewItem(primaryTitle, primaryCourseId, secTitle);
+        }
         if (onSave) onSave();
       }
     } catch (err) {

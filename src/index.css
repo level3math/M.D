@@ -1,1 +1,296 @@
 @import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-bg-base: #040712;
+    --color-bg-surface: #080f24;
+    --color-bg-card: #0d1738;
+    --color-bg-elevated: #142250;
+    --color-border: #00f0ff;
+    --color-border-subtle: #1e3a70;
+    --color-primary: #00f0ff;
+    --color-primary-hover: #38bdf8;
+    --color-accent: #ff007f;
+    --color-accent-hover: #f43f5e;
+    --color-text-primary: #f0fdf4;
+    --color-text-secondary: #67e8f9;
+    --color-text-muted: #94a3b8;
+    --color-badge-bg: #142250;
+    --color-badge-text: #00f0ff;
+    --theme-glow: rgba(0, 240, 255, 0.45);
+    --font-family-display: 'Alexandria', 'Cairo', sans-serif;
+    --card-radius: 0.5rem;
+    --border-width: 2px;
+  }
+
+  body {
+    background-color: var(--color-bg-base);
+    color: var(--color-text-primary);
+    font-family: 'Alexandria', 'Cairo', 'Readex Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+    line-height: 1.65;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    min-height: 100vh;
+  }
+}
+
+/* =========================================================================
+   12 DEEPLY DIFFERENTIATED THEME STYLES (NOT JUST BORDER COLORS)
+   ========================================================================= */
+
+/* 1. Cyberpunk Neon: Cyber grid, monospace tech fonts, glowing neon halos */
+html[data-theme="cyberpunk"] body {
+  background-image: 
+    linear-gradient(rgba(0, 240, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+  font-family: 'JetBrains Mono', 'Alexandria', monospace;
+  line-height: 1.65;
+}
+html[data-theme="cyberpunk"] .theme-card {
+  box-shadow: 0 0 20px -2px rgba(0, 240, 255, 0.25), inset 0 0 15px -5px rgba(0, 240, 255, 0.1);
+  border-width: 2px;
+}
+html[data-theme="cyberpunk"] .theme-btn-primary {
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* 2. Vintage Academia: Classical scholarly serif, warm parchment paper, antique ink */
+html[data-theme="academia"] body {
+  background-image: radial-gradient(#d6c7b2 0.8px, transparent 0.8px);
+  background-size: 24px 24px;
+  font-family: 'Amiri', 'Playfair Display', serif;
+  line-height: 1.7;
+}
+html[data-theme="academia"] h1, 
+html[data-theme="academia"] h2, 
+html[data-theme="academia"] h3,
+html[data-theme="academia"] .font-bold {
+  font-family: 'Amiri', 'Playfair Display', serif !important;
+  line-height: 1.55 !important;
+  letter-spacing: normal !important;
+}
+html[data-theme="academia"] .theme-card {
+  box-shadow: 0 4px 18px -2px rgba(180, 83, 9, 0.12);
+  border-style: solid;
+}
+
+/* 3. Refined Monolith / Dark Stone: Elegant slate stone aesthetic, subtle borders, no harsh white lines */
+html[data-theme="monolith"] body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background-image: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.04) 0%, transparent 60%);
+}
+html[data-theme="monolith"] .theme-card {
+  border-radius: 14px !important;
+  border-width: 1px !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45) !important;
+}
+html[data-theme="monolith"] .theme-btn-primary {
+  border-radius: 12px !important;
+  border: none !important;
+  background-color: #fafafa !important;
+  color: #09090b !important;
+  box-shadow: 0 2px 10px rgba(255, 255, 255, 0.15) !important;
+}
+html[data-theme="monolith"] .theme-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.25) !important;
+}
+
+/* 4. Nordic Pastel Candy: Pillowy soft corners (28px), bouncy candy feel, playful mood */
+html[data-theme="nordic_pastel"] body {
+  font-family: 'Readex Pro', sans-serif;
+  background-image: radial-gradient(circle at 10% 20%, rgba(244, 114, 182, 0.08) 0%, transparent 40%),
+                    radial-gradient(circle at 90% 80%, rgba(192, 132, 252, 0.08) 0%, transparent 40%);
+}
+html[data-theme="nordic_pastel"] .theme-card {
+  border-radius: 1.75rem !important;
+  box-shadow: 0 12px 30px -8px rgba(236, 72, 153, 0.18);
+}
+html[data-theme="nordic_pastel"] button,
+html[data-theme="nordic_pastel"] .theme-badge {
+  border-radius: 9999px !important;
+}
+
+/* 5. Cosmic Amethyst: Frosted glass effect, celestial starfield ambiance, violet stardust */
+html[data-theme="amethyst"] body {
+  background-image: radial-gradient(ellipse at 50% 10%, rgba(192, 132, 252, 0.18) 0%, transparent 60%),
+                    radial-gradient(ellipse at 80% 80%, rgba(126, 34, 206, 0.15) 0%, transparent 50%);
+  font-family: 'Alexandria', sans-serif;
+}
+html[data-theme="amethyst"] .theme-card {
+  backdrop-filter: blur(14px);
+  box-shadow: 0 8px 32px 0 rgba(126, 34, 206, 0.25);
+  border: 1.5px solid rgba(192, 132, 252, 0.3);
+}
+
+/* 6. Emerald Oasis: Botanical natural serenity with lush emerald soothing hues */
+html[data-theme="emerald"] body {
+  background-image: radial-gradient(rgba(16, 185, 129, 0.07) 1.5px, transparent 1.5px);
+  background-size: 28px 28px;
+  font-family: 'Alexandria', sans-serif;
+}
+html[data-theme="emerald"] .theme-card {
+  border-radius: 1.35rem;
+  box-shadow: 0 6px 24px -4px rgba(5, 150, 105, 0.18);
+}
+
+/* 7. Sahara Terracotta: Desert dunes dusk glow, warm clay pottery aesthetic */
+html[data-theme="sahara"] body {
+  background-image: linear-gradient(135deg, rgba(234, 88, 12, 0.04) 25%, transparent 25%),
+                    linear-gradient(225deg, rgba(234, 88, 12, 0.04) 25%, transparent 25%);
+  background-size: 40px 40px;
+  font-family: 'Cairo', 'Alexandria', sans-serif;
+}
+html[data-theme="sahara"] .theme-card {
+  border-radius: 1.25rem;
+  box-shadow: 0 8px 26px -4px rgba(234, 88, 12, 0.2);
+}
+
+/* 8. Oceanic: Deep blue sea waves, refreshing marine clarity */
+html[data-theme="oceanic"] body {
+  background-image: radial-gradient(ellipse at top, rgba(56, 189, 248, 0.12), transparent 70%);
+  font-family: 'Alexandria', sans-serif;
+}
+html[data-theme="oceanic"] .theme-card {
+  box-shadow: 0 8px 30px -4px rgba(2, 132, 199, 0.22);
+}
+
+/* 9. Crimson Volcano: Dramatic ruby red lava passion, high-intensity focus */
+html[data-theme="crimson"] body {
+  background-image: radial-gradient(circle at 50% 0%, rgba(220, 38, 38, 0.15) 0%, transparent 65%);
+  font-family: 'Alexandria', sans-serif;
+}
+html[data-theme="crimson"] .theme-card {
+  box-shadow: 0 0 25px -3px rgba(220, 38, 38, 0.3);
+}
+
+/* 10. Pine Moss: Evergreen stillness, quiet earthy forest zen */
+html[data-theme="pine_moss"] body {
+  background-image: radial-gradient(rgba(74, 222, 128, 0.06) 1px, transparent 1px);
+  background-size: 20px 20px;
+  font-family: 'Alexandria', sans-serif;
+}
+
+/* 11. Solar Amber: Golden warm honey, sunny daytime vitality */
+html[data-theme="solar_amber"] body {
+  background-image: radial-gradient(circle at 80% 20%, rgba(251, 191, 36, 0.15) 0%, transparent 50%);
+  font-family: 'Alexandria', sans-serif;
+}
+html[data-theme="solar_amber"] .theme-card {
+  box-shadow: 0 8px 28px -4px rgba(217, 119, 6, 0.22);
+}
+
+/* 12. Boreal Aurora: Northern lights shimmering teal waves */
+html[data-theme="boreal_aurora"] body {
+  background-image: linear-gradient(180deg, rgba(45, 212, 191, 0.1) 0%, transparent 50%);
+  font-family: 'Alexandria', sans-serif;
+}
+html[data-theme="boreal_aurora"] .theme-card {
+  box-shadow: 0 0 25px -4px rgba(45, 212, 191, 0.3);
+}
+
+/* Base custom theme utilities */
+.bg-theme-base {
+  background-color: var(--color-bg-base);
+}
+
+.bg-theme-surface {
+  background-color: var(--color-bg-surface);
+}
+
+.bg-theme-card {
+  background-color: var(--color-bg-card);
+}
+
+.bg-theme-elevated {
+  background-color: var(--color-bg-elevated);
+}
+
+.text-theme-primary {
+  color: var(--color-text-primary);
+}
+
+.text-theme-secondary {
+  color: var(--color-text-secondary);
+}
+
+.text-theme-muted {
+  color: var(--color-text-muted);
+}
+
+.border-theme {
+  border-color: var(--color-border);
+}
+
+.border-theme-subtle {
+  border-color: var(--color-border-subtle);
+}
+
+.theme-card {
+  background-color: var(--color-bg-card);
+  border: var(--border-width, 1.5px) solid var(--color-border-subtle);
+  border-radius: var(--card-radius, 1rem);
+  box-shadow: 0 4px 20px -3px var(--theme-glow, rgba(0, 0, 0, 0.05));
+  transition: all 0.25s ease-in-out;
+}
+
+.theme-card:hover {
+  border-color: var(--color-border);
+  box-shadow: 0 8px 30px -4px var(--theme-glow, rgba(0, 0, 0, 0.1));
+}
+
+.theme-btn-primary {
+  background-color: var(--color-primary);
+  color: #ffffff;
+  transition: all 0.2s ease;
+}
+
+.theme-btn-primary:hover {
+  background-color: var(--color-primary-hover);
+  filter: brightness(1.08);
+}
+
+.theme-btn-secondary {
+  background-color: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-subtle);
+  transition: all 0.2s ease;
+}
+
+.theme-btn-secondary:hover {
+  border-color: var(--color-border);
+}
+
+.theme-badge {
+  background-color: var(--color-badge-bg);
+  color: var(--color-badge-text);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.theme-glow {
+  box-shadow: 0 0 25px var(--theme-glow);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-subtle);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
+}

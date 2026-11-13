@@ -1,4 +1,5 @@
 import { renderStudyTracker, getTrackerData, calculateCourseReadiness, calculateRealStreak } from "./study_tracker.js";
+import { mountModernUI, switchModernTab } from "./modern_app.js";
 
 
 
@@ -297,6 +298,10 @@ function goHome() {
   render();
 }
 function setView(v, subView) {
+  const root = $("modern-content-root");
+  const shell = $("modern-app-shell");
+  if (shell) shell.style.display = v === "app" ? "block" : "none";
+  if (root) root.style.display = v === "app" ? "block" : "none";
   $("app").hidden = v !== "app";
   $("picker-box").hidden = v !== "picker";
   $("courses-box").hidden = v !== "courses";
@@ -315,6 +320,7 @@ function setView(v, subView) {
     if (state.deepLinkPending) { state.deepLinkPending = false; render(); }
     else goHome();
   }
+  window.scrollTo({ top: 0, behavior: "instant" });
 }
 /* الدوس على الخلفية (أي حاجة مش زرار/كارت/تاب) يرجّع للهوم */
 document.addEventListener("click", (e) => {
@@ -652,12 +658,19 @@ async function renderLog() {
 }
 /* التقدّم والحذف */
 async function save(itemId, done, submitted) {
-  const { error } = await sb.from("progress").upsert(
-    { user_id: state.userId, item_id: itemId, done, submitted, updated_at: new Date().toISOString() },
-    { onConflict: "user_id,item_id" }
-  );
-  if (error) { say("تعذّر الحفظ"); return; }
   state.progress[itemId] = { item_id: itemId, done, submitted };
+  try {
+    localStorage.setItem("math3_progress_cache", JSON.stringify(state.progress));
+  } catch (e) {}
+
+  if (state.userId && state.userId !== "anon-guest") {
+    try {
+      await sb.from("progress").upsert(
+        { user_id: state.userId, item_id: itemId, done, submitted, updated_at: new Date().toISOString() },
+        { onConflict: "user_id,item_id" }
+      );
+    } catch (e) {}
+  }
   say("");
   render();
 }
@@ -904,7 +917,9 @@ function buildForm(sec, it) {
       return;
     }
     if (!it) {
-      try { broadcastNewItem(data.title, data.course_id); } catch (e) { console.warn("broadcast error:", e); }
+      const isTask = sec.kind === "tasks" || (sec.title && (sec.title.includes("تكليف") || sec.title.includes("شيت") || sec.title.includes("واجب")));
+      const notifTitle = isTask ? "تكليف جديد 📝" : "محتوى / محاضرة جديدة 📁";
+      try { broadcastNewItem(data.title, data.course_id, notifTitle); } catch (e) { console.warn("broadcast error:", e); }
     }
     if (oldPath && (attFile || linkVal || removeAtt)) await removeAttachmentFiles([oldPath]);
     state.form = null;
@@ -1070,7 +1085,7 @@ document.addEventListener("click", (e) => {
     document.querySelectorAll(".menu-wrap .dropdown").forEach((d) => { d.hidden = true; });
   }
 });
-/* نسخة احتياطية (للمالك) */
+/* نسخة احتياطية (للأونر) */
 
 /* نظام النسخ الاحتياطي والاستعادة المتقدم الشامل */
 async function showBackupRestoreModal() {
@@ -1339,90 +1354,17 @@ async function retryBot() {
   setTimeout(refreshBotStatus, 75000);
   setTimeout(refreshBotStatus, 150000);
 }
-/* مكتبة المواد: فولدرات درايف لكل مادة (المحاضرات + الاسايمنتات) */
+/* مكتبة المواد: تم إلغاؤها والتحويل المباشر لشاشة المواد العصرية المعتمدة */
 function renderLinks(sec) {
+  if (typeof window !== "undefined" && window.switchModernTab) {
+    window.switchModernTab("courses");
+    return;
+  }
   $("chips").replaceChildren();
   const list = $("list");
   list.replaceChildren();
-  const courses = state.courses.filter((c) => c.is_active || (isAdmin() && (c.drive_url || c.assignment_drive_url)));
-  if (!courses.length) {
-    list.appendChild(el("p", "center", "لا توجد مواد بعد"));
-    return;
-  }
-  courses.forEach((c) => {
-    const card = el("div", "card");
-    card.appendChild(el("h3", "", c.name + (c.is_active ? "" : " (متوقفة)")));
-    
-    const linksRow = el("div", "row");
-    linksRow.style.gap = "8px";
-    linksRow.style.flexWrap = "wrap";
-    linksRow.style.marginBottom = "8px";
-
-    if (c.drive_url) {
-      const aLect = el("a", "btn", "📁 فولدر المحاضرات");
-      aLect.href = c.drive_url;
-      aLect.target = "_blank";
-      aLect.rel = "noopener noreferrer";
-      linksRow.appendChild(aLect);
-    } else {
-      const noLect = el("span", "meta", "المحاضرات: غير متوفر");
-      linksRow.appendChild(noLect);
-    }
-
-    if (c.assignment_drive_url) {
-      const aAssign = el("a", "btn btn-primary", "📝 فولدر التكاليف");
-      aAssign.href = c.assignment_drive_url;
-      aAssign.target = "_blank";
-      aAssign.rel = "noopener noreferrer";
-      linksRow.appendChild(aAssign);
-    } else {
-      const noAssign = el("span", "meta", "التكاليف: غير متوفر");
-      linksRow.appendChild(noAssign);
-    }
-    card.appendChild(linksRow);
-
-    if (isAdmin()) {
-      const adminRow = el("div", "row");
-      adminRow.style.gap = "8px";
-      adminRow.style.marginTop = "10px";
-      adminRow.style.paddingTop = "10px";
-      adminRow.style.borderTop = "1px dashed var(--line)";
-
-      const editLect = el("button", "small", c.drive_url ? "تعديل درايف المحاضرات" : "إضافة درايف محاضرات");
-      editLect.addEventListener("click", async () => {
-        const url = (prompt("رابط درايف المحاضرات لمادة " + c.name, c.drive_url || "") || "").trim();
-        if (url === "") return;
-        const u = safeUrl(url);
-        if (!u) { say("الرابط غير صالح"); return; }
-        const { error } = await sb.from("courses").update({ drive_url: u }).eq("id", c.id);
-        if (error) { say("تعذّر الحفظ"); return; }
-        say("تم حفظ رابط المحاضرات");
-        if (typeof invalidateCache === "function") invalidateCache();
-        await loadCourses(true);
-        render();
-      });
-      adminRow.appendChild(editLect);
-
-      const editAssign = el("button", "small", c.assignment_drive_url ? "تعديل درايف التكاليف" : "إضافة درايف تكاليف");
-      editAssign.addEventListener("click", async () => {
-        const url = (prompt("رابط درايف التكاليف لمادة " + c.name, c.assignment_drive_url || "") || "").trim();
-        if (url === "") return;
-        const u = safeUrl(url);
-        if (!u) { say("الرابط غير صالح"); return; }
-        const { error } = await sb.from("courses").update({ assignment_drive_url: u }).eq("id", c.id);
-        if (error) { say("تعذّر الحفظ"); return; }
-        say("تم حفظ رابط درايف التكاليف");
-        if (typeof invalidateCache === "function") invalidateCache();
-        await loadCourses(true);
-        render();
-      });
-      adminRow.appendChild(editAssign);
-
-      card.appendChild(adminRow);
-    }
-
-    list.appendChild(card);
-  });
+  const card = el("div", "card center");
+  card.innerHTML = `<p style="margin:0; font-weight:bold;">يرجى تصفح المواد من تبويب «المواد» بالأسفل 📚</p>`;
 }
 /* قسم الأسئلة */
 function displayName(uid) { return state.qaNames[uid] || "مستخدم"; }
@@ -1572,9 +1514,16 @@ function renderQA(sec) {
               p_attachment_size: up.data.attachment_size,
             };
           }
-          const { error } = await sb.rpc("answer_question", { p_question: q.id, p_body: ab.value.trim(), ...att });
+          let res = await sb.rpc("answer_question", { p_question_id: q.id, p_body: ab.value.trim(), ...att });
+          if (res.error && (res.error.code === "PGRST202" || (res.error.message && res.error.message.includes("p_question_id")))) {
+            res = await sb.rpc("answer_question", { p_question: q.id, p_body: ab.value.trim(), ...att });
+          }
           asend.disabled = false;
-          if (error) { say("تعذّر إرسال الإجابة"); return; }
+          if (res.error) {
+            console.error("Answer question error:", res.error);
+            say("تعذّر إرسال الإجابة: " + (res.error.message || ""));
+            return;
+          }
           delete state.answerForm[q.id];
           say("تم إرسال الإجابة");
           await loadData();
@@ -1626,12 +1575,17 @@ function openSectionById(id) {
 /* إدارة الأقسام الديناميكية (قالب بسيط: عنوان + تفاصيل + مرفق) */
 function openSectionsAdmin() {
   if (!isAdmin()) return;
+  const shell = $("modern-app-shell");
+  if (shell) shell.style.display = "none";
+  const root = $("modern-content-root");
+  if (root) root.style.display = "none";
   ["picker-box", "courses-box", "people-box", "log-box", "theme-box"].forEach((id) => { $(id).hidden = true; });
   $("app").hidden = false;
   state.active = "__sections_admin__";
   state.form = null; state.pform = null; state.postForm = null; state.postFocus = null;
   state.trash = false; state.filter = "all"; state.qform = null; state.answerForm = {};
   render();
+  window.scrollTo({ top: 0, behavior: "instant" });
 }
 const sortSections = () => state.sections.sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0));
 function renderSectionsAdmin() {
@@ -1956,7 +1910,14 @@ function renderDashboard() {
 
   box.appendChild(grid);
 }
+window._renderLegacyApp = function() { render(); };
 function render() {
+  document.body.classList.add("modern-mode");
+  try {
+    mountModernUI();
+  } catch (e) {
+    console.error("Modern UI error:", e);
+  }
   renderBotBanner();
   const tabs = $("tabs");
   tabs.replaceChildren();
@@ -1989,6 +1950,19 @@ function render() {
   list.replaceChildren();
 
   if (state.active === "__sections_admin__") {
+    const root = $("modern-content-root"); if (root) root.style.display = "none";
+    $("app").hidden = false;
+    let topBar = $("modern-section-top-bar");
+    if (!topBar) {
+      topBar = el("div", "section-nav-top");
+      topBar.id = "modern-section-top-bar";
+      $("app").insertBefore(topBar, $("app").firstChild);
+    }
+    topBar.replaceChildren();
+    const backBtn = el("button", "section-back-btn", "→ رجوع للمنصة");
+    backBtn.addEventListener("click", () => goHome());
+    topBar.appendChild(backBtn);
+    topBar.appendChild(el("h3", "amiri-title", "تخصيص وبناء الأقسام"));
     $("chips").replaceChildren();
     $("chips").hidden = true; $("list").hidden = true;
     tabs.hidden = true;
@@ -1998,7 +1972,20 @@ function render() {
   }
 
   if (state.active === "__posts__") {
-    tabs.hidden = false;
+    const root = $("modern-content-root"); if (root) root.style.display = "none";
+    $("app").hidden = false;
+    let topBar = $("modern-section-top-bar");
+    if (!topBar) {
+      topBar = el("div", "section-nav-top");
+      topBar.id = "modern-section-top-bar";
+      $("app").insertBefore(topBar, $("app").firstChild);
+    }
+    topBar.replaceChildren();
+    const backBtn = el("button", "section-back-btn", "→ رجوع للمنصة");
+    backBtn.addEventListener("click", () => goHome());
+    topBar.appendChild(backBtn);
+    topBar.appendChild(el("h3", "amiri-title", "المنشورات والأخبار"));
+    tabs.hidden = true;
     $("dashboard").hidden = true;
     $("chips").hidden = false; $("list").hidden = false;
     $("chips").replaceChildren();
@@ -2008,14 +1995,32 @@ function render() {
 
   const sec = state.sections.find((x) => x.id === state.active);
   if (!sec) {
+    const topBar = $("modern-section-top-bar");
+    if (topBar) topBar.remove();
+    const root = $("modern-content-root");
+    if (root) root.style.display = "block";
     $("chips").replaceChildren();
     $("chips").hidden = true; $("list").hidden = true;
     tabs.hidden = true;
-    $("dashboard").hidden = false;
-    renderDashboard();
+    $("dashboard").hidden = true;
+    $("app").hidden = true;
     return;
   }
-  tabs.hidden = false;
+  const root = $("modern-content-root"); if (root) root.style.display = "none";
+  $("app").hidden = false;
+  let topBar = $("modern-section-top-bar");
+  if (!topBar) {
+    topBar = el("div", "section-nav-top");
+    topBar.id = "modern-section-top-bar";
+    $("app").insertBefore(topBar, $("app").firstChild);
+  }
+  topBar.replaceChildren();
+  const backBtn = el("button", "section-back-btn", "→ رجوع للمنصة");
+  backBtn.addEventListener("click", () => goHome());
+  topBar.appendChild(backBtn);
+  topBar.appendChild(el("h3", "amiri-title", sec.title));
+
+  tabs.hidden = true;
   $("dashboard").hidden = true;
   $("chips").hidden = false; $("list").hidden = false;
   if (sec.kind === "qa") { renderQA(sec); return; }
@@ -2180,13 +2185,38 @@ async function showProfile() {
   hideAll();
   $("login-box").hidden = true;
   $("pending-box").hidden = true;
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) {
+  let session = null;
+  try {
+    const res = await Promise.race([
+      sb.auth.getSession(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error("Timeout")), 1200))
+    ]);
+    session = res && res.data ? res.data.session : null;
+  } catch (e) {
+    session = null;
+  }
+  const isExplicitLogout = sessionStorage.getItem("logged_out") === "true";
+  const isAnon = sessionStorage.getItem("auth_mode") === "anonymous";
+  if (!session && !isAnon) {
+    if (!isExplicitLogout) {
+      await loginAsAnonymous();
+      return;
+    }
     showLoading(false);
+    hideAll();
+    const bNav = $("modern-bottom-nav");
+    if (bNav) bNav.style.display = "none";
+    const shell = $("modern-app-shell");
+    if (shell) shell.style.display = "none";
     $("logout").hidden = true;
     $("login-box").hidden = false;
     renderSavedAccounts();
     mountTelegramRedirectButton();
+    if (window.mountLoginThemeSelector) window.mountLoginThemeSelector();
+    return;
+  }
+  if (!session && isAnon) {
+    await loginAsAnonymous();
     return;
   }
   state.userId = session.user.id;
@@ -2295,7 +2325,11 @@ $("theme-btn").addEventListener("click", () => setView("theme"));
 $("people-btn").addEventListener("click", () => setView("people"));
 $("log-btn").addEventListener("click", () => { state.logLimit = 100; setView("log"); });
 $("backup-btn").addEventListener("click", showBackupRestoreModal);
-$("logout").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
+$("logout").addEventListener("click", async () => {
+  try { sessionStorage.setItem("logged_out", "true"); sessionStorage.removeItem("auth_mode"); } catch(e) {}
+  await sb.auth.signOut();
+  location.reload();
+});
 
 // التحكم في القائمة المنسدلة المجمعة للأزرار العلوية
 const hMenuBtn = $("header-menu-btn");
@@ -2416,6 +2450,7 @@ if (switchTgBtn) {
     $("logout").hidden = true;
     renderSavedAccounts();
     mountTelegramRedirectButton();
+    if (window.mountLoginThemeSelector) window.mountLoginThemeSelector();
   });
 }
 

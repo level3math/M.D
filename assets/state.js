@@ -2,7 +2,7 @@ const roleLabels = { student: "طالب", admin: "ادمن", full_admin: "اون
 const roleRank = { full_admin: 0, admin: 1, student: 2 };
 function rpcMsg(error) {
   const m = (error && error.message) || "";
-  if (m.includes("last_full_admin")) return "لا يمكن ذلك: هذا آخر أدمن كامل";
+  if (m.includes("last_full_admin")) return "لا يمكن ذلك: هذا آخر أونر";
   if (m.includes("cannot_self")) return "لا يمكن تنفيذ ذلك على الحساب الشخصي";
   if (m.includes("not_allowed")) return "غير مسموح";
   return "تعذّر التنفيذ";
