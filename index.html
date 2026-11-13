@@ -82,6 +82,31 @@
   <meta name="twitter:image" content="assets/cover.jpg">
 <body class="modern-mode">
 <script>
+  // وضع التشخيص: افتح الموقع بإضافة ?debug=1 في آخر الرابط ليعرض أي خطأ JavaScript على الشاشة
+  (function () {
+    if (!/[?&]debug=1/.test(location.search)) return;
+    var box;
+    function show(msg) {
+      if (!box) {
+        box = document.createElement("pre");
+        box.style.cssText = "position:fixed;z-index:99999;top:0;left:0;right:0;max-height:60vh;overflow:auto;margin:0;padding:10px;background:#300;color:#fff;font:12px/1.5 monospace;white-space:pre-wrap;direction:ltr;text-align:left";
+        (document.body || document.documentElement).appendChild(box);
+      }
+      box.textContent += msg + "\n\n";
+    }
+    window.addEventListener("error", function (e) {
+      if (e.target && e.target !== window && (e.target.src || e.target.href)) {
+        show("LOAD FAILED: " + (e.target.src || e.target.href));
+      } else {
+        show("ERROR: " + e.message + "\n" + (e.filename || "") + ":" + (e.lineno || ""));
+      }
+    }, true);
+    window.addEventListener("unhandledrejection", function (e) {
+      show("PROMISE: " + (e.reason && (e.reason.stack || e.reason.message) || e.reason));
+    });
+  })();
+</script>
+<script>
   // عنوان سيرفر الذكاء الاصطناعي (server.ts). على GitHub Pages ضع هنا رابط السيرفر المنشور، مثل "https://your-app.onrender.com"
   // اتركه فارغاً لو الموقع والسيرفر على نفس النطاق.
   window.MATH3_API_BASE = "";
