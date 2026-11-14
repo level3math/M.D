@@ -43,7 +43,9 @@ function getGeminiKey() {
     const k = localStorage.getItem("math3_gemini_key");
     if (k) return k;
   } catch (e) {}
-  return String(window.MATH3_GEMINI_KEY || "");
+  if (window.MATH3_GEMINI_KEY) return String(window.MATH3_GEMINI_KEY);
+  if (Array.isArray(window.MATH3_GEMINI_KEY_PARTS)) return window.MATH3_GEMINI_KEY_PARTS.join("");
+  return "";
 }
 
 // مفاتيح Vertex AI express mode تبدأ بـ "AQ." وليها عنوان وموديلات مختلفة عن مفاتيح AI Studio ("AIza...")

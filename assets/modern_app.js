@@ -1616,6 +1616,7 @@ export function openSectionInModernView(kindOrId) {
       appEl.appendChild(bottomSpacer);
     }
 
+    try { document.body.classList.add("section-open"); } catch (e) {}
     window.scrollTo({ top: 0, behavior: "instant" });
   }
 
@@ -1630,6 +1631,7 @@ export function switchModernTab(tabKey) {
   try { window.switchModernTab = switchModernTab; } catch(e) {}
   currentTab = tabKey;
   state.active = null;
+  try { document.body.classList.remove("section-open"); } catch (e) {}
 
   // إزالة شريط القسم المفتوح
   const topBar = $("modern-section-top-bar");

@@ -3426,3 +3426,36 @@ body.modern-mode select {
 }
 
 
+
+/* =========================================================================
+   إصلاح المسافات الفارغة فوق وتحت الأقسام المفتوحة من "المزيد"
+   - الغلاف الحديث كان بيفضل واخد 130px من فوق حتى لو المحتوى مخفي
+   - المسافة السفلية كانت متكررة 4 مرات (app + list + spacer + آخر كارت)
+   ========================================================================= */
+#modern-app-shell:has(> #modern-content-root[style*="display: none"]),
+body.section-open #modern-app-shell {
+  padding: 0 !important;
+  margin: 0 !important;
+  height: 0 !important;
+  min-height: 0 !important;
+}
+
+#app,
+#courses-box, #theme-box, #people-box, #log-box, #tracker-box, #picker-box {
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+#list {
+  padding-bottom: 0 !important;
+}
+
+#list > *:last-child,
+#app #list .card:last-child {
+  margin-bottom: 0 !important;
+}
+
+#modern-section-bottom-spacer {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+}
