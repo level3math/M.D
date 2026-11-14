@@ -57,7 +57,7 @@ function getGeminiModels() {
   const custom = window.MATH3_GEMINI_MODELS;
   if (Array.isArray(custom) && custom.length) return custom;
   // الأذكى أولاً ثم الأخف؛ الحد المجاني محسوب لكل موديل لوحده فالحدود بتتجمّع
-  return ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
+  return ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-2.5-flash-lite"];
 }
 
 // طرق الاتصال: مفاتيح AI Studio الجديدة (AQ.) تعمل على العنوان الأصلي؛ ونجرّب بدائل لو رُفضت المصادقة
@@ -136,22 +136,38 @@ async function askGeminiDirect(text, history, attachments, signal) {
   parts.push({ text: text || "اقرأ المرفقات وحلّ كل الأسئلة الموجودة فيها بالتفصيل." });
   contents.push({ role: "user", parts });
 
+  const short = [];
   planLoop: for (const plan of geminiPlans(key)) {
+    let authWorked = false; // لو جوجل ردّت بغير 401 يبقى المفتاح مقبول ومفيش داعي نجرّب طريقة اتصال تانية
     for (const model of plan.models) {
-      const variants = /lite/i.test(model) ? [false] : [true, false]; // محاولة بالتفكير العميق ثم بدونه
-      for (const withThinking of variants) {
+      // محاولة كاملة (تفكير + بحث) ثم محاولة بسيطة من غيرهم، لأن الحد المجاني للبحث والتفكير ممكن يبقى صفر على بعض الموديلات
+      const variants = /lite/i.test(model)
+        ? [{ t: false, s: true }, { t: false, s: false }]
+        : [{ t: true, s: true }, { t: false, s: false }];
+      for (let vi = 0; vi < variants.length; vi++) {
+        const withThinking = variants[vi].t;
         const body = {
           contents,
           systemInstruction: { parts: [{ text: GEMINI_SYSTEM }] },
-          tools: [{ googleSearch: {} }],
         };
+        if (variants[vi].s) body.tools = [{ googleSearch: {} }];
         if (withThinking) body.generationConfig = { thinkingConfig: { thinkingLevel: "high" } };
         try {
           const res = await geminiRequest(plan, model, key, body, signal);
           const data = await res.json().catch(() => ({}));
           if (!res.ok) {
             errors.push(plan.kind + " " + model + ": " + res.status + " " + ((data.error && data.error.message) || ""));
-            if (res.status === 400 && withThinking) continue; // جرّب بدون thinkingConfig
+            if (res.status !== 401 && res.status !== 403) { authWorked = true; _gemPlan = plan.kind; }
+            let why = String(res.status);
+            try {
+              const raw = JSON.stringify((data.error && data.error.details) || []) + " " + ((data.error && data.error.message) || "");
+              if (res.status === 429) why += /PerDay/i.test(raw) ? " يومي" : (/PerMinute/i.test(raw) ? " دقيقة" : "");
+              if (res.status === 429 && /limit:\s*0/i.test(raw)) why += " [الحد صفر للموديل ده]";
+              const rd = raw.match(/retryDelay"?:\s*"?(\d+(?:\.\d+)?)s/i);
+              if (rd) why += " (حاول بعد " + Math.ceil(parseFloat(rd[1])) + " ث)";
+            } catch (e2) {}
+            short.push(model + (variants[vi].s ? "" : "(بسيط)") + ": " + why);
+            if ((res.status === 400 || res.status === 429) && vi < variants.length - 1) continue; // جرّب بدون بحث وتفكير
             if (res.status === 401) continue planLoop; // مشكلة مصادقة: جرّب طريقة الاتصال التالية
             break; // انتقل للموديل التالي
           }
@@ -182,14 +198,20 @@ async function askGeminiDirect(text, history, attachments, signal) {
         }
       }
     }
+    if (authWorked) break planLoop;
   }
   const quota = errors.some((e) => / 429 /.test(e));
+  const zeroLimit = short.length > 0 && short.every((x) => /الحد صفر/.test(x) || !/429/.test(x)) && short.some((x) => /الحد صفر/.test(x));
   const err = new Error(
-    quota
-      ? "وصلنا للحد المجاني لـ Gemini (في الدقيقة أو اليوم). جرّب بعد دقيقة، ولو اليوم خلص بيتصفّر نص الليل بتوقيت UTC."
+    zeroLimit
+      ? "المفتاح ده معندوش حد مجاني متاح على الموديلات المجرّبة (Google بترجّع الحد = صفر). افتحي aistudio.google.com ثم Rate limits وشوفي الموديلات المتاحة لمفتاحك."
+      : quota
+      ? "وصلنا للحد المجاني لـ Gemini (في الدقيقة أو اليوم). جرّب بعد دقيقة، ولو الحد اليومي هو اللي خلص يبقى استني لبكرة (Google بتصفّره مرة في اليوم)."
       : "تعذّر الحصول على رد من Gemini. تأكد من المفتاح ومن الاتصال بالإنترنت."
   );
-  if (!quota && errors.length) {
+  if (quota && short.length) {
+    err.message += "\n\nتفاصيل: " + short.slice(0, 8).join(" | ").slice(0, 520);
+  } else if (!quota && errors.length) {
     err.message += "\n\nتفاصيل فنية: " + errors.slice(0, 3).join(" | ").slice(0, 450);
   }
   err.details = errors;
