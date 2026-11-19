@@ -66,13 +66,13 @@
   } catch(e) {}
 })();
 </script>
-    <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" href="assets/icon.png?v=5">
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=5">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Math 3">
-  
+
   <!-- OpenGraph & Social Preview Cover -->
   <meta property="og:title" content="Math 3 - منصة الدفعة وتتبع المذاكرة">
   <meta property="og:description" content="منصة دفعة Math 3 الشاملة: جدول المحاضرات، التكاليف، تتبع إنجاز المواد، ستريك المذاكرة، مؤقت بومودورو، وخريطة الإنجاز الأسبوعية مع إشعارات الويب الحقيقية.">
@@ -80,6 +80,7 @@
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="assets/cover.jpg">
+</head>
 <body class="modern-mode">
 <script>
   // وضع التشخيص: افتح الموقع بإضافة ?debug=1 في آخر الرابط ليعرض أي خطأ JavaScript على الشاشة
@@ -106,18 +107,7 @@
     });
   })();
 </script>
-<script>
-  // عنوان سيرفر الذكاء الاصطناعي (server.ts). على GitHub Pages ضع هنا رابط السيرفر المنشور، مثل "https://your-app.onrender.com"
-  // اتركه فارغاً لو الموقع والسيرفر على نفس النطاق.
-  window.MATH3_API_BASE = "";
-
-  // اتصال مباشر بـ Gemini بدون سيرفر: ضع مفتاح Gemini هنا. (المفتاح هيبقى ظاهر لأي حد يفتح الموقع،
-  // فاعمل مفتاح مخصص للمشروع وقيّده بنطاق موقعك من Google AI Studio / Cloud Console)
-  window.MATH3_GEMINI_KEY = "";
-  window.MATH3_GEMINI_KEY_PARTS = ["AQ.Ab8RN6L3qhtq", "NGPxx4TLilanAZwyuZ", "AlckXNnl8m8FrYKOF77w"];
-</script>
 <script type="module" src="assets/ios-compat.js"></script>
-
 
 <div id="drawer-backdrop" class="side-drawer-backdrop"></div>
 
