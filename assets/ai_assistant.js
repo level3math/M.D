@@ -1,238 +1,34 @@
 /* =========================================================================
    Math 3 - Math & Pedagogy AI Assistant Module
    المساعد الذكي المتخصص في الرياضيات المتقدمة وطرق التدريس والمجال التربوي
-   - يدعم إرسال مرفقات متعددة (صور، PDF، مستندات) بحد أقصى مجمع 25 ميجابايت
+   - يدعم إرسال مرفقات متعددة (صور، PDF، مستندات) بحد أقصى مجمع 10 ميجابايت
    - إمكانية تعديل الرسائل المرسلة وإعادة إرسالها
-   - إمكانية البحث بالويب وتوثيق المصادر (Google Search Grounding)
+   - إمكانية البحث بالويب وتوثيق المصادر
    - تصدير الردود والملخصات كـ PDF جاهز للطباعة والمذاكرة
-   - مساحة مريحة وغير مخنوقة تناسب المذاكرة والتخطيط الأكاديمي
+   - مساحة مريحة تناسب المذاكرة والتخطيط الأكاديمي
    ========================================================================= */
 
-import { el, $ } from "./core.js";
+import { el, $, sb } from "./core.js";
 
 const STORAGE_KEY = "math3_ai_chat_v4";
+const MAX_ATTACHMENTS_TOTAL_BYTES = 10 * 1024 * 1024; // 10 ميجابايت كحد أقصى مجمع
+const MAX_ATTACHMENTS_B64_LEN = 14 * 1024 * 1024;
 
-// عنوان سيرفر الذكاء الاصطناعي. على GitHub Pages ضع رابط السيرفر في window.MATH3_API_BASE داخل index.html
-// (مثال: "https://my-app-xxxx.run.app"). وإن تُرك فارغاً يُستخدم نفس نطاق الموقع.
-function getApiBase() {
-  try {
-    const fromStorage = localStorage.getItem("math3_api_base");
-    if (fromStorage) return fromStorage.replace(/\/+$/, "");
-  } catch (e) {}
-  return String(window.MATH3_API_BASE || "").replace(/\/+$/, "");
-}
-
-// ==== GEMINI DIRECT START ====
-// وضع الاتصال المباشر بـ Gemini من المتصفح (بدون سيرفر). يُفعَّل لو وُضع المفتاح في window.MATH3_GEMINI_KEY داخل index.html
-const GEMINI_SYSTEM = `أنت "المعلّم الذكي" — مساعد ذكاء اصطناعي عام وقوي جداً داخل منصة دفعة Math 3 (كلية التربية - قسم الرياضيات).
-مستخدموك طلاب وأعضاء هيئة تدريس، لكنك لست محصوراً في الرياضيات أو التربية: أجب عن أي سؤال في أي مجال كما يفعل مساعد عام من الطراز الأول.
-
-القواعد:
-1. اللغة: ردّ بنفس لغة المستخدم (عربي مصري/فصحى أو إنجليزي).
-2. الطول المناسب: السؤال البسيط إجابة قصيرة ومباشرة. المسائل والامتحانات حل مرتب خطوة بخطوة. لا حشو.
-3. الرياضيات: كن دقيقاً، اذكر التعريفات وبرر كل خطوة. استخدم LaTeX: $...$ داخل السطر و $$...$$ للمعادلات المنفصلة. أطّر الناتج النهائي بـ \\boxed{...}. راجع الحل قبل الإرسال.
-4. الصور و PDF: اقرأ كل صفحة وكل صورة بعناية حتى لو كثرت. انقل نص كل سؤال أولاً ثم حلّه، وحافظ على الترقيم. إن كان جزء غير مقروء فقل ذلك بدل التخمين. لا تتجاهل أي سؤال.
-5. التربية: عند الطلب استخدم نماذج 5Es وCPA وتصنيف بلوم المعدّل.
-6. البحث والمصادر: استخدم أداة البحث للمعلومات الحديثة أو غير المؤكدة، وعندما يطلب المستخدم مصدراً أو رابطاً (أو "سورس") فابحث وأعطه مصادر فعلية. لا تخترع روابط أو مراجع.
-7. الأمانة: لا تدّعِ معرفة ما لا تعرفه، واذكر درجة تأكدك.
-8. الرسم: إذا طُلب رسم أو شكل فأخرج كود <svg ...>...</svg> كاملاً داخل الرد.
-9. ملفات PDF: إذا طلب المستخدم مستنداً للتحميل كـ PDF، اكتب محتواه ثم أنهِ ردك بسطر مستقل: [PDF_DOCUMENT: عنوان المستند]`;
-
-function getGeminiKey() {
-  try {
-    const k = localStorage.getItem("math3_gemini_key");
-    if (k) return k;
-  } catch (e) {}
-  if (window.MATH3_GEMINI_KEY) return String(window.MATH3_GEMINI_KEY);
-  if (Array.isArray(window.MATH3_GEMINI_KEY_PARTS)) return window.MATH3_GEMINI_KEY_PARTS.join("");
-  return "";
-}
-
-// مفاتيح Vertex AI express mode تبدأ بـ "AQ." وليها عنوان وموديلات مختلفة عن مفاتيح AI Studio ("AIza...")
-function isVertexKey(key) {
-  return /^AQ\./.test(String(key || ""));
-}
-
-function getGeminiModels() {
-  const custom = window.MATH3_GEMINI_MODELS;
-  if (Array.isArray(custom) && custom.length) return custom;
-  // الأذكى أولاً ثم الأخف؛ الحد المجاني محسوب لكل موديل لوحده فالحدود بتتجمّع
-  return ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-2.5-flash-lite"];
-}
-
-// طرق الاتصال: مفاتيح AI Studio الجديدة (AQ.) تعمل على العنوان الأصلي؛ ونجرّب بدائل لو رُفضت المصادقة
-let _gemPlan = null;
-function geminiPlans(key) {
-  const ais = getGeminiModels();
-  const plans = [
-    { kind: "header", models: ais },
-    { kind: "query", models: ais },
-  ];
-  if (isVertexKey(key)) {
-    plans.push({ kind: "vertex", models: ["gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash"] });
-  }
-  if (_gemPlan) {
-    const i = plans.findIndex((x) => x.kind === _gemPlan);
-    if (i > 0) plans.unshift(plans.splice(i, 1)[0]);
-  }
-  return plans;
-}
-
-function geminiRequest(plan, model, key, body, signal) {
-  const enc = encodeURIComponent(key);
-  const headers = { "Content-Type": "application/json" };
-  let url;
-  if (plan.kind === "vertex") {
-    url = "https://aiplatform.googleapis.com/v1/publishers/google/models/" + model + ":generateContent?key=" + enc;
-  } else if (plan.kind === "query") {
-    url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + enc;
-  } else {
-    url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent";
-    headers["x-goog-api-key"] = key;
-  }
-  return fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal });
-}
-
-function b64ToText(b64) {
-  try {
-    const bin = atob(b64);
-    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
-    return new TextDecoder("utf-8").decode(bytes).slice(0, 200000);
-  } catch (e) {
-    return "";
-  }
-}
-
-async function askGeminiDirect(text, history, attachments, signal) {
-  const key = getGeminiKey();
-  const errors = [];
-
-  const contents = (history || [])
-    .filter((h) => h && typeof h.text === "string" && h.text.trim())
-    .map((h) => ({ role: h.role === "user" ? "user" : "model", parts: [{ text: h.text.slice(0, 12000) }] }));
-  while (contents.length && contents[0].role !== "user") contents.shift();
-
-  const parts = [];
-  for (const a of attachments || []) {
-    if (!a || typeof a.data !== "string") continue;
-    const m = a.data.match(/^data:([^;]+);base64,/);
-    const name = a.name || "file";
-    const b64 = a.data.replace(/^data:[^;]+;base64,/, "");
-    let mime = String(a.type || (m && m[1]) || "").toLowerCase();
-    if (!mime || mime === "application/octet-stream") {
-      const n = name.toLowerCase();
-      if (n.endsWith(".pdf")) mime = "application/pdf";
-      else if (/\.(txt|md|csv|json|tex)$/.test(n)) mime = "text/plain";
-    }
-    if (mime === "application/pdf" || mime.startsWith("image/")) {
-      parts.push({ text: "[" + name + "]" });
-      parts.push({ inlineData: { mimeType: mime, data: b64 } });
-    } else if (mime.startsWith("text/") || mime === "application/json") {
-      parts.push({ text: "[محتوى الملف " + name + "]\n" + b64ToText(b64) });
-    } else {
-      parts.push({ text: "[تعذّر قراءة الملف " + name + ": نوع غير مدعوم]" });
-    }
-  }
-  parts.push({ text: text || "اقرأ المرفقات وحلّ كل الأسئلة الموجودة فيها بالتفصيل." });
-  contents.push({ role: "user", parts });
-
-  const short = [];
-  planLoop: for (const plan of geminiPlans(key)) {
-    let authWorked = false; // لو جوجل ردّت بغير 401 يبقى المفتاح مقبول ومفيش داعي نجرّب طريقة اتصال تانية
-    for (const model of plan.models) {
-      // محاولة كاملة (تفكير + بحث) ثم محاولة بسيطة من غيرهم، لأن الحد المجاني للبحث والتفكير ممكن يبقى صفر على بعض الموديلات
-      const variants = /lite/i.test(model)
-        ? [{ t: false, s: true }, { t: false, s: false }]
-        : [{ t: true, s: true }, { t: false, s: false }];
-      for (let vi = 0; vi < variants.length; vi++) {
-        const withThinking = variants[vi].t;
-        const body = {
-          contents,
-          systemInstruction: { parts: [{ text: GEMINI_SYSTEM }] },
-        };
-        if (variants[vi].s) body.tools = [{ googleSearch: {} }];
-        if (withThinking) body.generationConfig = { thinkingConfig: { thinkingLevel: "high" } };
-        try {
-          const res = await geminiRequest(plan, model, key, body, signal);
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok) {
-            errors.push(plan.kind + " " + model + ": " + res.status + " " + ((data.error && data.error.message) || ""));
-            if (res.status !== 401 && res.status !== 403) { authWorked = true; _gemPlan = plan.kind; }
-            let why = String(res.status);
-            try {
-              const raw = JSON.stringify((data.error && data.error.details) || []) + " " + ((data.error && data.error.message) || "");
-              if (res.status === 429) why += /PerDay/i.test(raw) ? " يومي" : (/PerMinute/i.test(raw) ? " دقيقة" : "");
-              if (res.status === 429 && /limit:\s*0/i.test(raw)) why += " [الحد صفر للموديل ده]";
-              const rd = raw.match(/retryDelay"?:\s*"?(\d+(?:\.\d+)?)s/i);
-              if (rd) why += " (حاول بعد " + Math.ceil(parseFloat(rd[1])) + " ث)";
-            } catch (e2) {}
-            short.push(model + (variants[vi].s ? "" : "(بسيط)") + ": " + why);
-            if ((res.status === 400 || res.status === 429) && vi < variants.length - 1) continue; // جرّب بدون بحث وتفكير
-            if (res.status === 401) continue planLoop; // مشكلة مصادقة: جرّب طريقة الاتصال التالية
-            break; // انتقل للموديل التالي
-          }
-          const cand = data.candidates && data.candidates[0];
-          const reply = ((cand && cand.content && cand.content.parts) || [])
-            .filter((p) => p.text && !p.thought)
-            .map((p) => p.text)
-            .join("")
-            .trim();
-          if (!reply) {
-            errors.push(plan.kind + " " + model + ": empty");
-            break;
-          }
-          const sources = [];
-          const chunks = (cand.groundingMetadata && cand.groundingMetadata.groundingChunks) || [];
-          for (const c of chunks) {
-            const w = c && c.web;
-            if (w && /^https?:\/\//i.test(w.uri || "") && !sources.some((x) => x.uri === w.uri)) {
-              sources.push({ title: w.title || w.uri, uri: w.uri });
-            }
-          }
-          _gemPlan = plan.kind;
-          return { reply, sources };
-        } catch (e) {
-          if (e && e.name === "AbortError") throw e;
-          errors.push(plan.kind + " " + model + ": " + (e && e.message));
-          continue planLoop; // خطأ شبكة/CORS: جرّب طريقة اتصال أخرى
-        }
-      }
-    }
-    if (authWorked) break planLoop;
-  }
-  const quota = errors.some((e) => / 429 /.test(e));
-  const zeroLimit = short.length > 0 && short.every((x) => /الحد صفر/.test(x) || !/429/.test(x)) && short.some((x) => /الحد صفر/.test(x));
-  const err = new Error(
-    zeroLimit
-      ? "المفتاح ده معندوش حد مجاني متاح على الموديلات المجرّبة (Google بترجّع الحد = صفر). افتحي aistudio.google.com ثم Rate limits وشوفي الموديلات المتاحة لمفتاحك."
-      : quota
-      ? "وصلنا للحد المجاني لـ Gemini (في الدقيقة أو اليوم). جرّب بعد دقيقة، ولو الحد اليومي هو اللي خلص يبقى استني لبكرة (Google بتصفّره مرة في اليوم)."
-      : "تعذّر الحصول على رد من Gemini. تأكد من المفتاح ومن الاتصال بالإنترنت."
-  );
-  if (quota && short.length) {
-    err.message += "\n\nتفاصيل: " + short.slice(0, 8).join(" | ").slice(0, 520);
-  } else if (!quota && errors.length) {
-    err.message += "\n\nتفاصيل فنية: " + errors.slice(0, 3).join(" | ").slice(0, 450);
-  }
-  err.details = errors;
-  throw err;
-}
-// ==== GEMINI DIRECT END ====
-
-const MAX_ATTACHMENTS_TOTAL_BYTES = 25 * 1024 * 1024; // 25 ميجابايت كحد أقصى مجمع
+const FALLBACK_SUPABASE_URL = "https://xwnjimsoframcqstdjfo.supabase.co";
+const FALLBACK_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3bmppbXNvZnJhbWNxc3RkamZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4NTAwODgsImV4cCI6MjEwNTQyNjA4OH0.JhyVa4l8qhK3_ZklbvJsK8fYvPyyWuCGeGzvZR6qu7c";
 
 const DEFAULT_WELCOME_MSG = {
   role: "model",
-  text: `أهلاً بك في **المعلّم الذكي** لدُفعة Math 3 🧠✨
+  text: `أهلاً بكم في **المعلّم الذكي** لدُفعة Math 3 🧠✨
 
-اسألني في أي حاجة، مش الرياضيات والتربية بس:
+يمكنكم السؤال في أي موضوع، وليس الرياضيات والتربية فقط:
 
-- **حل الأسئلة من الصور و PDF:** ارفع صورة أو شيت أو ملف PDF (حتى مجموعة كبيرة) وأنا أقرأ كل الأسئلة وأحلها بالترتيب خطوة بخطوة.
+- **حل الأسئلة من الصور و PDF:** يمكن إرفاق صورة أو شيت أو ملف PDF لقراءة كل الأسئلة وحلّها بالترتيب خطوة بخطوة.
 - **الرياضيات والتربية:** براهين، تحليل، معادلات تفاضلية، خطط دروس 5Es، أهداف سلوكية، وغيرها.
-- **أي موضوع تاني:** شرح، كتابة، برمجة، ترجمة، نصايح، وأي سؤال عام.
-- **بحث ومصادر:** بقدر أبحث في الويب، ولو طلبت المصدر أو السورس هجيبهولك بروابط حقيقية.
+- **أي موضوع آخر:** شرح، كتابة، برمجة، ترجمة، نصائح، وأي سؤال عام.
+- **بحث ومصادر:** تتوفر إمكانية البحث في الويب وتوثيق المصادر بروابط حقيقية عند الطلب.
 
-📎 تقدر ترفق صور وملفات PDF ونصوص، وتعدّل أي رسالة سابقة، وتطلب مذكرة PDF أو رسمة.`
+📎 يمكن إرفاق صور وملفات PDF ونصوص، وتعديل أي رسالة سابقة، وطلب مذكرة PDF أو رسم توضيحي.`
 };
 
 export function getAiChatHistory() {
@@ -241,7 +37,6 @@ export function getAiChatHistory() {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        // فلترة أي رسائل خطأ قديمة
         const cleaned = parsed.filter(m => !m.text?.includes("Failed to fetch") && !m.text?.includes("تعذر"));
         if (cleaned.length > 0) return cleaned;
       }
@@ -260,7 +55,7 @@ export function clearAiChatHistory() {
   localStorage.removeItem(STORAGE_KEY);
 }
 
-// دالة تنسيق الماركداون والرياضيات بأسلوب ChatGPT / Claude
+// دالة تنسيق الماركداون والرياضيات
 export function formatAiMarkdown(text) {
   if (!text) return "";
   let html = text;
@@ -354,7 +149,7 @@ export function triggerKaTeXRendering(container) {
 export function exportResponseAsPdf(title, text) {
   const printWindow = window.open("", "_blank");
   if (!printWindow) {
-    alert("يرجى السماح بفتح النوافذ المنبثقة لتحميل وطباعة ملف PDF.");
+    alert("يُرجى السماح بفتح النوافذ المنبثقة لتحميل وطباعة ملف PDF.");
     return;
   }
 
@@ -471,16 +266,14 @@ function formatBytes(bytes) {
 export function renderAiAssistantView(container, onBack) {
   container.replaceChildren();
 
-  let activeMode = "all"; // "all" | "math" | "pedagogy" | "proof"
   let isSending = false;
-  let isWebSearchActive = false;
   let pendingAttachments = []; // قائمة المرفقات المعلقة: { name, size, type, data }
 
   const wrapper = el("div", "ai-view-container");
 
-  // رأس الصفحة مع زر الرجوع وزر مسح المحادثة فقط (بدون أي تيكست بينهما)
+  // رأس الصفحة مع زر الرجوع وزر مسح المحادثة
   const topBar = el("div", "ai-top-bar");
-  
+
   const backBtn = el("button", "modern-back-btn");
   backBtn.innerHTML = `<span>←</span> <span>رجوع للمنصة</span>`;
   backBtn.addEventListener("click", () => {
@@ -488,7 +281,6 @@ export function renderAiAssistantView(container, onBack) {
   });
   topBar.appendChild(backBtn);
 
-  // زر مسح المحادثة الموثوق (تأكيد داخلي فوري يعمل 100% بدون أي نوافذ منبثقة محظورة)
   const clearChatBtn = el("button", "ai-clear-btn", "مسح المحادثة 🗑️");
   clearChatBtn.title = "بدء محادثة جديدة وحذف السجل القديم";
   let clearTimer = null;
@@ -552,8 +344,7 @@ export function renderAiAssistantView(container, onBack) {
     }
 
     const contentBox = el("div", `ai-bubble ${isModel ? "model-bubble" : "user-bubble"}`);
-    
-    // شريط علوي داخل الفقاعة (نسخ فقط للموديل، وتعديل للمستخدم)
+
     const headerRow = el("div", "ai-bubble-header");
     if (isModel) {
       headerRow.innerHTML = `
@@ -576,7 +367,7 @@ export function renderAiAssistantView(container, onBack) {
       }
     } else {
       headerRow.innerHTML = `
-        <span class="ai-speaker-name" style="color:var(--text-white); opacity:0.8;">أنت (طالب Math 3)</span>
+        <span class="ai-speaker-name" style="color:var(--text-white); opacity:0.8;">أنت (عضو Math 3)</span>
         <button type="button" class="ai-action-btn ai-edit-btn" title="تعديل هذه الرسالة">
           ✏️ تعديل الرسالة
         </button>
@@ -601,7 +392,6 @@ export function renderAiAssistantView(container, onBack) {
     }
     contentBox.appendChild(headerRow);
 
-    // إذا كانت هناك مرفقات مصاحبة للرسالة المعروضة
     if (msg.attachments && msg.attachments.length) {
       const attWrap = el("div", "ai-bubble-attachments-preview");
       msg.attachments.forEach(att => {
@@ -621,7 +411,6 @@ export function renderAiAssistantView(container, onBack) {
     const bodyDiv = el("div", "ai-bubble-body");
     bodyDiv.innerHTML = formatAiMarkdown(cleanDisplayContent);
 
-    // تعزيز الرسوم البيانية المتجهية SVG لتمكين التحميل المباشر
     bodyDiv.querySelectorAll("svg").forEach((svgEl) => {
       svgEl.setAttribute("preserveAspectRatio", "xMidYMid meet");
       svgEl.style.maxWidth = "100%";
@@ -657,7 +446,6 @@ export function renderAiAssistantView(container, onBack) {
 
     contentBox.appendChild(bodyDiv);
 
-    // بطاقة ملف PDF تظهر فقط وحصرياً إذا طُلب صراحة إنشاء ملف PDF
     const isExplicitPdfRequest = isModel && Boolean(
       msg.isPdf ||
       (msg.text && (msg.text.includes("[PDF_DOCUMENT:") || /ملف pdf جاهز للتحميل/i.test(msg.text)))
@@ -690,7 +478,6 @@ export function renderAiAssistantView(container, onBack) {
       contentBox.appendChild(pdfCard);
     }
 
-    // عرض مصادر البحث إن وُجدت
     if (msg.sources && msg.sources.length) {
       const sourcesBox = el("div", "ai-sources-card");
       sourcesBox.innerHTML = `
@@ -711,7 +498,6 @@ export function renderAiAssistantView(container, onBack) {
       contentBox.appendChild(sourcesBox);
     }
 
-    // تطبيق KaTeX
     triggerKaTeXRendering(bodyDiv);
 
     bubbleWrap.appendChild(contentBox);
@@ -730,13 +516,11 @@ export function renderAiAssistantView(container, onBack) {
     scrollChatToBottom();
   }
 
-  // تحميل الرسائل السابقة
   const history = getAiChatHistory();
   history.forEach(msg => appendMessageToUI(msg));
 
   wrapper.appendChild(chatMessagesBox);
 
-  // شريط المرفقات المعلقة فوق حقل الإدخال
   const attachmentsPreviewArea = el("div", "ai-attachments-tray");
   attachmentsPreviewArea.id = "ai-attachments-tray";
   attachmentsPreviewArea.style.display = "none";
@@ -753,7 +537,7 @@ export function renderAiAssistantView(container, onBack) {
     const totalBytes = pendingAttachments.reduce((s, a) => s + (a.size || 0), 0);
 
     const infoLabel = el("div", "ai-tray-info");
-    infoLabel.innerHTML = `<span>📎 المرفقات (${pendingAttachments.length})</span> · <span style="color:${totalBytes > MAX_ATTACHMENTS_TOTAL_BYTES ? '#ef4444' : 'var(--mint-primary)'}">${formatBytes(totalBytes)} / 25 MB</span>`;
+    infoLabel.innerHTML = `<span>📎 المرفقات (${pendingAttachments.length})</span> · <span style="color:${totalBytes > MAX_ATTACHMENTS_TOTAL_BYTES ? '#ef4444' : 'var(--mint-primary)'}">${formatBytes(totalBytes)} / 10 MB</span>`;
     attachmentsPreviewArea.appendChild(infoLabel);
 
     const chipsRow = el("div", "ai-tray-chips-row");
@@ -775,7 +559,6 @@ export function renderAiAssistantView(container, onBack) {
     attachmentsPreviewArea.appendChild(chipsRow);
   }
 
-  // مدخل اختيار الملفات المخفي
   const fileInput = document.createElement("input");
   fileInput.type = "file";
   fileInput.multiple = true;
@@ -851,15 +634,13 @@ export function renderAiAssistantView(container, onBack) {
     renderAttachmentsTray();
   });
 
-  // شريط الإدخال الموسع
   const inputContainer = el("div", "ai-input-container");
 
-  // شريط تنبيه وضع التعديل
   const editBanner = el("div", "ai-edit-banner");
   editBanner.id = "ai-edit-banner";
   editBanner.style.display = "none";
   editBanner.innerHTML = `
-    <span class="ai-edit-banner-text">✏️ وضع تعديل السؤال: قم بتعديل نص السؤال أو المرفقات ثم اضغط إرسال.</span>
+    <span class="ai-edit-banner-text">✏️ وضع تعديل السؤال: يُرجى تعديل نص السؤال أو المرفقات ثم الضغط على إرسال.</span>
     <button type="button" class="ai-cancel-edit-btn">✕ إلغاء التعديل</button>
   `;
   editBanner.querySelector(".ai-cancel-edit-btn").addEventListener("click", () => {
@@ -870,17 +651,16 @@ export function renderAiAssistantView(container, onBack) {
   inputContainer.appendChild(editBanner);
 
   inputContainer.appendChild(attachmentsPreviewArea);
-  
+
   const form = el("form", "ai-input-form");
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     handleSend();
   });
 
-  // زر إرفاق الملفات
   const attachBtn = el("button", "ai-attach-btn");
   attachBtn.type = "button";
-  attachBtn.title = "إرفاق ملفات أو صور أو مستندات PDF (حتى 25 ميجا مجمعة)";
+  attachBtn.title = "إرفاق ملفات أو صور أو مستندات PDF (حتى 10 ميجابايت مجمعة)";
   attachBtn.innerHTML = `
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
@@ -891,7 +671,7 @@ export function renderAiAssistantView(container, onBack) {
 
   const textarea = el("textarea", "ai-textarea");
   textarea.id = "ai-user-input";
-  textarea.placeholder = "اسأل في أي حاجة، أو أرفق صور وPDF...";
+  textarea.placeholder = "يمكن طرح أي سؤال هنا، أو إرفاق صور وملفات PDF...";
   textarea.rows = 1;
   textarea.addEventListener("input", () => {
     textarea.style.height = "auto";
@@ -927,7 +707,6 @@ export function renderAiAssistantView(container, onBack) {
   wrapper.appendChild(inputContainer);
   container.appendChild(wrapper);
 
-  // مؤشر التفكير / التحميل
   function createThinkingIndicator() {
     const row = el("div", "ai-message-row from-model ai-thinking-row");
     row.id = "ai-thinking-indicator";
@@ -953,6 +732,16 @@ export function renderAiAssistantView(container, onBack) {
     const hasAttachments = pendingAttachments.length > 0;
     if ((!text && !hasAttachments) || isSending) return;
 
+    const totalB64Len = pendingAttachments.reduce((n, a) => n + String(a.data || "").length, 0);
+    if (totalB64Len > MAX_ATTACHMENTS_B64_LEN) {
+      appendMessageToUI({
+        role: "model",
+        text: "⚠️ حجم المرفقات كبير (الحد الأقصى حوالي 10 ميجابايت). يُرجى تقسيمها على أكثر من رسالة.",
+        sources: []
+      }, true);
+      return;
+    }
+
     isSending = true;
     sendBtn.disabled = true;
     attachBtn.disabled = true;
@@ -966,7 +755,6 @@ export function renderAiAssistantView(container, onBack) {
     pendingAttachments = [];
     renderAttachmentsTray();
 
-    // 1. إضافة رسالة المستخدم
     const userMsg = {
       role: "user",
       text: text || "اقرأ المرفقات وحلّ كل الأسئلة الموجودة فيها بالتفصيل.",
@@ -976,7 +764,6 @@ export function renderAiAssistantView(container, onBack) {
     saveAiChatHistory(history);
     appendMessageToUI(userMsg, true);
 
-    // 2. إظهار مؤشر التفكير
     const indicator = createThinkingIndicator();
     chatMessagesBox.appendChild(indicator);
     scrollChatToBottom();
@@ -986,56 +773,69 @@ export function renderAiAssistantView(container, onBack) {
     let errorText = "";
 
     try {
+      const { data: sessionData } = await sb.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      if (!accessToken) {
+        throw { isUserMsg: true, message: "يجب تسجيل الدخول أولاً لاستخدام المعلّم الذكي." };
+      }
+
       const controller = new AbortController();
-      const fetchTimer = setTimeout(() => controller.abort(), 170000); // مهلة طويلة للقراءة العميقة للصور وملفات PDF
+      const fetchTimer = setTimeout(() => controller.abort(), 170000);
 
-      // نرسل التاريخ السابق فقط (بدون الرسالة الحالية) حتى لا تتكرر
       const priorHistory = history.slice(0, -1).slice(-24).map(m => ({ role: m.role, text: m.text }));
+      const baseUrl = String(sb.supabaseUrl || FALLBACK_SUPABASE_URL).replace(/\/+$/, "");
+      const anonKey = String(sb.supabaseKey || FALLBACK_SUPABASE_ANON_KEY);
 
-      if (getGeminiKey()) {
-        // اتصال مباشر بـ Gemini من المتصفح (بدون سيرفر)
-        const r = await askGeminiDirect(text, priorHistory, sentAttachments, controller.signal);
-        clearTimeout(fetchTimer);
-        replyText = r.reply;
-        replySources = r.sources || [];
+      const res = await fetch(`${baseUrl}/functions/v1/ai-chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": anonKey,
+          "Authorization": `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          message: text,
+          history: priorHistory,
+          attachments: sentAttachments,
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(fetchTimer);
+
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.reply) {
+        replyText = data.reply;
+        replySources = data.sources || [];
       } else {
-        const res = await fetch(getApiBase() + "/api/ai/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: text,
-            history: priorHistory,
-            attachments: sentAttachments,
-          }),
-          signal: controller.signal
-        });
-        clearTimeout(fetchTimer);
-
-        const data = await res.json().catch(() => ({}));
-        if (res.ok && data.reply) {
-          replyText = data.reply;
-          replySources = data.sources || [];
-        } else {
-          errorText = data.error || ("تعذّر الاتصال بالذكاء الاصطناعي (كود " + res.status + ").");
-        }
+        errorText = data.error || `تعذّر الاتصال بالخادم (كود ${res.status}).`;
       }
     } catch (err) {
       console.warn("AI request failed:", err);
-      errorText = err && err.name === "AbortError"
-        ? "استغرق الرد وقتاً أطول من المسموح. جرّب تقليل عدد المرفقات أو أعد المحاولة."
-        : (err && err.details ? err.message : "تعذّر الوصول للذكاء الاصطناعي. تأكد من الاتصال بالإنترنت ومن إعدادات المفتاح أو السيرفر.");
+      if (err && err.isUserMsg) {
+        errorText = err.message;
+      } else if (err && err.name === "AbortError") {
+        errorText = "استغرق الرد وقتاً أطول من المسموح. يُرجى تقليل عدد أو حجم المرفقات والمحاولة مرة أخرى.";
+      } else {
+        errorText = "تعذّر الوصول للخادم. يُرجى التحقق من الاتصال بالإنترنت والمحاولة مرة أخرى.";
+      }
     }
 
-    // إزالة مؤشر التفكير
     const ind = $("ai-thinking-indicator");
     if (ind) ind.remove();
 
-    // عند الفشل نعرض رسالة خطأ صريحة (غير محفوظة في السجل) بدلاً من إجابة مختلقة
     if (!replyText) {
-      appendMessageToUI({ role: "model", text: "⚠️ " + errorText + "\n\nرسالتك لسه موجودة، اضغط إرسال مرة تانية للمحاولة.", sources: [] }, true);
+      appendMessageToUI({
+        role: "model",
+        text: `⚠️ ${errorText}\n\nالرسالة لا تزال موجودة، يُرجى الضغط على إرسال للمحاولة مرة أخرى.`,
+        sources: []
+      }, true);
       history.pop();
       saveAiChatHistory(history);
       textarea.value = text;
+      if (sentAttachments.length) {
+        pendingAttachments = sentAttachments;
+        renderAttachmentsTray();
+      }
       isSending = false;
       sendBtn.disabled = false;
       attachBtn.disabled = false;
@@ -1058,4 +858,4 @@ export function renderAiAssistantView(container, onBack) {
   }
 
   scrollChatToBottom();
-}
+           }
